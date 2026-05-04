@@ -1,5 +1,5 @@
 // src/compute.ts
-import { startOfWeek, endOfWeek, isWithinInterval, parseISO } from 'date-fns'
+import { startOfWeek, endOfWeek, isWithinInterval, parseISO, addWeeks } from 'date-fns'
 import type { Entry, BudgetConfig, Category } from './types'
 import { CATEGORIES } from './types'
 
@@ -65,7 +65,7 @@ export function weeksInMonth(year: number, month: number): Date[] {
   let current = startOfWeek(firstDay, { weekStartsOn: 1 })
   while (current <= lastDay) {
     weeks.push(new Date(current))
-    current = new Date(current.getTime() + 7 * 24 * 60 * 60 * 1000)
+    current = addWeeks(current, 1)
   }
   return weeks
 }

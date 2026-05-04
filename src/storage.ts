@@ -6,8 +6,12 @@ const ENTRIES_KEY = 'budget_entries'
 const CONFIG_KEY = 'budget_config'
 
 export function getEntries(): Entry[] {
-  const raw = localStorage.getItem(ENTRIES_KEY)
-  return raw ? (JSON.parse(raw) as Entry[]) : []
+  try {
+    const raw = localStorage.getItem(ENTRIES_KEY)
+    return raw ? (JSON.parse(raw) as Entry[]) : []
+  } catch {
+    return []
+  }
 }
 
 export function saveEntries(entries: Entry[]): void {
@@ -19,8 +23,12 @@ export function addEntry(entry: Entry): void {
 }
 
 export function getBudgetConfig(): BudgetConfig {
-  const raw = localStorage.getItem(CONFIG_KEY)
-  return raw ? (JSON.parse(raw) as BudgetConfig) : DEFAULT_BUDGET
+  try {
+    const raw = localStorage.getItem(CONFIG_KEY)
+    return raw ? (JSON.parse(raw) as BudgetConfig) : { ...DEFAULT_BUDGET }
+  } catch {
+    return { ...DEFAULT_BUDGET }
+  }
 }
 
 export function saveBudgetConfig(config: BudgetConfig): void {

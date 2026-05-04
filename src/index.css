@@ -225,3 +225,53 @@ html, body, #root {
   color: var(--green);
   background: rgba(74, 222, 128, 0.1);
 }
+
+/* Dashboard */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.month-label { font-size: 18px; font-weight: 700; }
+.income-label { font-size: 12px; margin-top: 2px; }
+
+.settings-icon-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.buffer-card { border: 1px solid var(--border); }
+.buffer-card--danger { border-color: var(--red); }
+
+.buffer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.buffer-title { font-size: 14px; font-weight: 600; }
+.buffer-amount { font-size: 16px; font-weight: 700; }
+.buffer-sub { font-size: 11px; margin-top: 6px; }
+
+.cat-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.cat-row-right { text-align: right; }
+.cat-spent { font-size: 14px; font-weight: 600; }
+.over-note { font-size: 11px; margin-top: 4px; }
+
+.week-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.week-amount { font-size: 18px; font-weight: 700; }

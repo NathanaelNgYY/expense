@@ -10,6 +10,12 @@ interface Props {
 
 const NUMPAD_KEYS = ['1','2','3','4','5','6','7','8','9','.','0','⌫']
 
+function localDateString(): string {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 export default function AddEntry({ onSave }: Props) {
   const [digits, setDigits] = useState('0')
   const [category, setCategory] = useState<Category | null>(null)
@@ -37,7 +43,7 @@ export default function AddEntry({ onSave }: Props) {
       amount,
       category,
       note,
-      date: new Date().toISOString().split('T')[0],
+      date: localDateString(),
     })
     onSave()
   }
@@ -74,6 +80,7 @@ export default function AddEntry({ onSave }: Props) {
       </div>
 
       <input
+        type="text"
         className="note-input"
         placeholder="Note (optional)"
         value={note}

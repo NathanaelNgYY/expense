@@ -33,3 +33,14 @@ export const CATEGORY_LABELS: Record<Category, string> = {
 }
 
 export const CATEGORIES: Category[] = ['lunch', 'transport', 'savings', 'investments']
+
+export interface PokerSession {
+  id: string
+  date: string
+  startTime: string
+  endTime: string
+  stakes: string
+  buyIn: number
+  result: 'win' | 'loss'
+  amount: number
+}

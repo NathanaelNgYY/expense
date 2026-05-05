@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { toLocalDateString } from '../dates'
+import { formatStakesLabel } from '../pokerDisplay'
 import { getCustomStakes, saveCustomStakes, savePokerSession } from '../storage'
 
 const PRESET_STAKES = ['0.1/0.2', '0.2/0.2', '0.5/0.5', '0.5/1', '1/2']
@@ -141,7 +142,7 @@ export default function LogSession({ onSave, onBack }: Props) {
                   setShowCustomInput(false)
                 }}
               >
-                {s}
+                {formatStakesLabel(s)}
               </button>
             ))}
             <button

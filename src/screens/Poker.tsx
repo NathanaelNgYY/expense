@@ -7,6 +7,7 @@ import {
   totalHours,
   totalPnl,
 } from '../pokerCompute'
+import { formatStakesLabel } from '../pokerDisplay'
 import LogSession from './LogSession'
 
 function formatDuration(hours: number): string {
@@ -81,7 +82,7 @@ export default function Poker() {
             return (
               <div key={s.id} className="entry-row">
                 <div className="entry-main">
-                  <span className="entry-category">{s.stakes}</span>
+                  <span className="entry-category">{formatStakesLabel(s.stakes)}</span>
                   <span className="entry-date">
                     {dateLabel} | {formatDuration(dur)} | Buy-in S${s.buyIn}
                   </span>

@@ -1,4 +1,6 @@
 // src/components/TabBar.tsx
+import { ChartColumn, CirclePlus, House } from 'lucide-react'
+
 export type Tab = 'home' | 'add' | 'history'
 
 interface Props {
@@ -16,7 +18,7 @@ export default function TabBar({ active, onChange }: Props) {
         className={active === 'home' ? 'active' : ''}
         onClick={() => onChange('home')}
       >
-        <span aria-hidden="true">🏠</span>
+        <House className="tab-icon" aria-hidden="true" strokeWidth={2.3} />
         <span>Home</span>
       </button>
       <button
@@ -26,7 +28,7 @@ export default function TabBar({ active, onChange }: Props) {
         className={active === 'add' ? 'active' : ''}
         onClick={() => onChange('add')}
       >
-        <span aria-hidden="true">➕</span>
+        <CirclePlus className="tab-icon" aria-hidden="true" strokeWidth={2.3} />
         <span>Add</span>
       </button>
       <button
@@ -36,7 +38,7 @@ export default function TabBar({ active, onChange }: Props) {
         className={active === 'history' ? 'active' : ''}
         onClick={() => onChange('history')}
       >
-        <span aria-hidden="true">📊</span>
+        <ChartColumn className="tab-icon" aria-hidden="true" strokeWidth={2.3} />
         <span>History</span>
       </button>
     </nav>

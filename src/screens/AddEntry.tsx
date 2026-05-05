@@ -1,5 +1,8 @@
 // src/screens/AddEntry.tsx
 import { useState } from 'react'
+import { Delete } from 'lucide-react'
+import BudgetIcon from '../components/BudgetIcon'
+import { toLocalDateString } from '../dates'
 import { addEntry } from '../storage'
 import { CATEGORY_LABELS, CATEGORIES } from '../types'
 import type { Category } from '../types'
@@ -8,13 +11,7 @@ interface Props {
   onSave: () => void
 }
 
-const NUMPAD_KEYS = ['1','2','3','4','5','6','7','8','9','.','0','⌫']
-
-function localDateString(): string {
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
+const NUMPAD_KEYS = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
 
 export default function AddEntry({ onSave }: Props) {
   const [digits, setDigits] = useState('0')
@@ -24,7 +21,7 @@ export default function AddEntry({ onSave }: Props) {
   const amount = parseFloat(digits) || 0
 
   function handleDigit(key: string) {
-    if (key === '⌫') {
+    if (key === 'backspace') {
       setDigits(prev => (prev.length <= 1 ? '0' : prev.slice(0, -1)))
       return
     }
@@ -43,7 +40,7 @@ export default function AddEntry({ onSave }: Props) {
       amount,
       category,
       note,
-      date: localDateString(),
+      date: toLocalDateString(),
     })
     onSave()
   }
@@ -58,8 +55,14 @@ export default function AddEntry({ onSave }: Props) {
 
       <div className="numpad">
         {NUMPAD_KEYS.map(key => (
-          <button key={key} className="numpad-key" onClick={() => handleDigit(key)}>
-            {key}
+          <button
+            key={key}
+            type="button"
+            className="numpad-key"
+            onClick={() => handleDigit(key)}
+            aria-label={key === 'backspace' ? 'Delete digit' : key}
+          >
+            {key === 'backspace' ? <Delete className="numpad-icon" aria-hidden="true" /> : key}
           </button>
         ))}
       </div>
@@ -71,10 +74,12 @@ export default function AddEntry({ onSave }: Props) {
         {CATEGORIES.map(cat => (
           <button
             key={cat}
+            type="button"
             className={`chip ${category === cat ? 'chip--selected' : ''}`}
             onClick={() => setCategory(prev => (prev === cat ? null : cat))}
           >
-            {CATEGORY_LABELS[cat]}
+            <BudgetIcon name={cat} />
+            <span>{CATEGORY_LABELS[cat]}</span>
           </button>
         ))}
       </div>
@@ -87,7 +92,7 @@ export default function AddEntry({ onSave }: Props) {
         onChange={e => setNote(e.target.value)}
       />
 
-      <button className="save-btn" onClick={handleSave} disabled={amount <= 0}>
+      <button className="save-btn" type="button" onClick={handleSave} disabled={amount <= 0}>
         Save
       </button>
     </div>

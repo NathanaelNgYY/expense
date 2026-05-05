@@ -26,10 +26,10 @@ export const DEFAULT_BUDGET: BudgetConfig = {
 }
 
 export const CATEGORY_LABELS: Record<Category, string> = {
-  lunch: '🍱 Lunch',
-  transport: '🚆 Transport',
-  savings: '🏦 Savings',
-  investments: '📈 Investments',
+  lunch: 'Lunch',
+  transport: 'Transport',
+  savings: 'Savings',
+  investments: 'Investments',
 }
 
 export const CATEGORIES: Category[] = ['lunch', 'transport', 'savings', 'investments']

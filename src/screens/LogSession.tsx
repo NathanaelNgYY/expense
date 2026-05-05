@@ -109,6 +109,8 @@ export default function LogSession({ onSave, onBack }: Props) {
               className="amount-input time-input"
               value={startTime}
               onChange={e => setStartTime(e.target.value)}
+              onInput={e => setStartTime(e.currentTarget.value)}
+              onBlur={e => setStartTime(e.currentTarget.value)}
               aria-label="Start time"
               placeholder="Start"
             />
@@ -118,6 +120,8 @@ export default function LogSession({ onSave, onBack }: Props) {
               className="amount-input time-input"
               value={endTime}
               onChange={e => setEndTime(e.target.value)}
+              onInput={e => setEndTime(e.currentTarget.value)}
+              onBlur={e => setEndTime(e.currentTarget.value)}
               aria-label="End time"
               placeholder="End"
             />

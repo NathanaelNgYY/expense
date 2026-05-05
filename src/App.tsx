@@ -6,6 +6,7 @@ import Dashboard from './screens/Dashboard'
 import AddEntry from './screens/AddEntry'
 import History from './screens/History'
 import Settings from './screens/Settings'
+import Poker from './screens/Poker'
 
 function initialTab(): Tab {
   const params = new URLSearchParams(window.location.search)
@@ -34,6 +35,7 @@ export default function App() {
       {tab === 'home' && <Dashboard onSettings={() => setShowSettings(true)} />}
       {tab === 'add' && <AddEntry onSave={handleSave} />}
       {tab === 'history' && <History />}
+      {tab === 'poker' && <Poker />}
       <TabBar active={tab} onChange={setTab} />
     </div>
   )

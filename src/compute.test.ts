@@ -8,6 +8,8 @@ import {
   weeklyTotal,
   lunchWeeklySpend,
   weeksInMonth,
+  mostExpensiveCategory,
+  averageLunchPerEntry,
 } from './compute'
 import { DEFAULT_BUDGET } from './types'
 import type { Entry } from './types'
@@ -113,5 +115,68 @@ describe('weeksInMonth', () => {
   it('first entry is a Monday (day index 1)', () => {
     const weeks = weeksInMonth(2026, 4)
     expect(weeks[0].getDay()).toBe(1)
+  })
+})
+
+describe('mostExpensiveCategory', () => {
+  it('returns null when no categorized entries exist', () => {
+    expect(mostExpensiveCategory([], 2026, 4)).toBeNull()
+  })
+
+  it('returns null when all entries this month are uncategorized', () => {
+    const entries = [e({ category: null, date: '2026-05-04' })]
+    expect(mostExpensiveCategory(entries, 2026, 4)).toBeNull()
+  })
+
+  it('returns the only category that has spend', () => {
+    const entries = [e({ category: 'transport', amount: 5, date: '2026-05-04' })]
+    const result = mostExpensiveCategory(entries, 2026, 4)
+    expect(result).toEqual({ category: 'transport', amount: 5 })
+  })
+
+  it('returns the category with highest total spend', () => {
+    const entries = [
+      e({ category: 'lunch', amount: 30, date: '2026-05-04' }),
+      e({ category: 'transport', amount: 50, date: '2026-05-04' }),
+    ]
+    const result = mostExpensiveCategory(entries, 2026, 4)
+    expect(result).toEqual({ category: 'transport', amount: 50 })
+  })
+
+  it('ignores entries from other months', () => {
+    const entries = [
+      e({ category: 'transport', amount: 999, date: '2026-04-01' }),
+      e({ category: 'lunch', amount: 10, date: '2026-05-04' }),
+    ]
+    const result = mostExpensiveCategory(entries, 2026, 4)
+    expect(result).toEqual({ category: 'lunch', amount: 10 })
+  })
+})
+
+describe('averageLunchPerEntry', () => {
+  it('returns null when there are no lunch entries', () => {
+    expect(averageLunchPerEntry([], 2026, 4)).toBeNull()
+  })
+
+  it('returns null when there is only 1 lunch entry', () => {
+    const entries = [e({ category: 'lunch', amount: 10, date: '2026-05-04' })]
+    expect(averageLunchPerEntry(entries, 2026, 4)).toBeNull()
+  })
+
+  it('returns the average when there are 2+ lunch entries', () => {
+    const entries = [
+      e({ category: 'lunch', amount: 8, date: '2026-05-04' }),
+      e({ category: 'lunch', amount: 12, date: '2026-05-05' }),
+    ]
+    expect(averageLunchPerEntry(entries, 2026, 4)).toBe(10)
+  })
+
+  it('ignores non-lunch entries', () => {
+    const entries = [
+      e({ category: 'lunch', amount: 8, date: '2026-05-04' }),
+      e({ category: 'lunch', amount: 12, date: '2026-05-05' }),
+      e({ category: 'transport', amount: 999, date: '2026-05-06' }),
+    ]
+    expect(averageLunchPerEntry(entries, 2026, 4)).toBe(10)
   })
 })

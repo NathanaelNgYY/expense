@@ -69,3 +69,25 @@ export function weeksInMonth(year: number, month: number): Date[] {
   }
   return weeks
 }
+
+export function mostExpensiveCategory(
+  entries: Entry[],
+  year: number,
+  month: number,
+): { category: Category; amount: number } | null {
+  const spend = monthlySpendByCategory(entries, year, month)
+  const categorized = CATEGORIES.filter(c => spend[c] > 0)
+  if (categorized.length === 0) return null
+  const top = categorized.reduce((a, b) => (spend[a] >= spend[b] ? a : b))
+  return { category: top, amount: spend[top] }
+}
+
+export function averageLunchPerEntry(
+  entries: Entry[],
+  year: number,
+  month: number,
+): number | null {
+  const lunchEntries = entriesForMonth(entries, year, month).filter(e => e.category === 'lunch')
+  if (lunchEntries.length < 2) return null
+  return lunchEntries.reduce((sum, e) => sum + e.amount, 0) / lunchEntries.length
+}

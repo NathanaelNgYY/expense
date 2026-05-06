@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { endOfWeek, format } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
+import InsightsSection from '../components/InsightsSection'
 import {
   entriesForMonth,
   lunchWeeklySpend,
@@ -313,6 +314,8 @@ export default function History() {
           </div>
         ))}
       </div>
+
+      <InsightsSection entries={entries} year={year} month={month} />
 
       <h3 className="section-title">Entries</h3>
       {monthEntries.length === 0 ? (

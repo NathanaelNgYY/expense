@@ -12,6 +12,7 @@ import {
   averageLunchPerEntry,
   highestSpendingDay,
   topSpendingDayOfWeek,
+  monthOverMonthDelta,
 } from './compute'
 import { DEFAULT_BUDGET } from './types'
 import type { Entry } from './types'
@@ -251,5 +252,36 @@ describe('topSpendingDayOfWeek', () => {
       e({ amount: 99, date: '2026-05-07' }), // Thursday - dominant
     ]
     expect(topSpendingDayOfWeek(entries)).toBe('Thursdays')
+  })
+})
+
+describe('monthOverMonthDelta', () => {
+  it('returns null when there are no entries in the previous month', () => {
+    const entries = [e({ amount: 50, date: '2026-05-04' })]
+    expect(monthOverMonthDelta(entries, 2026, 4)).toBeNull()
+  })
+
+  it('returns positive delta when current month spend is higher', () => {
+    const entries = [
+      e({ amount: 100, date: '2026-04-01' }),
+      e({ amount: 150, date: '2026-05-04' }),
+    ]
+    expect(monthOverMonthDelta(entries, 2026, 4)).toBe(50)
+  })
+
+  it('returns negative delta when current month spend is lower', () => {
+    const entries = [
+      e({ amount: 200, date: '2026-04-01' }),
+      e({ amount: 150, date: '2026-05-04' }),
+    ]
+    expect(monthOverMonthDelta(entries, 2026, 4)).toBe(-50)
+  })
+
+  it('handles January correctly (previous month is December of prior year)', () => {
+    const entries = [
+      e({ amount: 100, date: '2025-12-15' }),
+      e({ amount: 80, date: '2026-01-10' }),
+    ]
+    expect(monthOverMonthDelta(entries, 2026, 0)).toBe(-20)
   })
 })

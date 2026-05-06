@@ -119,3 +119,17 @@ export function topSpendingDayOfWeek(entries: Entry[]): string | null {
     topDow
   ]
 }
+
+export function monthOverMonthDelta(
+  entries: Entry[],
+  year: number,
+  month: number,
+): number | null {
+  const prevMonth = month === 0 ? 11 : month - 1
+  const prevYear = month === 0 ? year - 1 : year
+  const prevEntries = entriesForMonth(entries, prevYear, prevMonth)
+  if (prevEntries.length === 0) return null
+  const current = entriesForMonth(entries, year, month).reduce((sum, e) => sum + e.amount, 0)
+  const prev = prevEntries.reduce((sum, e) => sum + e.amount, 0)
+  return current - prev
+}

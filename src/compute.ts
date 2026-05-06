@@ -91,3 +91,31 @@ export function averageLunchPerEntry(
   if (lunchEntries.length < 2) return null
   return lunchEntries.reduce((sum, e) => sum + e.amount, 0) / lunchEntries.length
 }
+
+export function highestSpendingDay(
+  entries: Entry[],
+  year: number,
+  month: number,
+): { date: string; amount: number } | null {
+  const monthly = entriesForMonth(entries, year, month)
+  const byDate = new Map<string, number>()
+  for (const entry of monthly) {
+    byDate.set(entry.date, (byDate.get(entry.date) ?? 0) + entry.amount)
+  }
+  if (byDate.size < 2) return null
+  const [topDate, topAmount] = [...byDate.entries()].reduce((a, b) => (b[1] > a[1] ? b : a))
+  return { date: topDate, amount: topAmount }
+}
+
+export function topSpendingDayOfWeek(entries: Entry[]): string | null {
+  const byDow = [0, 0, 0, 0, 0, 0, 0]
+  for (const entry of entries) {
+    const dow = parseISO(entry.date).getDay()
+    byDow[dow] += entry.amount
+  }
+  if (byDow.filter(v => v > 0).length < 3) return null
+  const topDow = byDow.indexOf(Math.max(...byDow))
+  return ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'][
+    topDow
+  ]
+}

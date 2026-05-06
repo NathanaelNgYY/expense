@@ -10,6 +10,8 @@ import {
   weeksInMonth,
   mostExpensiveCategory,
   averageLunchPerEntry,
+  highestSpendingDay,
+  topSpendingDayOfWeek,
 } from './compute'
 import { DEFAULT_BUDGET } from './types'
 import type { Entry } from './types'
@@ -178,5 +180,76 @@ describe('averageLunchPerEntry', () => {
       e({ category: 'transport', amount: 999, date: '2026-05-06' }),
     ]
     expect(averageLunchPerEntry(entries, 2026, 4)).toBe(10)
+  })
+})
+
+describe('highestSpendingDay', () => {
+  it('returns null when there are no entries', () => {
+    expect(highestSpendingDay([], 2026, 4)).toBeNull()
+  })
+
+  it('returns null when all entries are on the same day (only 1 distinct day)', () => {
+    const entries = [
+      e({ amount: 10, date: '2026-05-04' }),
+      e({ amount: 20, date: '2026-05-04' }),
+    ]
+    expect(highestSpendingDay(entries, 2026, 4)).toBeNull()
+  })
+
+  it('returns the day with the highest total when 2+ distinct days exist', () => {
+    const entries = [
+      e({ amount: 10, date: '2026-05-04' }),
+      e({ amount: 25, date: '2026-05-05' }),
+      e({ amount: 5, date: '2026-05-06' }),
+    ]
+    expect(highestSpendingDay(entries, 2026, 4)).toEqual({ date: '2026-05-05', amount: 25 })
+  })
+
+  it('sums multiple entries on the same day', () => {
+    const entries = [
+      e({ amount: 10, date: '2026-05-04' }),
+      e({ amount: 15, date: '2026-05-04' }),
+      e({ amount: 5, date: '2026-05-05' }),
+    ]
+    expect(highestSpendingDay(entries, 2026, 4)).toEqual({ date: '2026-05-04', amount: 25 })
+  })
+
+  it('ignores entries from other months', () => {
+    const entries = [
+      e({ amount: 999, date: '2026-04-30' }),
+      e({ amount: 10, date: '2026-05-04' }),
+      e({ amount: 5, date: '2026-05-05' }),
+    ]
+    expect(highestSpendingDay(entries, 2026, 4)).toEqual({ date: '2026-05-04', amount: 10 })
+  })
+})
+
+describe('topSpendingDayOfWeek', () => {
+  it('returns null when fewer than 3 days-of-week have data', () => {
+    const entries = [
+      e({ amount: 10, date: '2026-05-04' }), // Monday
+      e({ amount: 20, date: '2026-05-05' }), // Tuesday
+    ]
+    expect(topSpendingDayOfWeek(entries)).toBeNull()
+  })
+
+  it('returns the pluralised day name with the highest total spend', () => {
+    const entries = [
+      e({ amount: 10, date: '2026-05-04' }), // Monday
+      e({ amount: 5, date: '2026-05-05' }), // Tuesday
+      e({ amount: 3, date: '2026-05-06' }), // Wednesday
+      e({ amount: 50, date: '2026-05-08' }), // Friday
+    ]
+    expect(topSpendingDayOfWeek(entries)).toBe('Fridays')
+  })
+
+  it('uses all entries, not just the current month', () => {
+    const entries = [
+      e({ amount: 1, date: '2026-04-06' }), // Monday
+      e({ amount: 1, date: '2026-04-07' }), // Tuesday
+      e({ amount: 1, date: '2026-04-08' }), // Wednesday
+      e({ amount: 99, date: '2026-05-07' }), // Thursday - dominant
+    ]
+    expect(topSpendingDayOfWeek(entries)).toBe('Thursdays')
   })
 })

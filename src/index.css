@@ -44,6 +44,7 @@ body,
 button,
 input {
   font: inherit;
+  min-width: 0;
 }
 
 button {
@@ -175,6 +176,8 @@ button {
 /* ─── Progress bars ──────────────────────────────────────── */
 
 .progress-bar {
+  display: block;
+  width: 100%;
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
@@ -186,6 +189,7 @@ button {
 }
 
 .progress-fill {
+  display: block;
   height: 100%;
   border-radius: 999px;
   transition: width 220ms ease, background 220ms ease;
@@ -253,7 +257,10 @@ button {
 .amount-input,
 .date-input {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 48px;
+  display: block;
   border: 1px solid transparent;
   border-radius: 12px;
   background: var(--bg-elev-2);
@@ -269,9 +276,55 @@ button {
   color: var(--text-tertiary);
 }
 
+.date-input-shell {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  overflow: hidden;
+  transition: border 150ms ease, box-shadow 150ms ease;
+}
+
+.date-input-value {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 17px;
+  text-align: left;
+}
+
+.date-input--native {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
 button:focus-visible,
 input:focus-visible {
   outline: none;
+  border-color: rgba(10, 132, 255, 0.55);
+  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.12);
+}
+
+.date-input-shell:focus-within {
   border-color: rgba(10, 132, 255, 0.55);
   box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.12);
 }
@@ -471,6 +524,53 @@ input:focus-visible {
   padding: 7px 12px;
 }
 
+/* Forecast card */
+
+.forecast-card {
+  border-radius: 22px;
+  border-color: rgba(48, 209, 88, 0.18);
+}
+
+.forecast-card--danger {
+  border-color: rgba(255, 69, 58, 0.22);
+}
+
+.forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.forecast-metric {
+  min-width: 0;
+}
+
+.forecast-metric--right {
+  text-align: right;
+}
+
+.forecast-metric .icon-label {
+  gap: 6px;
+}
+
+.forecast-value,
+.month-change-total {
+  display: block;
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.05;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.forecast-note {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 /* ─── Buffer card ────────────────────────────────────────── */
 
 .buffer-card {
@@ -517,8 +617,34 @@ input:focus-visible {
   margin-top: 8px;
 }
 
+.category-row-card {
+  flex-shrink: 0;
+  min-height: 116px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.category-row-toggle {
+  width: 100%;
+  min-height: 114px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  padding: 16px;
+  text-align: left;
+}
+
+.category-row-toggle:active {
+  transform: scale(0.99);
+}
+
 .cat-row-top {
   align-items: flex-start;
+  width: 100%;
 }
 
 .cat-row-right {
@@ -527,6 +653,18 @@ input:focus-visible {
   align-items: flex-end;
   gap: 3px;
   text-align: right;
+}
+
+.cat-spent-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cat-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
 }
 
 .cat-spent {
@@ -546,8 +684,16 @@ input:focus-visible {
   color: var(--green);
 }
 
+.cat-status--committed {
+  color: var(--blue);
+}
+
 .cat-status--over {
   color: var(--red);
+}
+
+.category-row--committed {
+  border-color: rgba(10, 132, 255, 0.18);
 }
 
 .cat-row-bottom {
@@ -559,6 +705,71 @@ input:focus-visible {
 .over-note {
   color: var(--red);
   margin-top: 0;
+}
+
+.category-expense-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 0.5px solid var(--separator);
+  padding: 12px 16px 14px;
+}
+
+.category-expense-header,
+.category-expense-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.category-expense-header {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.category-expense-row {
+  min-height: 34px;
+}
+
+.category-expense-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.category-expense-date {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.category-expense-note,
+.category-expense-empty {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.category-expense-note {
+  overflow-wrap: anywhere;
+}
+
+.category-expense-empty {
+  padding: 2px 0;
+}
+
+.category-expense-amount {
+  flex: 0 0 auto;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 /* ─── Week strip (Dashboard) ─────────────────────────────── */
@@ -644,12 +855,16 @@ input:focus-visible {
 }
 
 .field-grid {
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
 .form-field {
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -714,6 +929,7 @@ input:focus-visible {
 /* ─── iOS inset grouped list ─────────────────────────────── */
 
 .ios-list {
+  flex-shrink: 0;
   background: var(--bg-elev);
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -734,6 +950,37 @@ input:focus-visible {
   min-height: 50px;
   font-size: 15px;
   font-weight: 500;
+}
+
+.month-review-card {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.month-change-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.insight-row {
+  gap: 8px;
+}
+
+.insight-row .icon-label {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.insight-value {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .breakdown-row .ui-icon,
@@ -942,6 +1189,42 @@ input:focus-visible {
 }
 
 .poker-hours-note {
+  font-size: 13px;
+}
+
+.bankroll-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bankroll-trend {
+  height: 70px;
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.bankroll-trend-point {
+  flex: 1 1 0;
+  min-width: 4px;
+  border-radius: 999px 999px 2px 2px;
+  opacity: 0.95;
+}
+
+.bankroll-trend-point.is-positive {
+  background: var(--green);
+}
+
+.bankroll-trend-point.is-negative {
+  background: var(--red);
+}
+
+.bankroll-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   font-size: 13px;
 }
 

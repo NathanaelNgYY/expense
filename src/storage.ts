@@ -25,7 +25,10 @@ export function addEntry(entry: Entry): void {
 export function getBudgetConfig(): BudgetConfig {
   try {
     const raw = localStorage.getItem(CONFIG_KEY)
-    return raw ? (JSON.parse(raw) as BudgetConfig) : { ...DEFAULT_BUDGET }
+    if (!raw) return { ...DEFAULT_BUDGET }
+
+    const parsed = { ...DEFAULT_BUDGET, ...(JSON.parse(raw) as Partial<BudgetConfig>) }
+    return { ...parsed, others: parsed.buffer }
   } catch {
     return { ...DEFAULT_BUDGET }
   }

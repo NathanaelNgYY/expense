@@ -6,7 +6,6 @@ import InsightsSection from '../components/InsightsSection'
 import {
   entriesForMonth,
   lunchWeeklySpend,
-  monthlySpendByCategory,
   weeklyTotal,
   weeksInMonth,
 } from '../compute'
@@ -20,8 +19,6 @@ import {
 import { addEntry, getBudgetConfig, getEntries } from '../storage'
 import { CATEGORIES, CATEGORY_LABELS } from '../types'
 import type { Category, Entry } from '../types'
-
-const MONTHLY_INCOME = 1200
 
 function progressPercent(amount: number, budget: number): number {
   if (budget <= 0) return amount > 0 ? 100 : 0
@@ -71,10 +68,9 @@ export default function History() {
   const entries = getEntries()
   const config = getBudgetConfig()
   const weeks = weeksInMonth(year, month)
-  const spend = monthlySpendByCategory(entries, year, month)
   const monthEntries = entriesForMonth(entries, year, month).sort(entrySort)
   const monthTotal = monthEntries.reduce((sum, entry) => sum + entry.amount, 0)
-  const weeklyBudget = MONTHLY_INCOME / 4
+  const weeklyBudget = config.monthlyIncome / 4
   const lunchWeeklyAvg = config.lunch / 4
   const dateMin = minDateForMonth(year, month)
   const dateMax = maxDateForMonth(year, month)
@@ -170,15 +166,20 @@ export default function History() {
         <div className="field-grid">
           <label className="form-field" htmlFor="backfill-date">
             <span>Date</span>
-            <input
-              id="backfill-date"
-              type="date"
-              className="date-input"
-              value={selectedDate}
-              min={dateMin}
-              max={dateMax}
-              onChange={event => handleDateChange(event.target.value)}
-            />
+            <span className="date-input-shell">
+              <span className="date-input-value">
+                {format(fromLocalDateString(selectedDate), 'MMM d, yyyy')}
+              </span>
+              <input
+                id="backfill-date"
+                type="date"
+                className="date-input date-input--native"
+                value={selectedDate}
+                min={dateMin}
+                max={dateMax}
+                onChange={event => handleDateChange(event.target.value)}
+              />
+            </span>
           </label>
           <label className="form-field" htmlFor="backfill-amount">
             <span>Amount</span>
@@ -298,22 +299,6 @@ export default function History() {
           </div>
         )
       })}
-
-      <h3 className="section-title">Monthly Breakdown</h3>
-      <div className="ios-list">
-        {CATEGORIES.map(cat => (
-          <div key={cat} className="breakdown-row">
-            <span className="icon-label">
-              <BudgetIcon name={cat} />
-              {CATEGORY_LABELS[cat]}
-            </span>
-            <div>
-              <span style={{ fontWeight: 600 }}>S${spend[cat].toFixed(2)}</span>
-              <span className="muted"> / S${config[cat]}</span>
-            </div>
-          </div>
-        ))}
-      </div>
 
       <InsightsSection entries={entries} year={year} month={month} />
 

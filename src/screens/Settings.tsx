@@ -1,6 +1,6 @@
 // src/screens/Settings.tsx
 import { useState } from 'react'
-import { ChevronLeft, Download, Save, Trash2 } from 'lucide-react'
+import { ChevronLeft, Download, Save, Trash2, Wallet } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import { getBudgetConfig, getEntries, saveBudgetConfig, saveEntries } from '../storage'
 import type { BudgetConfig } from '../types'
@@ -9,9 +9,9 @@ interface Props {
   onBack: () => void
 }
 
-const MONTHLY_INCOME = 1200
+type BudgetFieldKey = Exclude<keyof BudgetConfig, 'monthlyIncome' | 'others'>
 
-const BUDGET_FIELDS: Array<{ key: keyof BudgetConfig; label: string }> = [
+const BUDGET_FIELDS: Array<{ key: BudgetFieldKey; label: string }> = [
   { key: 'lunch', label: 'Lunch' },
   { key: 'transport', label: 'Transport' },
   { key: 'savings', label: 'Savings' },
@@ -32,12 +32,16 @@ function csvCell(value: string | number | null): string {
 export default function Settings({ onBack }: Props) {
   const [config, setConfig] = useState<BudgetConfig>(getBudgetConfig)
 
-  const total = Object.values(config).reduce((sum, value) => sum + value, 0)
-  const totalMismatch = Math.abs(total - MONTHLY_INCOME) > 0.01
+  const total = BUDGET_FIELDS.reduce((sum, field) => sum + config[field.key], 0)
+  const totalMismatch = Math.abs(total - config.monthlyIncome) > 0.01
 
   function handleChange(key: keyof BudgetConfig, value: string) {
     const nextValue = Math.max(0, parseFloat(value) || 0)
-    setConfig(currentConfig => ({ ...currentConfig, [key]: nextValue }))
+    setConfig(currentConfig => ({
+      ...currentConfig,
+      [key]: nextValue,
+      ...(key === 'buffer' ? { others: nextValue } : {}),
+    }))
   }
 
   function handleSave() {
@@ -82,6 +86,27 @@ export default function Settings({ onBack }: Props) {
         <div className="settings-header-spacer" />
       </div>
 
+      <h3 className="section-title">Income</h3>
+
+      <div className="ios-list">
+        <div className="settings-row">
+          <label className="settings-label icon-label" htmlFor="budget-monthly-income">
+            <Wallet className="ui-icon" aria-hidden="true" strokeWidth={2.2} />
+            Monthly income
+          </label>
+          <input
+            id="budget-monthly-income"
+            type="number"
+            className="settings-input"
+            value={config.monthlyIncome}
+            min="0"
+            step="1"
+            inputMode="decimal"
+            onChange={event => handleChange('monthlyIncome', event.target.value)}
+          />
+        </div>
+      </div>
+
       <h3 className="section-title">Monthly Budgets (S$)</h3>
 
       <div className="ios-list">
@@ -107,7 +132,9 @@ export default function Settings({ onBack }: Props) {
 
       <div className="settings-total">
         Total: S${total.toFixed(2)}
-        {totalMismatch && <span className="settings-total-warning">!= S${MONTHLY_INCOME}</span>}
+        {totalMismatch && (
+          <span className="settings-total-warning">!= S${config.monthlyIncome.toFixed(2)}</span>
+        )}
       </div>
 
       <button className="save-btn" type="button" onClick={handleSave}>

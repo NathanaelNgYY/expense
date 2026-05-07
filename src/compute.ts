@@ -3,6 +3,48 @@ import { startOfWeek, endOfWeek, isWithinInterval, parseISO, addWeeks } from 'da
 import type { Entry, BudgetConfig, Category } from './types'
 import { CATEGORIES } from './types'
 
+const COMMITMENT_CATEGORIES = new Set<Category>(['savings', 'investments'])
+const SPENDING_CATEGORIES = CATEGORIES.filter(category => !COMMITMENT_CATEGORIES.has(category))
+
+export interface MonthlySpendForecast {
+  spentToDate: number
+  dailyAverage: number
+  daysElapsed: number
+  daysInMonth: number
+  projectedTotal: number
+}
+
+export interface SafeToSpendResult {
+  remainingBudget: number
+  daysRemaining: number
+  amountPerDay: number
+}
+
+export interface CategoryMonthDelta {
+  current: number
+  previous: number
+  delta: number
+}
+
+export interface HighlightedCategoryMonthDelta extends CategoryMonthDelta {
+  category: Category
+}
+
+export interface MonthComparison {
+  previousYear: number
+  previousMonth: number
+  currentTotal: number
+  previousTotal: number
+  totalDelta: number
+  categoryDeltas: Record<Category, CategoryMonthDelta>
+  biggestIncrease: HighlightedCategoryMonthDelta | null
+  biggestDecrease: HighlightedCategoryMonthDelta | null
+}
+
+export interface SpendFilterOptions {
+  excludedCategories?: Category[]
+}
+
 export function entriesForMonth(entries: Entry[], year: number, month: number): Entry[] {
   return entries.filter(e => {
     const d = parseISO(e.date)
@@ -18,7 +60,7 @@ export function monthlySpendByCategory(
   const monthly = entriesForMonth(entries, year, month)
   const result = Object.fromEntries(CATEGORIES.map(c => [c, 0])) as Record<Category, number>
   for (const entry of monthly) {
-    if (entry.category) result[entry.category] += entry.amount
+    if (entry.category && entry.category in result) result[entry.category] += entry.amount
   }
   return result
 }
@@ -28,7 +70,7 @@ export function categoryDeficits(
   config: BudgetConfig
 ): Record<Category, number> {
   return Object.fromEntries(
-    CATEGORIES.map(c => [c, config[c] - spend[c]])
+    CATEGORIES.map(c => [c, (config[c] ?? 0) - (spend[c] ?? 0)])
   ) as Record<Category, number>
 }
 
@@ -36,10 +78,12 @@ export function bufferRemaining(
   deficits: Record<Category, number>,
   config: BudgetConfig
 ): number {
-  const totalOverage = Object.values(deficits)
-    .filter(d => d < 0)
-    .reduce((sum, d) => sum + Math.abs(d), 0)
-  return config.buffer - totalOverage
+  const othersBudget = config.others ?? config.buffer
+  const othersSpend = Math.max(0, othersBudget - (deficits.others ?? othersBudget))
+  const categoryOverage = Object.entries(deficits)
+    .filter(([category, deficit]) => category !== 'others' && deficit < 0)
+    .reduce((sum, [, deficit]) => sum + Math.abs(deficit), 0)
+  return config.buffer - othersSpend - categoryOverage
 }
 
 export function weeklyTotal(entries: Entry[], referenceDate: Date): number {
@@ -76,7 +120,7 @@ export function mostExpensiveCategory(
   month: number,
 ): { category: Category; amount: number } | null {
   const spend = monthlySpendByCategory(entries, year, month)
-  const categorized = CATEGORIES.filter(c => spend[c] > 0)
+  const categorized = SPENDING_CATEGORIES.filter(c => spend[c] > 0)
   if (categorized.length === 0) return null
   const top = categorized.reduce((a, b) => (spend[a] >= spend[b] ? a : b))
   return { category: top, amount: spend[top] }
@@ -97,7 +141,7 @@ export function highestSpendingDay(
   year: number,
   month: number,
 ): { date: string; amount: number } | null {
-  const monthly = entriesForMonth(entries, year, month)
+  const monthly = entriesForMonth(entries, year, month).filter(entry => entry.category === 'lunch')
   const byDate = new Map<string, number>()
   for (const entry of monthly) {
     byDate.set(entry.date, (byDate.get(entry.date) ?? 0) + entry.amount)
@@ -132,4 +176,128 @@ export function monthOverMonthDelta(
   const current = entriesForMonth(entries, year, month).reduce((sum, e) => sum + e.amount, 0)
   const prev = prevEntries.reduce((sum, e) => sum + e.amount, 0)
   return current - prev
+}
+
+function daysInCalendarMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate()
+}
+
+function monthOrder(year: number, month: number): number {
+  return year * 12 + month
+}
+
+function daysElapsedForForecast(year: number, month: number, referenceDate: Date): number {
+  const daysInMonth = daysInCalendarMonth(year, month)
+  const target = monthOrder(year, month)
+  const reference = monthOrder(referenceDate.getFullYear(), referenceDate.getMonth())
+
+  if (target < reference) return daysInMonth
+  if (target > reference) return 1
+  return Math.min(daysInMonth, Math.max(1, referenceDate.getDate()))
+}
+
+function daysRemainingForMonth(year: number, month: number, referenceDate: Date): number {
+  const daysInMonth = daysInCalendarMonth(year, month)
+  const target = monthOrder(year, month)
+  const reference = monthOrder(referenceDate.getFullYear(), referenceDate.getMonth())
+
+  if (target < reference) return 0
+  if (target > reference) return daysInMonth
+  return Math.max(1, daysInMonth - referenceDate.getDate() + 1)
+}
+
+function spendEntriesForMonth(
+  entries: Entry[],
+  year: number,
+  month: number,
+  options: SpendFilterOptions = {},
+): Entry[] {
+  const excluded = new Set(options.excludedCategories ?? [])
+  return entriesForMonth(entries, year, month).filter(entry => !entry.category || !excluded.has(entry.category))
+}
+
+export function monthlySpendForecast(
+  entries: Entry[],
+  year: number,
+  month: number,
+  referenceDate: Date = new Date(),
+  options: SpendFilterOptions = {},
+): MonthlySpendForecast {
+  const spentToDate = spendEntriesForMonth(entries, year, month, options).reduce((sum, e) => sum + e.amount, 0)
+  const daysInMonth = daysInCalendarMonth(year, month)
+  const daysElapsed = daysElapsedForForecast(year, month, referenceDate)
+  const dailyAverage = spentToDate / daysElapsed
+
+  return {
+    spentToDate,
+    dailyAverage,
+    daysElapsed,
+    daysInMonth,
+    projectedTotal: dailyAverage * daysInMonth,
+  }
+}
+
+export function safeToSpendPerDay(
+  entries: Entry[],
+  year: number,
+  month: number,
+  monthlyBudget: number,
+  referenceDate: Date = new Date(),
+  options: SpendFilterOptions = {},
+): SafeToSpendResult {
+  const spent = spendEntriesForMonth(entries, year, month, options).reduce((sum, e) => sum + e.amount, 0)
+  const remainingBudget = monthlyBudget - spent
+  const daysRemaining = daysRemainingForMonth(year, month, referenceDate)
+
+  return {
+    remainingBudget,
+    daysRemaining,
+    amountPerDay: daysRemaining > 0 ? remainingBudget / daysRemaining : 0,
+  }
+}
+
+export function monthComparison(
+  entries: Entry[],
+  year: number,
+  month: number,
+): MonthComparison | null {
+  const previousMonth = month === 0 ? 11 : month - 1
+  const previousYear = month === 0 ? year - 1 : year
+  const currentEntries = entriesForMonth(entries, year, month)
+  const previousEntries = entriesForMonth(entries, previousYear, previousMonth)
+
+  if (previousEntries.length === 0) return null
+
+  const currentSpend = monthlySpendByCategory(entries, year, month)
+  const previousSpend = monthlySpendByCategory(entries, previousYear, previousMonth)
+  const categoryDeltas = Object.fromEntries(
+    CATEGORIES.map(category => [
+      category,
+      {
+        current: currentSpend[category],
+        previous: previousSpend[category],
+        delta: currentSpend[category] - previousSpend[category],
+      },
+    ]),
+  ) as Record<Category, CategoryMonthDelta>
+  const highlighted = CATEGORIES.map(category => ({ category, ...categoryDeltas[category] }))
+  const increases = highlighted.filter(item => item.delta > 0)
+  const decreases = highlighted.filter(item => item.delta < 0)
+  const currentTotal = currentEntries.reduce((sum, e) => sum + e.amount, 0)
+  const previousTotal = previousEntries.reduce((sum, e) => sum + e.amount, 0)
+
+  return {
+    previousYear,
+    previousMonth,
+    currentTotal,
+    previousTotal,
+    totalDelta: currentTotal - previousTotal,
+    categoryDeltas,
+    biggestIncrease: increases.length > 0
+      ? increases.reduce((largest, item) => (item.delta > largest.delta ? item : largest))
+      : null,
+    biggestDecrease: decreases.length > 0
+      ? decreases.reduce((largestDrop, item) => (item.delta < largestDrop.delta ? item : largestDrop))
+      : null,
+  }
 }

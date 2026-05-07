@@ -13,6 +13,9 @@ import {
   highestSpendingDay,
   topSpendingDayOfWeek,
   monthOverMonthDelta,
+  monthlySpendForecast,
+  safeToSpendPerDay,
+  monthComparison,
 } from './compute'
 import { DEFAULT_BUDGET } from './types'
 import type { Entry } from './types'
@@ -44,6 +47,7 @@ describe('monthlySpendByCategory', () => {
     expect(result.transport).toBe(3)
     expect(result.savings).toBe(0)
     expect(result.investments).toBe(0)
+    expect((result as Record<string, number>).others).toBe(0)
   })
 
   it('excludes uncategorized entries from all category totals', () => {
@@ -51,37 +55,83 @@ describe('monthlySpendByCategory', () => {
     expect(result.lunch).toBe(0)
     expect(result.transport).toBe(0)
   })
+
+  it('tracks others as a category', () => {
+    const result = monthlySpendByCategory(
+      [e({ amount: 200, category: 'others' as Entry['category'] })],
+      2026,
+      4,
+    )
+
+    expect((result as Record<string, number>).others).toBe(200)
+  })
 })
 
 describe('categoryDeficits', () => {
   it('returns positive value when under budget', () => {
-    const spend = { lunch: 100, transport: 30, savings: 400, investments: 250 }
+    const spend = { lunch: 100, transport: 30, savings: 400, investments: 250, others: 0 }
     const deficits = categoryDeficits(spend, DEFAULT_BUDGET)
     expect(deficits.lunch).toBe(164)   // 264 - 100
     expect(deficits.transport).toBe(20) // 50 - 30
   })
 
   it('returns negative value when over budget', () => {
-    const spend = { lunch: 280, transport: 30, savings: 400, investments: 250 }
+    const spend = { lunch: 280, transport: 30, savings: 400, investments: 250, others: 0 }
     const deficits = categoryDeficits(spend, DEFAULT_BUDGET)
     expect(deficits.lunch).toBe(-16) // 264 - 280
+  })
+
+  it('gives others the same spending room as the buffer', () => {
+    const spend = { lunch: 0, transport: 0, savings: 0, investments: 0, others: 100 }
+    const deficits = categoryDeficits(spend, DEFAULT_BUDGET)
+
+    expect(DEFAULT_BUDGET.others).toBe(DEFAULT_BUDGET.buffer)
+    expect(deficits.others).toBe(136)
   })
 })
 
 describe('bufferRemaining', () => {
   it('returns full buffer when all categories are under budget', () => {
-    const deficits = { lunch: 50, transport: 10, savings: 0, investments: 4 }
+    const deficits = { lunch: 50, transport: 10, savings: 0, investments: 4, others: 236 }
     expect(bufferRemaining(deficits, DEFAULT_BUDGET)).toBe(236)
   })
 
   it('subtracts all overages from the buffer', () => {
-    const deficits = { lunch: -16, transport: -5, savings: 0, investments: 4 }
+    const deficits = { lunch: -16, transport: -5, savings: 0, investments: 4, others: 236 }
     expect(bufferRemaining(deficits, DEFAULT_BUDGET)).toBe(215) // 236 - 16 - 5
   })
 
   it('returns negative buffer when overages exceed buffer', () => {
-    const deficits = { lunch: -300, transport: 0, savings: 0, investments: 0 }
+    const deficits = { lunch: -300, transport: 0, savings: 0, investments: 0, others: 236 }
     expect(bufferRemaining(deficits, DEFAULT_BUDGET)).toBe(-64) // 236 - 300
+  })
+
+  it('deducts others spending from the buffer even while others is within budget', () => {
+    const spend = monthlySpendByCategory(
+      [e({ amount: 200, category: 'others' as Entry['category'] })],
+      2026,
+      4,
+    )
+    const deficits = categoryDeficits(spend, DEFAULT_BUDGET)
+
+    expect((deficits as Record<string, number>).others).toBe(36)
+    expect(bufferRemaining(deficits, DEFAULT_BUDGET)).toBe(36)
+  })
+
+  it('also deducts over-budget amounts from other categories', () => {
+    const spend = monthlySpendByCategory(
+      [
+        e({ amount: 100, category: 'others' as Entry['category'] }),
+        e({ amount: 280, category: 'lunch' }),
+      ],
+      2026,
+      4,
+    )
+    const deficits = categoryDeficits(spend, DEFAULT_BUDGET)
+
+    expect(deficits.others).toBe(136)
+    expect(deficits.lunch).toBe(-16)
+    expect(bufferRemaining(deficits, DEFAULT_BUDGET)).toBe(120)
   })
 })
 
@@ -154,6 +204,30 @@ describe('mostExpensiveCategory', () => {
     const result = mostExpensiveCategory(entries, 2026, 4)
     expect(result).toEqual({ category: 'lunch', amount: 10 })
   })
+
+  it('ignores savings and investments when finding most expensive spending category', () => {
+    const entries = [
+      e({ category: 'lunch', amount: 13.5, date: '2026-05-04' }),
+      e({ category: 'savings', amount: 400, date: '2026-05-04' }),
+      e({ category: 'investments', amount: 250, date: '2026-05-04' }),
+    ]
+
+    const result = mostExpensiveCategory(entries, 2026, 4)
+
+    expect(result).toEqual({ category: 'lunch', amount: 13.5 })
+  })
+
+  it('can show others as the most expensive spending category', () => {
+    const entries = [
+      e({ category: 'lunch', amount: 13.5, date: '2026-05-04' }),
+      e({ category: 'savings', amount: 400, date: '2026-05-04' }),
+      e({ category: 'others' as Entry['category'], amount: 200, date: '2026-05-05' }),
+    ]
+
+    const result = mostExpensiveCategory(entries, 2026, 4)
+
+    expect(result).toEqual({ category: 'others', amount: 200 })
+  })
 })
 
 describe('averageLunchPerEntry', () => {
@@ -223,6 +297,17 @@ describe('highestSpendingDay', () => {
     ]
     expect(highestSpendingDay(entries, 2026, 4)).toEqual({ date: '2026-05-04', amount: 10 })
   })
+
+  it('uses only lunch entries for the highest spending day', () => {
+    const entries = [
+      e({ category: 'lunch', amount: 12, date: '2026-05-04' }),
+      e({ category: 'savings', amount: 400, date: '2026-05-04' }),
+      e({ category: 'lunch', amount: 10, date: '2026-05-05' }),
+      e({ category: 'investments', amount: 1000, date: '2026-05-05' }),
+    ]
+
+    expect(highestSpendingDay(entries, 2026, 4)).toEqual({ date: '2026-05-04', amount: 12 })
+  })
 })
 
 describe('topSpendingDayOfWeek', () => {
@@ -283,5 +368,134 @@ describe('monthOverMonthDelta', () => {
       e({ amount: 80, date: '2026-01-10' }),
     ]
     expect(monthOverMonthDelta(entries, 2026, 0)).toBe(-20)
+  })
+})
+
+describe('monthlySpendForecast', () => {
+  it('projects current month spend from month-to-date average', () => {
+    const entries = [
+      e({ amount: 30, date: '2026-05-01' }),
+      e({ amount: 60, date: '2026-05-03' }),
+    ]
+
+    expect(monthlySpendForecast(entries, 2026, 4, new Date('2026-05-06T12:00:00'))).toEqual({
+      spentToDate: 90,
+      dailyAverage: 15,
+      daysElapsed: 6,
+      daysInMonth: 31,
+      projectedTotal: 465,
+    })
+  })
+
+  it('uses the full month for past months', () => {
+    const entries = [
+      e({ amount: 80, date: '2026-04-01' }),
+      e({ amount: 20, date: '2026-04-10' }),
+    ]
+
+    expect(monthlySpendForecast(entries, 2026, 3, new Date('2026-05-06T12:00:00'))).toEqual({
+      spentToDate: 100,
+      dailyAverage: 100 / 30,
+      daysElapsed: 30,
+      daysInMonth: 30,
+      projectedTotal: 100,
+    })
+  })
+
+  it('can exclude commitment categories from spending pace', () => {
+    const entries = [
+      e({ amount: 55, category: 'lunch', date: '2026-05-03' }),
+      e({ amount: 400, category: 'savings', date: '2026-05-04' }),
+      e({ amount: 250, category: 'investments', date: '2026-05-05' }),
+      e({ amount: 20, category: null, date: '2026-05-06' }),
+    ]
+
+    expect(
+      monthlySpendForecast(entries, 2026, 4, new Date('2026-05-06T12:00:00'), {
+        excludedCategories: ['savings', 'investments'],
+      }),
+    ).toEqual({
+      spentToDate: 75,
+      dailyAverage: 12.5,
+      daysElapsed: 6,
+      daysInMonth: 31,
+      projectedTotal: 387.5,
+    })
+  })
+})
+
+describe('safeToSpendPerDay', () => {
+  it('spreads remaining budget across today and the rest of the month', () => {
+    const entries = [e({ amount: 300, date: '2026-05-05' })]
+
+    expect(safeToSpendPerDay(entries, 2026, 4, 1200, new Date('2026-05-06T12:00:00'))).toEqual({
+      remainingBudget: 900,
+      daysRemaining: 26,
+      amountPerDay: 900 / 26,
+    })
+  })
+
+  it('returns negative daily room when the month is already over budget', () => {
+    const entries = [e({ amount: 1300, date: '2026-05-05' })]
+
+    expect(safeToSpendPerDay(entries, 2026, 4, 1200, new Date('2026-05-06T12:00:00'))).toEqual({
+      remainingBudget: -100,
+      daysRemaining: 26,
+      amountPerDay: -100 / 26,
+    })
+  })
+
+  it('can exclude commitment categories from the remaining daily spend room', () => {
+    const entries = [
+      e({ amount: 55, category: 'lunch', date: '2026-05-03' }),
+      e({ amount: 400, category: 'savings', date: '2026-05-04' }),
+      e({ amount: 250, category: 'investments', date: '2026-05-05' }),
+      e({ amount: 20, category: null, date: '2026-05-06' }),
+    ]
+
+    expect(
+      safeToSpendPerDay(entries, 2026, 4, 550, new Date('2026-05-06T12:00:00'), {
+        excludedCategories: ['savings', 'investments'],
+      }),
+    ).toEqual({
+      remainingBudget: 475,
+      daysRemaining: 26,
+      amountPerDay: 475 / 26,
+    })
+  })
+})
+
+describe('monthComparison', () => {
+  it('returns null when the previous month has no entries', () => {
+    const entries = [e({ amount: 50, category: 'lunch', date: '2026-05-04' })]
+
+    expect(monthComparison(entries, 2026, 4)).toBeNull()
+  })
+
+  it('compares total and category spend with the previous month', () => {
+    const entries = [
+      e({ amount: 100, category: 'lunch', date: '2026-04-01' }),
+      e({ amount: 40, category: 'transport', date: '2026-04-02' }),
+      e({ amount: 150, category: 'lunch', date: '2026-05-04' }),
+      e({ amount: 10, category: 'transport', date: '2026-05-05' }),
+      e({ amount: 20, category: null, date: '2026-05-06' }),
+    ]
+
+    expect(monthComparison(entries, 2026, 4)).toEqual({
+      previousYear: 2026,
+      previousMonth: 3,
+      currentTotal: 180,
+      previousTotal: 140,
+      totalDelta: 40,
+      categoryDeltas: {
+        lunch: { current: 150, previous: 100, delta: 50 },
+        transport: { current: 10, previous: 40, delta: -30 },
+        savings: { current: 0, previous: 0, delta: 0 },
+        investments: { current: 0, previous: 0, delta: 0 },
+        others: { current: 0, previous: 0, delta: 0 },
+      },
+      biggestIncrease: { category: 'lunch', current: 150, previous: 100, delta: 50 },
+      biggestDecrease: { category: 'transport', current: 10, previous: 40, delta: -30 },
+    })
   })
 })

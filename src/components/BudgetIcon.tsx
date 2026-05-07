@@ -2,6 +2,7 @@ import {
   CircleDollarSign,
   PiggyBank,
   ShieldCheck,
+  ShoppingBag,
   TrainFront,
   TrendingUp,
   Utensils,
@@ -24,9 +25,11 @@ export default function BudgetIcon({ name }: Props) {
           ? PiggyBank
           : name === 'investments'
             ? TrendingUp
-            : name === 'buffer'
-              ? ShieldCheck
-              : CircleDollarSign
+            : name === 'others'
+              ? ShoppingBag
+              : name === 'buffer'
+                ? ShieldCheck
+                : CircleDollarSign
 
   return <Icon className="ui-icon" aria-hidden="true" strokeWidth={2.2} />
 }

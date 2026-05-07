@@ -1,11 +1,17 @@
 import { useState } from 'react'
+import { Flame, Percent, TrendingUp, Trophy } from 'lucide-react'
 import { getPokerSessions } from '../storage'
 import {
+  bankrollTrend,
+  biggestSession,
+  currentResultStreak,
   hourlyRate,
+  monthlyPnl,
   sessionDurationHours,
   sessionPnl,
   totalHours,
   totalPnl,
+  winRate,
 } from '../pokerCompute'
 import { formatStakesLabel } from '../pokerDisplay'
 import LogSession from './LogSession'
@@ -21,6 +27,10 @@ function formatSignedCurrency(value: number): string {
   return `${sign}S$${Math.abs(value).toFixed(2)}`
 }
 
+function formatPercent(value: number): string {
+  return `${value.toFixed(value % 1 === 0 ? 0 : 1)}%`
+}
+
 export default function Poker() {
   const [showLog, setShowLog] = useState(false)
 
@@ -28,10 +38,17 @@ export default function Poker() {
     return <LogSession onSave={() => setShowLog(false)} onBack={() => setShowLog(false)} />
   }
 
+  const now = new Date()
   const sessions = getPokerSessions()
   const pnl = totalPnl(sessions)
   const hours = totalHours(sessions)
   const rate = hourlyRate(sessions)
+  const thisMonthPnl = monthlyPnl(sessions, now.getFullYear(), now.getMonth())
+  const ratePct = winRate(sessions)
+  const streak = currentResultStreak(sessions)
+  const biggest = biggestSession(sessions)
+  const trend = bankrollTrend(sessions)
+  const trendMax = Math.max(1, ...trend.map(value => Math.abs(value)))
 
   const pnlColor = pnl >= 0 ? 'var(--green)' : 'var(--red)'
   const rateColor = (rate ?? 0) >= 0 ? 'var(--green)' : 'var(--red)'
@@ -64,6 +81,80 @@ export default function Poker() {
           {sessions.length} session{sessions.length !== 1 ? 's' : ''}
         </p>
       </div>
+
+      {sessions.length > 0 && (
+        <>
+          <h3 className="section-title">Bankroll Insights</h3>
+          <div className="ios-list">
+            <div className="breakdown-row insight-row">
+              <span className="icon-label">
+                <TrendingUp size={16} strokeWidth={2} aria-hidden="true" />
+                This month
+              </span>
+              <span
+                className="insight-value"
+                style={{ color: thisMonthPnl >= 0 ? 'var(--green)' : 'var(--red)' }}
+              >
+                {formatSignedCurrency(thisMonthPnl)}
+              </span>
+            </div>
+            {ratePct !== null && (
+              <div className="breakdown-row insight-row">
+                <span className="icon-label">
+                  <Percent size={16} strokeWidth={2} aria-hidden="true" />
+                  Win rate
+                </span>
+                <span className="insight-value">{formatPercent(ratePct)}</span>
+              </div>
+            )}
+            {streak && (
+              <div className="breakdown-row insight-row">
+                <span className="icon-label">
+                  <Flame size={16} strokeWidth={2} aria-hidden="true" />
+                  Streak
+                </span>
+                <span
+                  className="insight-value"
+                  style={{ color: streak.result === 'win' ? 'var(--green)' : 'var(--red)' }}
+                >
+                  {streak.count} {streak.result}{streak.count === 1 ? '' : 's'} in a row
+                </span>
+              </div>
+            )}
+            {biggest && (
+              <div className="breakdown-row insight-row">
+                <span className="icon-label">
+                  <Trophy size={16} strokeWidth={2} aria-hidden="true" />
+                  Biggest swing
+                </span>
+                <span
+                  className="insight-value"
+                  style={{ color: biggest.pnl >= 0 ? 'var(--green)' : 'var(--red)' }}
+                >
+                  {formatSignedCurrency(biggest.pnl)}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="card bankroll-card" aria-label="Bankroll trend">
+            <div className="bankroll-trend">
+              {trend.map((value, index) => (
+                <span
+                  // Cumulative values can repeat, so index is the stable point identity here.
+                  key={`${index}-${value}`}
+                  className={`bankroll-trend-point ${value >= 0 ? 'is-positive' : 'is-negative'}`}
+                  style={{ height: `${Math.max(16, (Math.abs(value) / trendMax) * 100)}%` }}
+                  title={formatSignedCurrency(value)}
+                />
+              ))}
+            </div>
+            <div className="bankroll-card-footer">
+              <span className="muted">Bankroll trend</span>
+              <strong style={{ color: pnlColor }}>{formatSignedCurrency(pnl)}</strong>
+            </div>
+          </div>
+        </>
+      )}
 
       <h3 className="section-title">Sessions</h3>
 

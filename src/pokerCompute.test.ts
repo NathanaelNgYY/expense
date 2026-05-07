@@ -5,6 +5,12 @@ import {
   totalPnl,
   totalHours,
   hourlyRate,
+  sessionsForMonth,
+  monthlyPnl,
+  winRate,
+  currentResultStreak,
+  biggestSession,
+  bankrollTrend,
 } from './pokerCompute'
 import type { PokerSession } from './types'
 
@@ -89,5 +95,90 @@ describe('hourlyRate', () => {
   it('returns null when total hours is 0', () => {
     const sessions = [session({ startTime: '18:00', endTime: '18:00' })]
     expect(hourlyRate(sessions)).toBeNull()
+  })
+})
+
+describe('sessionsForMonth', () => {
+  it('returns sessions in the requested month', () => {
+    const sessions = [
+      session({ id: 'may', date: '2026-05-05' }),
+      session({ id: 'apr', date: '2026-04-30' }),
+      session({ id: 'may-2', date: '2026-05-31' }),
+    ]
+
+    expect(sessionsForMonth(sessions, 2026, 4).map(s => s.id)).toEqual(['may', 'may-2'])
+  })
+})
+
+describe('monthlyPnl', () => {
+  it('sums only sessions in the requested month', () => {
+    const sessions = [
+      session({ result: 'win', amount: 200, date: '2026-05-05' }),
+      session({ result: 'loss', amount: 50, date: '2026-05-06' }),
+      session({ result: 'win', amount: 999, date: '2026-04-30' }),
+    ]
+
+    expect(monthlyPnl(sessions, 2026, 4)).toBe(150)
+  })
+})
+
+describe('winRate', () => {
+  it('returns null when there are no sessions', () => {
+    expect(winRate([])).toBeNull()
+  })
+
+  it('returns percentage of winning sessions', () => {
+    const sessions = [
+      session({ result: 'win' }),
+      session({ result: 'loss' }),
+      session({ result: 'win' }),
+    ]
+
+    expect(winRate(sessions)).toBeCloseTo(66.666)
+  })
+})
+
+describe('currentResultStreak', () => {
+  it('returns null when there are no sessions', () => {
+    expect(currentResultStreak([])).toBeNull()
+  })
+
+  it('counts the latest contiguous streak by date and start time', () => {
+    const sessions = [
+      session({ id: 'old-win', result: 'win', date: '2026-05-01', startTime: '18:00' }),
+      session({ id: 'loss', result: 'loss', date: '2026-05-02', startTime: '18:00' }),
+      session({ id: 'win-1', result: 'win', date: '2026-05-03', startTime: '18:00' }),
+      session({ id: 'win-2', result: 'win', date: '2026-05-03', startTime: '22:00' }),
+    ]
+
+    expect(currentResultStreak(sessions)).toEqual({ result: 'win', count: 2 })
+  })
+})
+
+describe('biggestSession', () => {
+  it('returns null when there are no sessions', () => {
+    expect(biggestSession([])).toBeNull()
+  })
+
+  it('returns the session with the largest absolute P&L', () => {
+    const sessions = [
+      session({ id: 'small-win', result: 'win', amount: 80 }),
+      session({ id: 'big-loss', result: 'loss', amount: 200 }),
+      session({ id: 'medium-win', result: 'win', amount: 150 }),
+    ]
+
+    expect(biggestSession(sessions)).toEqual({ session: sessions[1], pnl: -200 })
+  })
+})
+
+describe('bankrollTrend', () => {
+  it('returns cumulative P&L in chronological order', () => {
+    const sessions = [
+      session({ result: 'win', amount: 50, date: '2026-05-02', startTime: '18:00' }),
+      session({ result: 'loss', amount: 20, date: '2026-05-01', startTime: '18:00' }),
+      session({ result: 'win', amount: 30, date: '2026-05-02', startTime: '20:00' }),
+    ]
+
+    expect(bankrollTrend(sessions)).toEqual([-20, 30, 60])
   })
 })

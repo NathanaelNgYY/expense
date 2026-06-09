@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Delete } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import { toLocalDateString } from '../dates'
-import { addEntry } from '../storage'
+import { useEntries } from '../EntriesContext'
 import { CATEGORY_LABELS, CATEGORIES } from '../types'
 import type { Category } from '../types'
 
@@ -17,6 +17,7 @@ export default function AddEntry({ onSave }: Props) {
   const [digits, setDigits] = useState('0')
   const [category, setCategory] = useState<Category | null>(null)
   const [note, setNote] = useState('')
+  const { addEntry } = useEntries()
 
   const amount = parseFloat(digits) || 0
 
@@ -33,10 +34,9 @@ export default function AddEntry({ onSave }: Props) {
     })
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (amount <= 0) return
-    addEntry({
-      id: crypto.randomUUID(),
+    await addEntry({
       amount,
       category,
       note,

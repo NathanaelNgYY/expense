@@ -2,8 +2,10 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { ChevronLeft, Download, Save, Trash2, Upload, Wallet } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
-import { entriesToCsv, mergeImportedEntries, parseEntriesCsv } from '../csvEntries'
-import { getBudgetConfig, getEntries, saveBudgetConfig, saveEntries } from '../storage'
+import { entriesToCsv, parseEntriesCsv } from '../csvEntries'
+import { getBudgetConfig, saveBudgetConfig } from '../storage'
+import { getApiToken, setApiToken } from '../api'
+import { useEntries } from '../EntriesContext'
 import type { BudgetConfig } from '../types'
 
 interface Props {
@@ -29,7 +31,9 @@ export default function Settings({ onBack }: Props) {
   const [config, setConfig] = useState<BudgetConfig>(getBudgetConfig)
   const [importMessage, setImportMessage] = useState('')
   const [importError, setImportError] = useState(false)
+  const [token, setToken] = useState(getApiToken())
   const importInputRef = useRef<HTMLInputElement>(null)
+  const { entries, addEntry, removeEntry, refresh } = useEntries()
 
   const total = BUDGET_FIELDS.reduce((sum, field) => sum + config[field.key], 0)
   const totalMismatch = Math.abs(total - config.monthlyIncome) > 0.01
@@ -48,18 +52,20 @@ export default function Settings({ onBack }: Props) {
     onBack()
   }
 
-  function handleReset() {
+  async function handleReset() {
     if (!confirm("Delete all entries for the current month? This can't be undone.")) return
 
     const now = new Date()
-    const filteredEntries = getEntries().filter(
-      entry => !isEntryInMonth(entry.date, now.getFullYear(), now.getMonth()),
+    const toRemove = entries.filter(entry =>
+      isEntryInMonth(entry.date, now.getFullYear(), now.getMonth()),
     )
-    saveEntries(filteredEntries)
+    for (const entry of toRemove) {
+      await removeEntry(entry.id)
+    }
   }
 
   function handleExport() {
-    const blob = new Blob([entriesToCsv(getEntries())], { type: 'text/csv;charset=utf-8' })
+    const blob = new Blob([entriesToCsv(entries)], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -76,17 +82,22 @@ export default function Settings({ onBack }: Props) {
 
     try {
       const importedEntries = parseEntriesCsv(await file.text())
-      const result = mergeImportedEntries(getEntries(), importedEntries)
+      const existingIds = new Set(entries.map(e => e.id))
+      const newEntries = importedEntries.filter(e => !existingIds.has(e.id))
+      const duplicateCount = importedEntries.length - newEntries.length
 
-      saveEntries(result.entries)
+      for (const e of newEntries) {
+        await addEntry({ amount: e.amount, category: e.category, note: e.note, date: e.date })
+      }
+
       setImportError(false)
       setImportMessage(
-        result.importedCount === 0
-          ? `No new entries imported. ${result.duplicateCount} duplicate${result.duplicateCount === 1 ? '' : 's'} skipped.`
-          : `Imported ${result.importedCount} entr${result.importedCount === 1 ? 'y' : 'ies'}.`,
+        newEntries.length === 0
+          ? `No new entries imported. ${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'} skipped.`
+          : `Imported ${newEntries.length} entr${newEntries.length === 1 ? 'y' : 'ies'}.`,
       )
 
-      if (result.importedCount > 0) {
+      if (newEntries.length > 0) {
         onBack()
       }
     } catch (error) {
@@ -161,6 +172,15 @@ export default function Settings({ onBack }: Props) {
         <Save aria-hidden="true" size={18} strokeWidth={2.3} />
         Save Budgets
       </button>
+
+      <div className="settings-divider" />
+
+      <h3 className="section-title">API</h3>
+
+      <label>API token
+        <input value={token} onChange={e => setToken(e.target.value)} placeholder="Bearer token" />
+      </label>
+      <button onClick={() => { setApiToken(token); void refresh() }}>Save token</button>
 
       <div className="settings-divider" />
 

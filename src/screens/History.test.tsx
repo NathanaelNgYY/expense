@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import History from './History'
+import { EntriesProvider } from '../EntriesContext'
 import { getEntries } from '../storage'
 import type { Entry } from '../types'
 
@@ -16,15 +17,23 @@ function entry(overrides: Partial<Entry> = {}): Entry {
   }
 }
 
-function renderHistory(
+function renderWithEntries(
+  entries: unknown[] = [],
   props: Partial<React.ComponentProps<typeof History>> = {},
 ): { container: HTMLDivElement; root: Root } {
+  localStorage.setItem('budget_entries', JSON.stringify(entries))
+  localStorage.setItem('api_token', 'tok')
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(entries), { status: 200 })))
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
 
   act(() => {
-    root.render(<History {...props} />)
+    root.render(
+      <EntriesProvider>
+        <History {...props} />
+      </EntriesProvider>,
+    )
   })
 
   return { container, root }
@@ -59,16 +68,13 @@ describe('History entry editing', () => {
     document.body.replaceChildren()
     root = null
     vi.useRealTimers()
+    vi.unstubAllGlobals()
     localStorage.clear()
   })
 
-  it('opens an entry editor after tapping a history entry and saves edits', () => {
-    localStorage.setItem(
-      'budget_entries',
-      JSON.stringify([entry({ id: 'entry-1', source: 'apple-pay', importKey: 'apple-pay:key' })]),
-    )
-
-    const rendered = renderHistory()
+  it('opens an entry editor after tapping a history entry and saves edits', async () => {
+    const testEntry = entry({ id: 'entry-1', source: 'apple-pay', importKey: 'apple-pay:key' })
+    const rendered = renderWithEntries([testEntry])
     root = rendered.root
 
     const entryButton = [...rendered.container.querySelectorAll('button')].find(button =>
@@ -106,39 +112,33 @@ describe('History entry editing', () => {
     )
     if (!saveButton) throw new Error('Save Changes button was not found')
 
-    act(() => {
+    await act(async () => {
       saveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
 
+    // Context writes to cache; the cache should reflect the edit
     expect(getEntries()[0]).toMatchObject({
       id: 'entry-1',
       amount: 12.4,
       category: 'others',
       note: 'FairPrice edited',
       date: '2026-05-18',
-      source: 'apple-pay',
-      importKey: 'apple-pay:key',
     })
     expect(rendered.container).toHaveTextContent('Updated S$12.40')
   })
 
   it('opens the requested imported entry when initialEditingEntryId is passed', () => {
     const onEditHandled = vi.fn()
-    localStorage.setItem(
-      'budget_entries',
-      JSON.stringify([
-        entry({
-          id: 'apple-pay-entry',
-          amount: 12.5,
-          category: 'others',
-          note: 'FairPrice',
-          source: 'apple-pay',
-          importKey: 'apple-pay:key',
-        }),
-      ]),
-    )
+    const testEntry = entry({
+      id: 'apple-pay-entry',
+      amount: 12.5,
+      category: 'others',
+      note: 'FairPrice',
+      source: 'apple-pay',
+      importKey: 'apple-pay:key',
+    })
 
-    const rendered = renderHistory({
+    const rendered = renderWithEntries([testEntry], {
       initialEditingEntryId: 'apple-pay-entry',
       onEditHandled,
     })

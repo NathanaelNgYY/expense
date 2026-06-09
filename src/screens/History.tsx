@@ -16,7 +16,8 @@ import {
   isFutureDateString,
   toLocalDateString,
 } from '../dates'
-import { addEntry, getBudgetConfig, getEntries, updateEntry } from '../storage'
+import { getBudgetConfig, getEntries } from '../storage'
+import { useEntries } from '../EntriesContext'
 import { CATEGORIES, CATEGORY_LABELS } from '../types'
 import type { Category, Entry } from '../types'
 
@@ -112,6 +113,7 @@ function initialHistoryState(
 
 export default function History({ initialEditingEntryId = null, onEditHandled }: Props) {
   const now = new Date()
+  const { entries, addEntry, editEntry } = useEntries()
   const [initialState] = useState(() => initialHistoryState(initialEditingEntryId, now))
   const [year, setYear] = useState(initialState.year)
   const [month, setMonth] = useState(initialState.month)
@@ -122,9 +124,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
   const [savedMessage, setSavedMessage] = useState('')
   const [editingEntryId, setEditingEntryId] = useState<string | null>(initialState.editingEntryId)
   const [editDraft, setEditDraft] = useState<EditDraft | null>(initialState.editDraft)
-  const [, refreshHistory] = useState(0)
 
-  const entries = getEntries()
   const config = getBudgetConfig()
   const weeks = weeksInMonth(year, month)
   const monthEntries = entriesForMonth(entries, year, month).sort(entrySort)
@@ -174,13 +174,12 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     setSavedMessage('')
   }
 
-  function handleSaveBackfill() {
+  async function handleSaveBackfill() {
     if (!canSaveBackfill) return
 
     const amount = Math.round(backfillAmount * 100) / 100
     const entryDate = clampDateString(selectedDate, dateMin, dateMax)
-    addEntry({
-      id: crypto.randomUUID(),
+    await addEntry({
       amount,
       category,
       note: note.trim(),
@@ -191,7 +190,6 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     setCategory(null)
     setNote('')
     setSavedMessage(`Saved S$${amount.toFixed(2)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
-    refreshHistory(version => version + 1)
   }
 
   function startEditingEntry(entry: Entry) {
@@ -210,7 +208,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     setSavedMessage('')
   }
 
-  function handleSaveEditedEntry(entry: Entry) {
+  async function handleSaveEditedEntry(entry: Entry) {
     if (!editDraft) return
 
     const amount = Math.round(Number(editDraft.amountText) * 100) / 100
@@ -226,8 +224,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
       return
     }
 
-    updateEntry({
-      ...entry,
+    await editEntry(entry.id, {
       amount,
       category: editDraft.category,
       note: editDraft.note.trim(),
@@ -237,7 +234,6 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     setSavedMessage(`Updated S$${amount.toFixed(2)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
     setEditingEntryId(null)
     setEditDraft(null)
-    refreshHistory(version => version + 1)
   }
 
   useEffect(() => {

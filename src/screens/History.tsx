@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { endOfWeek, format } from 'date-fns'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
@@ -16,9 +16,29 @@ import {
   isFutureDateString,
   toLocalDateString,
 } from '../dates'
-import { addEntry, getBudgetConfig, getEntries } from '../storage'
+import { addEntry, getBudgetConfig, getEntries, updateEntry } from '../storage'
 import { CATEGORIES, CATEGORY_LABELS } from '../types'
 import type { Category, Entry } from '../types'
+
+interface Props {
+  initialEditingEntryId?: string | null
+  onEditHandled?: () => void
+}
+
+interface EditDraft {
+  amountText: string
+  category: Category | null
+  note: string
+  date: string
+}
+
+interface InitialHistoryState {
+  year: number
+  month: number
+  selectedDate: string
+  editingEntryId: string | null
+  editDraft: EditDraft | null
+}
 
 function progressPercent(amount: number, budget: number): number {
   if (budget <= 0) return amount > 0 ? 100 : 0
@@ -52,17 +72,56 @@ function entrySort(a: Entry, b: Entry): number {
   return b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
 }
 
-export default function History() {
+function editDraftForEntry(entry: Entry): EditDraft {
+  return {
+    amountText: entry.amount.toFixed(2),
+    category: entry.category,
+    note: entry.note,
+    date: entry.date,
+  }
+}
+
+function initialHistoryState(
+  initialEditingEntryId: string | null,
+  referenceDate: Date,
+): InitialHistoryState {
+  const entry = initialEditingEntryId
+    ? getEntries().find(candidate => candidate.id === initialEditingEntryId)
+    : null
+
+  if (entry) {
+    const [entryYear, entryMonth] = entry.date.split('-').map(Number)
+
+    return {
+      year: entryYear,
+      month: entryMonth - 1,
+      selectedDate: defaultBackfillDate(entryYear, entryMonth - 1),
+      editingEntryId: entry.id,
+      editDraft: editDraftForEntry(entry),
+    }
+  }
+
+  return {
+    year: referenceDate.getFullYear(),
+    month: referenceDate.getMonth(),
+    selectedDate: defaultBackfillDate(referenceDate.getFullYear(), referenceDate.getMonth()),
+    editingEntryId: null,
+    editDraft: null,
+  }
+}
+
+export default function History({ initialEditingEntryId = null, onEditHandled }: Props) {
   const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth())
-  const [selectedDate, setSelectedDate] = useState(() =>
-    defaultBackfillDate(now.getFullYear(), now.getMonth()),
-  )
+  const [initialState] = useState(() => initialHistoryState(initialEditingEntryId, now))
+  const [year, setYear] = useState(initialState.year)
+  const [month, setMonth] = useState(initialState.month)
+  const [selectedDate, setSelectedDate] = useState(initialState.selectedDate)
   const [amountText, setAmountText] = useState('')
   const [category, setCategory] = useState<Category | null>(null)
   const [note, setNote] = useState('')
   const [savedMessage, setSavedMessage] = useState('')
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(initialState.editingEntryId)
+  const [editDraft, setEditDraft] = useState<EditDraft | null>(initialState.editDraft)
   const [, refreshHistory] = useState(0)
 
   const entries = getEntries()
@@ -134,6 +193,58 @@ export default function History() {
     setSavedMessage(`Saved S$${amount.toFixed(2)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
     refreshHistory(version => version + 1)
   }
+
+  function startEditingEntry(entry: Entry) {
+    setEditingEntryId(entry.id)
+    setEditDraft(editDraftForEntry(entry))
+    setSavedMessage('')
+  }
+
+  function cancelEditingEntry() {
+    setEditingEntryId(null)
+    setEditDraft(null)
+  }
+
+  function handleEditDraftChange(nextDraft: Partial<EditDraft>) {
+    setEditDraft(currentDraft => (currentDraft ? { ...currentDraft, ...nextDraft } : currentDraft))
+    setSavedMessage('')
+  }
+
+  function handleSaveEditedEntry(entry: Entry) {
+    if (!editDraft) return
+
+    const amount = Math.round(Number(editDraft.amountText) * 100) / 100
+    const entryDate = clampDateString(editDraft.date, dateMin, dateMax)
+
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0 ||
+      entryDate < dateMin ||
+      entryDate > dateMax ||
+      isFutureDateString(entryDate)
+    ) {
+      return
+    }
+
+    updateEntry({
+      ...entry,
+      amount,
+      category: editDraft.category,
+      note: editDraft.note.trim(),
+      date: entryDate,
+    })
+
+    setSavedMessage(`Updated S$${amount.toFixed(2)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
+    setEditingEntryId(null)
+    setEditDraft(null)
+    refreshHistory(version => version + 1)
+  }
+
+  useEffect(() => {
+    if (!initialEditingEntryId) return
+
+    onEditHandled?.()
+  }, [initialEditingEntryId, onEditHandled])
 
   return (
     <div className="screen history">
@@ -307,19 +418,120 @@ export default function History() {
         <div className="empty-state">No entries for {monthLabel} yet.</div>
       ) : (
         <div className="entry-list">
-          {monthEntries.map(entry => (
-            <div key={entry.id} className="entry-row">
-              <div className="entry-main">
-                <span className="entry-category icon-label">
-                  <BudgetIcon name={entry.category ?? 'uncategorized'} />
-                  {entry.category ? CATEGORY_LABELS[entry.category] : 'Uncategorized'}
-                </span>
-                <span className="entry-date">{format(fromLocalDateString(entry.date), 'EEE, MMM d')}</span>
-                {entry.note && <span className="entry-note">{entry.note}</span>}
+          {monthEntries.map(entry => {
+            const isEditing = editingEntryId === entry.id && editDraft
+            const editAmount = editDraft ? Number(editDraft.amountText) : Number.NaN
+            const canSaveEdit =
+              Boolean(editDraft) &&
+              Number.isFinite(editAmount) &&
+              editAmount > 0 &&
+              editDraft!.date >= dateMin &&
+              editDraft!.date <= dateMax &&
+              !isFutureDateString(editDraft!.date)
+
+            return (
+              <div key={entry.id} className="entry-edit-shell">
+                <button
+                  type="button"
+                  className="entry-row entry-row-button"
+                  onClick={() => startEditingEntry(entry)}
+                  aria-expanded={Boolean(isEditing)}
+                >
+                  <span className="entry-main">
+                    <span className="entry-category icon-label">
+                      <BudgetIcon name={entry.category ?? 'uncategorized'} />
+                      {entry.category ? CATEGORY_LABELS[entry.category] : 'Uncategorized'}
+                    </span>
+                    <span className="entry-date">{format(fromLocalDateString(entry.date), 'EEE, MMM d')}</span>
+                    {entry.note && <span className="entry-note">{entry.note}</span>}
+                  </span>
+                  <strong className="entry-amount">S${entry.amount.toFixed(2)}</strong>
+                </button>
+
+                {isEditing && (
+                  <div className="entry-edit-panel" aria-label="Edit expense">
+                    <h4 className="entry-edit-title">Edit Expense</h4>
+                    <div className="field-grid">
+                      <label className="form-field" htmlFor="edit-entry-date">
+                        <span>Date</span>
+                        <span className="date-input-shell">
+                          <span className="date-input-value">
+                            {format(fromLocalDateString(editDraft.date), 'MMM d, yyyy')}
+                          </span>
+                          <input
+                            id="edit-entry-date"
+                            type="date"
+                            className="date-input date-input--native"
+                            value={editDraft.date}
+                            min={dateMin}
+                            max={dateMax}
+                            onChange={event => handleEditDraftChange({ date: event.target.value })}
+                          />
+                        </span>
+                      </label>
+                      <label className="form-field" htmlFor="edit-entry-amount">
+                        <span>Amount</span>
+                        <input
+                          id="edit-entry-amount"
+                          type="number"
+                          className="amount-input"
+                          value={editDraft.amountText}
+                          min="0"
+                          step="0.01"
+                          inputMode="decimal"
+                          onChange={event => handleEditDraftChange({ amountText: event.target.value })}
+                        />
+                      </label>
+                    </div>
+
+                    <p className="category-label">
+                      Category <span className="muted">(optional)</span>
+                    </p>
+                    <div className="chips chips--compact">
+                      {CATEGORIES.map(cat => (
+                        <button
+                          key={cat}
+                          type="button"
+                          className={`chip chip--compact ${editDraft.category === cat ? 'chip--selected' : ''}`}
+                          onClick={() =>
+                            handleEditDraftChange({
+                              category: editDraft.category === cat ? null : cat,
+                            })
+                          }
+                        >
+                          <BudgetIcon name={cat} />
+                          <span>{CATEGORY_LABELS[cat]}</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    <input
+                      id="edit-entry-note"
+                      type="text"
+                      className="note-input"
+                      placeholder="Note (optional)"
+                      value={editDraft.note}
+                      onChange={event => handleEditDraftChange({ note: event.target.value })}
+                    />
+
+                    <div className="entry-edit-actions">
+                      <button className="export-btn" type="button" onClick={cancelEditingEntry}>
+                        Cancel
+                      </button>
+                      <button
+                        className="save-btn history-save-btn"
+                        type="button"
+                        onClick={() => handleSaveEditedEntry(entry)}
+                        disabled={!canSaveEdit}
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <strong className="entry-amount">S${entry.amount.toFixed(2)}</strong>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

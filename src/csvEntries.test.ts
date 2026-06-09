@@ -1,0 +1,80 @@
+import { describe, expect, it } from 'vitest'
+import { entriesToCsv, mergeImportedEntries, parseEntriesCsv } from './csvEntries'
+import type { Entry } from './types'
+
+describe('CSV entry import and export', () => {
+  it('round-trips exported entries with quoted values', () => {
+    const entries: Entry[] = [
+      {
+        id: 'entry-1',
+        amount: 12.5,
+        category: 'lunch',
+        note: 'Chicken rice, kopi',
+        date: '2026-05-11',
+      },
+      {
+        id: 'entry-2',
+        amount: 4,
+        category: null,
+        note: '  He said "thanks"  ',
+        date: '2026-05-12',
+      },
+    ]
+
+    const csv = entriesToCsv(entries)
+
+    expect(parseEntriesCsv(csv)).toEqual(entries)
+  })
+
+  it('merges imported entries without duplicating existing ids', () => {
+    const existing: Entry[] = [
+      {
+        id: 'entry-1',
+        amount: 10,
+        category: 'transport',
+        note: 'Bus',
+        date: '2026-05-10',
+      },
+    ]
+    const imported: Entry[] = [
+      {
+        id: 'entry-1',
+        amount: 10,
+        category: 'transport',
+        note: 'Bus',
+        date: '2026-05-10',
+      },
+      {
+        id: 'entry-2',
+        amount: 8.75,
+        category: 'others',
+        note: 'Notebook',
+        date: '2026-05-11',
+      },
+    ]
+
+    expect(mergeImportedEntries(existing, imported)).toEqual({
+      entries: [existing[0], imported[1]],
+      importedCount: 1,
+      duplicateCount: 1,
+    })
+  })
+
+  it('rejects rows with invalid entry data', () => {
+    const csv = [
+      '"id","amount","category","note","date"',
+      '"bad-1","nope","lunch","Lunch","2026-05-11"',
+    ].join('\n')
+
+    expect(() => parseEntriesCsv(csv)).toThrow('Row 2 has an invalid amount')
+  })
+
+  it('rejects impossible calendar dates', () => {
+    const csv = [
+      '"id","amount","category","note","date"',
+      '"bad-1","12","lunch","Lunch","2026-02-31"',
+    ].join('\n')
+
+    expect(() => parseEntriesCsv(csv)).toThrow('Row 2 has an invalid date')
+  })
+})

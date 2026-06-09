@@ -464,6 +464,66 @@ input:focus-visible {
   flex: 0 0 auto;
 }
 
+.apple-pay-banner {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(48, 209, 88, 0.22);
+  background: rgba(48, 209, 88, 0.12);
+  color: var(--text);
+  padding: 12px 14px;
+}
+
+.apple-pay-banner--duplicate {
+  border-color: rgba(255, 159, 10, 0.24);
+  background: rgba(255, 159, 10, 0.12);
+}
+
+.apple-pay-banner--error {
+  border-color: rgba(255, 69, 58, 0.24);
+  background: rgba(255, 69, 58, 0.12);
+}
+
+.apple-pay-banner-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.apple-pay-banner-main strong,
+.apple-pay-banner-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apple-pay-banner-main strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.apple-pay-banner-main span {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.apple-pay-banner-edit {
+  flex: 0 0 auto;
+  min-height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 0 14px;
+}
+
 /* ─── Summary card ───────────────────────────────────────── */
 
 .summary-card {
@@ -884,6 +944,10 @@ input:focus-visible {
   text-align: center;
 }
 
+.save-feedback--error {
+  color: var(--red);
+}
+
 .history-summary {
   align-items: stretch;
 }
@@ -1035,6 +1099,52 @@ input:focus-visible {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
+}
+
+.entry-edit-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.entry-row-button {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: left;
+  cursor: pointer;
+}
+
+.entry-row-button:active {
+  transform: scale(0.99);
+}
+
+.entry-edit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 14px;
+  background: var(--bg-elev);
+  border: 1px solid rgba(10, 132, 255, 0.18);
+  padding: 14px;
+}
+
+.entry-edit-title {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.entry-edit-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.entry-edit-actions .save-btn,
+.entry-edit-actions .export-btn {
+  margin-top: 0;
+  min-height: 46px;
+  font-size: 15px;
 }
 
 /* ─── Empty state ────────────────────────────────────────── */

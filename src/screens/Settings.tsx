@@ -1,7 +1,8 @@
 // src/screens/Settings.tsx
-import { useState } from 'react'
-import { ChevronLeft, Download, Save, Trash2, Wallet } from 'lucide-react'
+import { useRef, useState, type ChangeEvent } from 'react'
+import { ChevronLeft, Download, Save, Trash2, Upload, Wallet } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
+import { entriesToCsv, mergeImportedEntries, parseEntriesCsv } from '../csvEntries'
 import { getBudgetConfig, getEntries, saveBudgetConfig, saveEntries } from '../storage'
 import type { BudgetConfig } from '../types'
 
@@ -24,13 +25,11 @@ function isEntryInMonth(date: string, year: number, month: number): boolean {
   return entryYear === year && entryMonth === month + 1
 }
 
-function csvCell(value: string | number | null): string {
-  const text = value == null ? '' : String(value)
-  return `"${text.replace(/"/g, '""')}"`
-}
-
 export default function Settings({ onBack }: Props) {
   const [config, setConfig] = useState<BudgetConfig>(getBudgetConfig)
+  const [importMessage, setImportMessage] = useState('')
+  const [importError, setImportError] = useState(false)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   const total = BUDGET_FIELDS.reduce((sum, field) => sum + config[field.key], 0)
   const totalMismatch = Math.abs(total - config.monthlyIncome) > 0.01
@@ -60,19 +59,40 @@ export default function Settings({ onBack }: Props) {
   }
 
   function handleExport() {
-    const rows = [
-      ['id', 'amount', 'category', 'note', 'date'].map(csvCell).join(','),
-      ...getEntries().map(entry =>
-        [entry.id, entry.amount, entry.category, entry.note, entry.date].map(csvCell).join(','),
-      ),
-    ]
-    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8' })
+    const blob = new Blob([entriesToCsv(getEntries())], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     link.download = 'budget-entries.csv'
     link.click()
     URL.revokeObjectURL(url)
+  }
+
+  async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0]
+    event.currentTarget.value = ''
+
+    if (!file) return
+
+    try {
+      const importedEntries = parseEntriesCsv(await file.text())
+      const result = mergeImportedEntries(getEntries(), importedEntries)
+
+      saveEntries(result.entries)
+      setImportError(false)
+      setImportMessage(
+        result.importedCount === 0
+          ? `No new entries imported. ${result.duplicateCount} duplicate${result.duplicateCount === 1 ? '' : 's'} skipped.`
+          : `Imported ${result.importedCount} entr${result.importedCount === 1 ? 'y' : 'ies'}.`,
+      )
+
+      if (result.importedCount > 0) {
+        onBack()
+      }
+    } catch (error) {
+      setImportError(true)
+      setImportMessage(error instanceof Error ? error.message : 'Could not import this CSV file.')
+    }
   }
 
   return (
@@ -148,6 +168,26 @@ export default function Settings({ onBack }: Props) {
         <Download aria-hidden="true" size={18} strokeWidth={2.3} />
         Export as CSV
       </button>
+      <input
+        ref={importInputRef}
+        type="file"
+        accept=".csv,text/csv"
+        hidden
+        onChange={handleImportFile}
+      />
+      <button
+        className="export-btn"
+        type="button"
+        onClick={() => importInputRef.current?.click()}
+      >
+        <Upload aria-hidden="true" size={18} strokeWidth={2.3} />
+        Import CSV
+      </button>
+      {importMessage && (
+        <p className={`save-feedback ${importError ? 'save-feedback--error' : ''}`} role="status">
+          {importMessage}
+        </p>
+      )}
       <button className="danger-btn" type="button" onClick={handleReset}>
         <Trash2 aria-hidden="true" size={18} strokeWidth={2.3} />
         Reset This Month&apos;s Data

@@ -14,10 +14,13 @@ import {
 } from '../compute'
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
 import { CATEGORY_LABELS, CATEGORIES } from '../types'
+import type { ApplePayImportStatus } from '../App'
 import type { Category, Entry } from '../types'
 
 interface Props {
   onSettings: () => void
+  importStatus?: ApplePayImportStatus | null
+  onEditImportedEntry?: (entryId: string) => void
 }
 
 const COMMITTED_CATEGORIES: Category[] = ['savings', 'investments']
@@ -36,7 +39,11 @@ function entrySort(a: Entry, b: Entry): number {
   return b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
 }
 
-export default function Dashboard({ onSettings }: Props) {
+export default function Dashboard({
+  onSettings,
+  importStatus = null,
+  onEditImportedEntry,
+}: Props) {
   const [expandedCategory, setExpandedCategory] = useState<Category | null>(null)
   const now = new Date()
   const entries = getEntries()
@@ -91,6 +98,32 @@ export default function Dashboard({ onSettings }: Props) {
           <SettingsIcon aria-hidden="true" size={19} strokeWidth={2} />
         </button>
       </header>
+
+      {importStatus && (
+        <div
+          className={`apple-pay-banner apple-pay-banner--${importStatus.kind}`}
+          role="status"
+        >
+          <div className="apple-pay-banner-main">
+            <strong>{importStatus.message}</strong>
+            {'amount' in importStatus && (
+              <span>
+                S${importStatus.amount.toFixed(2)}
+                {importStatus.merchant ? ` | ${importStatus.merchant}` : ''}
+              </span>
+            )}
+          </div>
+          {'entryId' in importStatus && onEditImportedEntry && (
+            <button
+              className="apple-pay-banner-edit"
+              type="button"
+              onClick={() => onEditImportedEntry(importStatus.entryId)}
+            >
+              Edit
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="card summary-card">
         <div className="summary-card-top">

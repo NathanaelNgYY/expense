@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act } from 'react'
+import { act, type ComponentProps } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import Dashboard from './Dashboard'
 import type { Entry } from '../types'
@@ -17,13 +17,22 @@ function entry(overrides: Partial<Entry> = {}): Entry {
   }
 }
 
-function renderDashboard(): { container: HTMLDivElement; root: Root } {
+function renderDashboard(
+  props: Partial<ComponentProps<typeof Dashboard>> = {},
+): { container: HTMLDivElement; root: Root } {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
 
   act(() => {
-    root.render(<Dashboard onSettings={() => undefined} />)
+    root.render(
+      <Dashboard
+        onSettings={() => undefined}
+        importStatus={null}
+        onEditImportedEntry={() => undefined}
+        {...props}
+      />,
+    )
   })
 
   return { container, root }
@@ -151,5 +160,49 @@ describe('Dashboard category expense history', () => {
     expect(rendered.container).toHaveTextContent('S$1,800 / month')
     expect(rendered.container).toHaveTextContent('Monthly income')
     expect(rendered.container).toHaveTextContent('S$1,800')
+  })
+
+  it('shows an Apple Pay saved banner with merchant and edit action', () => {
+    const onEditImportedEntry = vi.fn()
+
+    const rendered = renderDashboard({
+      importStatus: {
+        kind: 'saved',
+        entryId: 'apple-pay-entry',
+        amount: 12.5,
+        merchant: 'FairPrice Finest',
+        message: 'Saved from Apple Pay',
+      },
+      onEditImportedEntry,
+    })
+    root = rendered.root
+
+    expect(rendered.container).toHaveTextContent('Saved from Apple Pay')
+    expect(rendered.container).toHaveTextContent('FairPrice Finest')
+    expect(rendered.container).toHaveTextContent('S$12.50')
+
+    const editButton = [...rendered.container.querySelectorAll('button')].find(button =>
+      button.textContent?.includes('Edit'),
+    )
+    if (!editButton) throw new Error('Edit button was not found')
+
+    act(() => {
+      editButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(onEditImportedEntry).toHaveBeenCalledWith('apple-pay-entry')
+  })
+
+  it('shows an Apple Pay import error banner without edit action', () => {
+    const rendered = renderDashboard({
+      importStatus: {
+        kind: 'error',
+        message: 'Could not save Apple Pay transaction',
+      },
+    })
+    root = rendered.root
+
+    expect(rendered.container).toHaveTextContent('Could not save Apple Pay transaction')
+    expect(rendered.container).not.toHaveTextContent('Edit')
   })
 })

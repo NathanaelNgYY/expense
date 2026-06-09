@@ -53,6 +53,26 @@ https://your-site.netlify.app?add=true
 4. Rename the shortcut to `Log Expense`.
 5. Add it to the home screen.
 
+## Apple Pay Auto-Logging
+
+iOS does not let this PWA read Apple Pay, Wallet, FairPrice, or other apps' notifications directly. Use a Shortcuts Wallet Transaction automation instead.
+
+1. Open the Shortcuts app on iPhone.
+2. Tap Automation, then tap +.
+3. Choose Transaction.
+4. Choose the Wallet card you use with Apple Pay.
+5. Choose Run Immediately if iOS offers that option.
+6. Add the Open URL action.
+7. Use your deployed app URL with these query parameters:
+
+```text
+https://your-site.netlify.app/?auto=applepay&amount=<Shortcut Input: Amount>&merchant=<Shortcut Input: Merchant>&name=<Shortcut Input: Name>
+```
+
+When filling each field in Shortcuts, insert the Shortcut Input variable, tap it, then choose the matching transaction field such as Amount, Merchant, or Name.
+
+When the automation runs, the app saves the expense immediately, guesses a category from the merchant, and shows the entry in History where it can be edited.
+
 ## Budget Defaults
 
 | Bucket | Monthly |

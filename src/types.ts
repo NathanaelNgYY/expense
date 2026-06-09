@@ -1,5 +1,6 @@
 // src/types.ts
 export type Category = 'lunch' | 'transport' | 'savings' | 'investments' | 'others'
+export type EntrySource = 'manual' | 'apple-pay'
 
 export interface Entry {
   id: string
@@ -7,6 +8,8 @@ export interface Entry {
   category: Category | null
   note: string
   date: string // YYYY-MM-DD
+  source?: EntrySource
+  importKey?: string
 }
 
 export interface BudgetConfig {

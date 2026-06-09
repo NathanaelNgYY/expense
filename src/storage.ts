@@ -22,6 +22,10 @@ export function addEntry(entry: Entry): void {
   saveEntries([...getEntries(), entry])
 }
 
+export function updateEntry(updatedEntry: Entry): void {
+  saveEntries(getEntries().map(entry => (entry.id === updatedEntry.id ? updatedEntry : entry)))
+}
+
 export function getBudgetConfig(): BudgetConfig {
   try {
     const raw = localStorage.getItem(CONFIG_KEY)

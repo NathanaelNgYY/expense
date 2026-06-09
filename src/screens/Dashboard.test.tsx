@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, type ComponentProps } from 'react'
+import { act } from 'react'
+import { render } from '@testing-library/react'
 import { createRoot, type Root } from 'react-dom/client'
 import Dashboard from './Dashboard'
+import { EntriesProvider } from '../EntriesContext'
 import type { Entry } from '../types'
 
 let nextId = 0
@@ -17,21 +19,19 @@ function entry(overrides: Partial<Entry> = {}): Entry {
   }
 }
 
-function renderDashboard(
-  props: Partial<ComponentProps<typeof Dashboard>> = {},
-): { container: HTMLDivElement; root: Root } {
+function renderWithEntries(entries: unknown[] = []) {
+  localStorage.setItem('budget_entries', JSON.stringify(entries))
+  localStorage.setItem('api_token', 'tok')
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(entries), { status: 200 })))
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
 
   act(() => {
     root.render(
-      <Dashboard
-        onSettings={() => undefined}
-        importStatus={null}
-        onEditImportedEntry={() => undefined}
-        {...props}
-      />,
+      <EntriesProvider>
+        <Dashboard onSettings={() => undefined} />
+      </EntriesProvider>,
     )
   })
 
@@ -68,20 +68,16 @@ describe('Dashboard category expense history', () => {
     document.body.replaceChildren()
     root = null
     vi.useRealTimers()
+    vi.unstubAllGlobals()
     localStorage.clear()
   })
 
   it('shows current-month expenses after clicking a category', () => {
-    localStorage.setItem(
-      'budget_entries',
-      JSON.stringify([
-        entry({ amount: 12.5, category: 'lunch', date: '2026-05-04' }),
-        entry({ amount: 8, category: 'lunch', date: '2026-04-30' }),
-        entry({ amount: 4, category: 'transport', date: '2026-05-05' }),
-      ]),
-    )
-
-    const rendered = renderDashboard()
+    const rendered = renderWithEntries([
+      entry({ amount: 12.5, category: 'lunch', date: '2026-05-04' }),
+      entry({ amount: 8, category: 'lunch', date: '2026-04-30' }),
+      entry({ amount: 4, category: 'transport', date: '2026-05-05' }),
+    ])
     root = rendered.root
 
     clickCategory(rendered.container, 'Lunch')
@@ -95,19 +91,14 @@ describe('Dashboard category expense history', () => {
   })
 
   it('shows notes for others expenses', () => {
-    localStorage.setItem(
-      'budget_entries',
-      JSON.stringify([
-        entry({
-          amount: 100,
-          category: 'others',
-          note: 'clothes',
-          date: '2026-05-06',
-        }),
-      ]),
-    )
-
-    const rendered = renderDashboard()
+    const rendered = renderWithEntries([
+      entry({
+        amount: 100,
+        category: 'others',
+        note: 'clothes',
+        date: '2026-05-06',
+      }),
+    ])
     root = rendered.root
 
     clickCategory(rendered.container, 'Others')
@@ -120,16 +111,11 @@ describe('Dashboard category expense history', () => {
 
   it('limits category dropdown expenses to the past two weeks', () => {
     vi.setSystemTime(new Date('2026-05-25T12:00:00'))
-    localStorage.setItem(
-      'budget_entries',
-      JSON.stringify([
-        entry({ amount: 7, category: 'lunch', date: '2026-05-10' }),
-        entry({ amount: 9, category: 'lunch', date: '2026-05-11' }),
-        entry({ amount: 14, category: 'lunch', date: '2026-05-24' }),
-      ]),
-    )
-
-    const rendered = renderDashboard()
+    const rendered = renderWithEntries([
+      entry({ amount: 7, category: 'lunch', date: '2026-05-10' }),
+      entry({ amount: 9, category: 'lunch', date: '2026-05-11' }),
+      entry({ amount: 14, category: 'lunch', date: '2026-05-24' }),
+    ])
     root = rendered.root
 
     clickCategory(rendered.container, 'Lunch')
@@ -154,55 +140,11 @@ describe('Dashboard category expense history', () => {
       }),
     )
 
-    const rendered = renderDashboard()
+    const rendered = renderWithEntries([])
     root = rendered.root
 
     expect(rendered.container).toHaveTextContent('S$1,800 / month')
     expect(rendered.container).toHaveTextContent('Monthly income')
     expect(rendered.container).toHaveTextContent('S$1,800')
-  })
-
-  it('shows an Apple Pay saved banner with merchant and edit action', () => {
-    const onEditImportedEntry = vi.fn()
-
-    const rendered = renderDashboard({
-      importStatus: {
-        kind: 'saved',
-        entryId: 'apple-pay-entry',
-        amount: 12.5,
-        merchant: 'FairPrice Finest',
-        message: 'Saved from Apple Pay',
-      },
-      onEditImportedEntry,
-    })
-    root = rendered.root
-
-    expect(rendered.container).toHaveTextContent('Saved from Apple Pay')
-    expect(rendered.container).toHaveTextContent('FairPrice Finest')
-    expect(rendered.container).toHaveTextContent('S$12.50')
-
-    const editButton = [...rendered.container.querySelectorAll('button')].find(button =>
-      button.textContent?.includes('Edit'),
-    )
-    if (!editButton) throw new Error('Edit button was not found')
-
-    act(() => {
-      editButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    })
-
-    expect(onEditImportedEntry).toHaveBeenCalledWith('apple-pay-entry')
-  })
-
-  it('shows an Apple Pay import error banner without edit action', () => {
-    const rendered = renderDashboard({
-      importStatus: {
-        kind: 'error',
-        message: 'Could not save Apple Pay transaction',
-      },
-    })
-    root = rendered.root
-
-    expect(rendered.container).toHaveTextContent('Could not save Apple Pay transaction')
-    expect(rendered.container).not.toHaveTextContent('Edit')
   })
 })

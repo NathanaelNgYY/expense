@@ -2,7 +2,7 @@ import { useState, type KeyboardEvent } from 'react'
 import { CalendarDays, ChevronDown, ChevronUp, Settings as SettingsIcon, TrendingDown, TrendingUp } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
-import { getBudgetConfig, getEntries } from '../storage'
+import { getBudgetConfig } from '../storage'
 import {
   bufferRemaining,
   categoryDeficits,
@@ -14,13 +14,11 @@ import {
 } from '../compute'
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
 import { CATEGORY_LABELS, CATEGORIES } from '../types'
-import type { ApplePayImportStatus } from '../App'
 import type { Category, Entry } from '../types'
+import { useEntries } from '../EntriesContext'
 
 interface Props {
   onSettings: () => void
-  importStatus?: ApplePayImportStatus | null
-  onEditImportedEntry?: (entryId: string) => void
 }
 
 const COMMITTED_CATEGORIES: Category[] = ['savings', 'investments']
@@ -39,14 +37,10 @@ function entrySort(a: Entry, b: Entry): number {
   return b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
 }
 
-export default function Dashboard({
-  onSettings,
-  importStatus = null,
-  onEditImportedEntry,
-}: Props) {
+export default function Dashboard({ onSettings }: Props) {
   const [expandedCategory, setExpandedCategory] = useState<Category | null>(null)
   const now = new Date()
-  const entries = getEntries()
+  const { entries } = useEntries()
   const config = getBudgetConfig()
 
   const currentMonthEntries = entriesForMonth(entries, now.getFullYear(), now.getMonth())
@@ -98,32 +92,6 @@ export default function Dashboard({
           <SettingsIcon aria-hidden="true" size={19} strokeWidth={2} />
         </button>
       </header>
-
-      {importStatus && (
-        <div
-          className={`apple-pay-banner apple-pay-banner--${importStatus.kind}`}
-          role="status"
-        >
-          <div className="apple-pay-banner-main">
-            <strong>{importStatus.message}</strong>
-            {'amount' in importStatus && (
-              <span>
-                S${importStatus.amount.toFixed(2)}
-                {importStatus.merchant ? ` | ${importStatus.merchant}` : ''}
-              </span>
-            )}
-          </div>
-          {'entryId' in importStatus && onEditImportedEntry && (
-            <button
-              className="apple-pay-banner-edit"
-              type="button"
-              onClick={() => onEditImportedEntry(importStatus.entryId)}
-            >
-              Edit
-            </button>
-          )}
-        </div>
-      )}
 
       <div className="card summary-card">
         <div className="summary-card-top">

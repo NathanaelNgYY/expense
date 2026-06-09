@@ -3,7 +3,10 @@ export type DbsEmailParse =
   | { ok: false; reason: 'no-amount' | 'invalid-amount' }
 
 export function parseDbsEmail(rawBody: string): DbsEmailParse {
-  const amountMatch = /(?:SGD|S\$|\$)\s*([0-9][0-9,]*\.?[0-9]{0,2})/i.exec(rawBody)
+  const body = rawBody.replace(/\r\n/g, '\n')
+
+  // Amount: "SGD5.70", "SGD 5.70", "S$5.70" or "$1,234.50" — space after the symbol is optional.
+  const amountMatch = /(?:SGD|S\$|\$)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i.exec(body)
   if (!amountMatch) {
     return { ok: false, reason: 'no-amount' }
   }
@@ -12,8 +15,13 @@ export function parseDbsEmail(rawBody: string): DbsEmailParse {
     return { ok: false, reason: 'invalid-amount' }
   }
 
-  // Merchant: prefer a "To: <name>" or "at <name>" line; otherwise empty.
-  const merchantMatch = /(?:^|\n)\s*(?:To|At|Merchant)\s*[:\-]\s*(.+)/i.exec(rawBody)
-  const merchant = merchantMatch ? merchantMatch[1].trim() : ''
+  // Merchant: the recipient/merchant on a "To:" line (PayNow & card alerts both use it),
+  // falling back to "At"/"Merchant". Use [ \t] so the line is matched, not spanned across
+  // newlines, and ignore the "From:" line. Strip a trailing "(UEN ending ...)" parenthetical.
+  const merchantMatch = /(?:^|\n)[ \t]*(?:To|At|Merchant)[ \t]*[:\-][ \t]*(.+)/i.exec(body)
+  const merchant = (merchantMatch ? merchantMatch[1] : '')
+    .trim()
+    .replace(/\s*\([^)]*\)\s*$/, '')
+    .trim()
   return { ok: true, amount, merchant }
 }

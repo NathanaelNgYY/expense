@@ -18,6 +18,10 @@ export function saveEntries(entries: Entry[]): void {
   localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries))
 }
 
+// Entries now live on the server; localStorage is a read-through cache.
+export const getCachedEntries = getEntries
+export const setCachedEntries = saveEntries
+
 export function addEntry(entry: Entry): void {
   saveEntries([...getEntries(), entry])
 }

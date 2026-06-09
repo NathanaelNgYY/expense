@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getEntries, saveEntries, updateEntry } from './storage'
+import { getEntries, saveEntries, updateEntry, getCachedEntries, setCachedEntries } from './storage'
 import type { Entry } from './types'
 
 function entry(overrides: Partial<Entry> = {}): Entry {
@@ -56,5 +56,16 @@ describe('updateEntry', () => {
       source: 'apple-pay',
       importKey: 'apple-pay:2026-05-19:12.50:fairprice',
     })
+  })
+})
+
+describe('entries cache', () => {
+  it('round-trips cached entries', () => {
+    setCachedEntries([{ id: '1', amount: 2, category: 'lunch', note: '', date: '2026-06-09' }])
+    expect(getCachedEntries()).toHaveLength(1)
+  })
+  it('returns [] when cache empty', () => {
+    localStorage.clear()
+    expect(getCachedEntries()).toEqual([])
   })
 })

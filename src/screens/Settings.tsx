@@ -87,7 +87,7 @@ export default function Settings({ onBack }: Props) {
       const duplicateCount = importedEntries.length - newEntries.length
 
       for (const e of newEntries) {
-        await addEntry({ amount: e.amount, category: e.category, note: e.note, date: e.date })
+        await addEntry({ id: e.id, amount: e.amount, category: e.category, note: e.note, date: e.date })
       }
 
       setImportError(false)
@@ -178,9 +178,9 @@ export default function Settings({ onBack }: Props) {
       <h3 className="section-title">API</h3>
 
       <label>API token
-        <input value={token} onChange={e => setToken(e.target.value)} placeholder="Bearer token" />
+        <input type="password" value={token} onChange={e => setToken(e.target.value)} placeholder="Bearer token" />
       </label>
-      <button onClick={() => { setApiToken(token); void refresh() }}>Save token</button>
+      <button type="button" onClick={() => { setApiToken(token); void refresh() }}>Save token</button>
 
       <div className="settings-divider" />
 

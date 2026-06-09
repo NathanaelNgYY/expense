@@ -8,7 +8,7 @@ import {
   deleteEntryApi,
   type NewManualEntry,
 } from './api'
-import { getQueue, setQueue, type Mutation } from './syncQueue'
+import { getQueue, setQueue } from './syncQueue'
 
 interface EntriesContextValue {
   entries: Entry[]
@@ -29,6 +29,7 @@ async function flushQueue(): Promise<boolean> {
     try {
       if (mutation.op === 'create') {
         await createEntryApi({
+          id: mutation.entry.id,
           amount: mutation.entry.amount,
           category: mutation.entry.category,
           note: mutation.entry.note,
@@ -56,7 +57,7 @@ async function migrateIfNeeded(serverEntries: Entry[]): Promise<boolean> {
   if (serverEntries.length === 0 && cached.length > 0) {
     for (const entry of cached) {
       try {
-        await createEntryApi({ amount: entry.amount, category: entry.category, note: entry.note, date: entry.date })
+        await createEntryApi({ id: entry.id, amount: entry.amount, category: entry.category, note: entry.note, date: entry.date })
         migrated = true
       } catch {
         return migrated // try again next load; don't mark migration done
@@ -69,7 +70,16 @@ async function migrateIfNeeded(serverEntries: Entry[]): Promise<boolean> {
 
 export function EntriesProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<Entry[]>(() => getCachedEntries())
+  // Mirrors `entries` synchronously so sequential awaited mutations (clearing a month,
+  // importing many rows) compose off the latest value instead of a stale render closure.
+  const entriesRef = useRef(entries)
   const didInit = useRef(false)
+
+  const commit = useCallback((next: Entry[]) => {
+    entriesRef.current = next
+    setEntries(next)
+    setCachedEntries(next)
+  }, [])
 
   const refresh = useCallback(async () => {
     try {
@@ -77,12 +87,11 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
       const server = await fetchEntries()
       const migrated = await migrateIfNeeded(server)
       const fresh = migrated ? await fetchEntries() : server
-      setEntries(fresh)
-      setCachedEntries(fresh)
+      commit(fresh)
     } catch {
       // offline: keep showing cache
     }
-  }, [])
+  }, [commit])
 
   useEffect(() => {
     if (didInit.current) return
@@ -93,40 +102,34 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('online', onOnline)
   }, [refresh])
 
-  const commit = useCallback((next: Entry[]) => {
-    setEntries(next)
-    setCachedEntries(next)
-  }, [])
-
   const addEntry = useCallback(async (input: NewManualEntry) => {
     const optimistic: Entry = {
-      id: crypto.randomUUID(),
+      id: input.id ?? crypto.randomUUID(),
       amount: input.amount,
       category: input.category,
       note: input.note,
       date: input.date,
       source: 'manual',
     }
-    commit([...entries, optimistic])
-    const queue: Mutation[] = [...getQueue(), { op: 'create', entry: optimistic }]
-    setQueue(queue)
+    commit([...entriesRef.current, optimistic])
+    setQueue([...getQueue(), { op: 'create', entry: optimistic }])
     await flushQueue()
     void refresh()
-  }, [entries, commit, refresh])
+  }, [commit, refresh])
 
   const editEntry = useCallback(async (id: string, patch: Partial<Entry>) => {
-    commit(entries.map(e => (e.id === id ? { ...e, ...patch } : e)))
+    commit(entriesRef.current.map(e => (e.id === id ? { ...e, ...patch } : e)))
     setQueue([...getQueue(), { op: 'update', id, patch }])
     await flushQueue()
     void refresh()
-  }, [entries, commit, refresh])
+  }, [commit, refresh])
 
   const removeEntry = useCallback(async (id: string) => {
-    commit(entries.filter(e => e.id !== id))
+    commit(entriesRef.current.filter(e => e.id !== id))
     setQueue([...getQueue(), { op: 'delete', id }])
     await flushQueue()
     void refresh()
-  }, [entries, commit, refresh])
+  }, [commit, refresh])
 
   return (
     <EntriesContext.Provider value={{ entries, addEntry, editEntry, removeEntry, refresh }}>

@@ -40,6 +40,7 @@ export interface NewManualEntry {
   category: Category | null
   note: string
   date: string
+  id?: string // optional; lets imports/migration preserve a stable id so re-runs are idempotent
 }
 
 export function fetchEntries(): Promise<Entry[]> {

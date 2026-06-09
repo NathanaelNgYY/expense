@@ -7,6 +7,7 @@ export interface NewManualEntry {
   category: Category | null
   note: string
   date: string
+  id?: string // optional; preserves a caller-supplied id (import/migration) for idempotent writes
 }
 
 export async function listEntries(store: EntryStore): Promise<Entry[]> {
@@ -19,7 +20,7 @@ export async function createEntry(
   store: EntryStore,
   makeId: () => string = () => crypto.randomUUID(),
 ): Promise<Entry> {
-  const id = makeId()
+  const id = input.id ?? makeId()
   const entry: Entry = {
     id,
     amount: input.amount,

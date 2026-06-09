@@ -16,7 +16,7 @@ import {
   isFutureDateString,
   toLocalDateString,
 } from '../dates'
-import { getBudgetConfig, getEntries } from '../storage'
+import { getBudgetConfig } from '../storage'
 import { useEntries } from '../EntriesContext'
 import { CATEGORIES, CATEGORY_LABELS } from '../types'
 import type { Category, Entry } from '../types'
@@ -85,9 +85,10 @@ function editDraftForEntry(entry: Entry): EditDraft {
 function initialHistoryState(
   initialEditingEntryId: string | null,
   referenceDate: Date,
+  knownEntries: Entry[],
 ): InitialHistoryState {
   const entry = initialEditingEntryId
-    ? getEntries().find(candidate => candidate.id === initialEditingEntryId)
+    ? knownEntries.find(candidate => candidate.id === initialEditingEntryId)
     : null
 
   if (entry) {
@@ -114,7 +115,7 @@ function initialHistoryState(
 export default function History({ initialEditingEntryId = null, onEditHandled }: Props) {
   const now = new Date()
   const { entries, addEntry, editEntry } = useEntries()
-  const [initialState] = useState(() => initialHistoryState(initialEditingEntryId, now))
+  const [initialState] = useState(() => initialHistoryState(initialEditingEntryId, now, entries))
   const [year, setYear] = useState(initialState.year)
   const [month, setMonth] = useState(initialState.month)
   const [selectedDate, setSelectedDate] = useState(initialState.selectedDate)

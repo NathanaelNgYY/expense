@@ -27,8 +27,8 @@ const { store } = vi.hoisted(() => {
 
 vi.mock('@netlify/blobs', () => ({ getStore: () => store }))
 
-import ingest from './ingest'
-import entries from './entries'
+import ingest from '../ingest'
+import entries from '../entries'
 
 type AnyContext = { params?: Record<string, string> }
 

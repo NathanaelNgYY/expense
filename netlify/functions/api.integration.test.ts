@@ -150,4 +150,15 @@ describe('/api/entries CRUD', () => {
     )
     expect(res.status).toBe(404)
   })
+
+  it('returns 400 on a malformed JSON body instead of crashing', async () => {
+    const req = new Request('http://x/api/entries', {
+      method: 'POST',
+      headers: { authorization: 'Bearer tok', 'content-type': 'application/json' },
+      body: '{not json',
+    })
+    const res = await entries(req, { params: {} } as never)
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ error: 'invalid-json' })
+  })
 })

@@ -11,7 +11,7 @@ function renderWithEntries(entries: unknown[] = []) {
   // and echoes back a created entry for POST (createEntryApi)
   vi.stubGlobal(
     'fetch',
-    vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+    vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
       if (init?.method === 'POST') {
         try {
           const body = JSON.parse(init.body as string) as Record<string, unknown>

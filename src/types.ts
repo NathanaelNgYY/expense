@@ -1,15 +1,19 @@
 // src/types.ts
 export type Category = 'lunch' | 'transport' | 'savings' | 'investments' | 'others'
-export type EntrySource = 'manual' | 'apple-pay'
+export type EntrySource = 'manual' | 'apple-pay' | 'dbs-email'
 
 export interface Entry {
   id: string
   amount: number
   category: Category | null
   note: string
-  date: string // YYYY-MM-DD
+  date: string // YYYY-MM-DD (local SGT date used by all budget computations)
   source?: EntrySource
-  importKey?: string
+  importKey?: string // legacy; superseded by dedupeKey
+  merchant?: string
+  occurredAt?: string // ISO 8601 timestamp
+  currency?: string // e.g. "SGD"
+  dedupeKey?: string
 }
 
 export interface BudgetConfig {

@@ -48,19 +48,23 @@ async function flushQueue(): Promise<boolean> {
   return true
 }
 
-async function migrateIfNeeded(serverEntries: Entry[]): Promise<void> {
-  if (localStorage.getItem(MIGRATION_KEY)) return
+// Returns true if it pushed cached entries up (so the caller should re-fetch).
+async function migrateIfNeeded(serverEntries: Entry[]): Promise<boolean> {
+  if (localStorage.getItem(MIGRATION_KEY)) return false
   const cached = getCachedEntries()
+  let migrated = false
   if (serverEntries.length === 0 && cached.length > 0) {
     for (const entry of cached) {
       try {
         await createEntryApi({ amount: entry.amount, category: entry.category, note: entry.note, date: entry.date })
+        migrated = true
       } catch {
-        return // try again next load
+        return migrated // try again next load; don't mark migration done
       }
     }
   }
   localStorage.setItem(MIGRATION_KEY, '1')
+  return migrated
 }
 
 export function EntriesProvider({ children }: { children: ReactNode }) {
@@ -71,9 +75,10 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
     try {
       await flushQueue()
       const server = await fetchEntries()
-      await migrateIfNeeded(server)
-      setEntries(server)
-      setCachedEntries(server)
+      const migrated = await migrateIfNeeded(server)
+      const fresh = migrated ? await fetchEntries() : server
+      setEntries(fresh)
+      setCachedEntries(fresh)
     } catch {
       // offline: keep showing cache
     }

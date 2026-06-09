@@ -47,4 +47,33 @@ describe('EntriesContext', () => {
     const queue = JSON.parse(localStorage.getItem('sync_queue') as string)
     expect(queue).toHaveLength(1)
   })
+
+  it('migrates cached entries to an empty server, then shows the migrated entries', async () => {
+    localStorage.setItem('api_token', 'tok')
+    localStorage.setItem(
+      'budget_entries',
+      JSON.stringify([{ id: 'c1', amount: 7, category: 'lunch', note: 'old', date: '2026-06-01' }]),
+    )
+    const fetchMock = vi.fn().mockImplementation((_url: string, opts?: RequestInit) => {
+      if (opts?.method === 'POST') {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ id: 's-new', amount: 7, category: 'lunch', note: 'old', date: '2026-06-01' }),
+            { status: 201 },
+          ),
+        )
+      }
+      // GET: empty until a POST (migration) has happened, then return the migrated entry
+      const alreadyPosted = fetchMock.mock.calls.some(([, o]) => (o as RequestInit | undefined)?.method === 'POST')
+      const body = alreadyPosted
+        ? [{ id: 's-new', amount: 7, category: 'lunch', note: 'old', date: '2026-06-01' }]
+        : []
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<EntriesProvider><Probe /></EntriesProvider>)
+    // After migration, the entry pushed to the server must be reflected (regression: state was wiped to [])
+    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('1'))
+    expect(fetchMock.mock.calls.some(([, o]) => (o as RequestInit | undefined)?.method === 'POST')).toBe(true)
+  })
 })

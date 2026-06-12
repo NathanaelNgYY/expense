@@ -1,6 +1,15 @@
 # Budget Tracker
 
-Personal iPhone-friendly budget tracker built as a React + Vite PWA. Transactions live on a small Netlify Functions backend (Netlify Blobs store) so they can be captured automatically in the background; the PWA reads/writes through that API and keeps a `localStorage` cache for offline viewing. It tracks a S$1,200 monthly budget and supports a shortcut URL that opens straight to the add-entry screen.
+Personal iPhone-friendly budget tracker built as a React 19 + Vite PWA. Transactions live on a small Netlify Functions backend (Netlify Blobs store) so they can be captured automatically in the background; the PWA reads/writes through that API and keeps a `localStorage` cache for offline viewing. It tracks a configurable monthly budget (default S$1,200) and supports a shortcut URL that opens straight to the add-entry screen.
+
+## Features
+
+- **Dashboard** — per-category spend vs. budget, a computed buffer that absorbs overages, and a this-week strip.
+- **Add Entry** — fast custom numpad, category chips, optional note. Deep-linkable via `?add=true`.
+- **History** — weekly bars, lunch pace, monthly category breakdown, and spending insights.
+- **Settings** — edit monthly income + per-category budgets, paste the API token, export/import CSV, reset the month.
+- **Poker tracker** — log sessions and see P&L, hourly rate, win rate, streaks, and a bankroll trend (stored locally only).
+- **Background ingestion** — Apple Pay and DBS-email transactions captured automatically via iOS Shortcuts.
 
 ## Running Locally
 
@@ -101,6 +110,8 @@ The server extracts the amount and merchant from `rawBody`, so parsing can be im
 
 ## Budget Defaults
 
+Monthly income and every bucket are editable in Settings. Defaults (sum to the S$1,200 income):
+
 | Bucket | Monthly |
 | --- | ---: |
 | Lunch | S$264 |
@@ -109,6 +120,10 @@ The server extracts the amount and merchant from `rawBody`, so parsing can be im
 | Investments | S$250 |
 | Buffer | S$236 |
 
+The **Buffer** isn't a spending category — it absorbs per-category overages, computed as the buffer
+budget minus the sum of all category overages. Uncategorised entries (`others`) count toward weekly/monthly
+totals but not the per-category rows.
+
 ## Data Notes
 
-Transactions are stored server-side in Netlify Blobs (the source of truth) and cached in browser `localStorage` for offline viewing; on first load after deploy, any pre-existing local entries are migrated up to the server. Budget settings still live in `localStorage`. The Settings screen can export entries as CSV and reset the current month's entries.
+Transactions are stored server-side in Netlify Blobs (the source of truth) and cached in browser `localStorage` for offline viewing; on first load after deploy, any pre-existing local entries are migrated up to the server. Each entry has a deterministic `dedupeKey`, so re-fired automations and re-imported CSVs won't create duplicates. Budget settings and poker sessions live only in `localStorage`. The Settings screen can export and import entries as CSV and reset the current month's entries.

@@ -24,6 +24,10 @@ interface Props {
 const COMMITTED_CATEGORIES: Category[] = ['savings', 'investments']
 const COMMITTED_CATEGORY_SET = new Set<Category>(COMMITTED_CATEGORIES)
 
+// Which collapsible spend list is open. 'uncategorized' is the triage bucket for entries
+// (often auto-imported) that have no category yet — they have no budget line of their own.
+type ExpandKey = Category | 'uncategorized'
+
 function formatSignedCurrency(value: number): string {
   const sign = value < 0 ? '-' : ''
   return `${sign}S$${Math.abs(value).toFixed(2)}`
@@ -38,13 +42,19 @@ function entrySort(a: Entry, b: Entry): number {
 }
 
 export default function Dashboard({ onSettings }: Props) {
-  const [expandedCategory, setExpandedCategory] = useState<Category | null>(null)
+  const [expandedCategory, setExpandedCategory] = useState<ExpandKey | null>(null)
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
   const now = new Date()
   const { entries, removeEntry } = useEntries()
   const config = getBudgetConfig()
 
   const currentMonthEntries = entriesForMonth(entries, now.getFullYear(), now.getMonth())
+  // Triage bucket: this month's entries that still have no category (e.g. auto-imported
+  // from an unknown payee). Shown in full — unlike category lists, we don't trim to the
+  // last 2 weeks, since the whole point is to find and categorize every stray entry.
+  const uncategorizedEntries = currentMonthEntries.filter(entry => entry.category == null).sort(entrySort)
+  const uncategorizedTotal = uncategorizedEntries.reduce((sum, entry) => sum + entry.amount, 0)
+  const uncategorizedExpanded = expandedCategory === 'uncategorized'
   const todayDate = toLocalDateString(now)
   const recentExpenseStartDate = toLocalDateString(addDays(now, -14))
   const monthTotal = currentMonthEntries.reduce((sum, entry) => sum + entry.amount, 0)
@@ -71,16 +81,71 @@ export default function Dashboard({ onSettings }: Props) {
   const totalOverage = config.buffer - buffer
   const forecastOver = projectedDelta > 0
 
-  function toggleCategory(category: Category) {
+  function toggleCategory(category: ExpandKey) {
     setConfirmingDeleteId(null)
     setExpandedCategory(current => (current === category ? null : category))
   }
 
-  function handleCategoryKeyDown(event: KeyboardEvent<HTMLDivElement>, category: Category) {
+  function handleCategoryKeyDown(event: KeyboardEvent<HTMLDivElement>, category: ExpandKey) {
     if (event.key !== 'Enter' && event.key !== ' ') return
 
     event.preventDefault()
     toggleCategory(category)
+  }
+
+  // One expense row, shared by the category lists and the Uncategorized list. Shows an
+  // inline delete confirm when this row's id is the one pending deletion.
+  function renderExpenseRow(entry: Entry) {
+    if (confirmingDeleteId === entry.id) {
+      return (
+        <div key={entry.id} className="category-expense-row category-expense-row--confirm">
+          <span className="category-expense-confirm-text">Delete this entry?</span>
+          <span className="category-expense-confirm-actions">
+            <button
+              type="button"
+              className="expense-confirm-btn expense-confirm-btn--yes"
+              aria-label="Confirm delete"
+              onClick={() => {
+                setConfirmingDeleteId(null)
+                void removeEntry(entry.id)
+              }}
+            >
+              <Check size={15} strokeWidth={3} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="expense-confirm-btn expense-confirm-btn--no"
+              aria-label="Cancel delete"
+              onClick={() => setConfirmingDeleteId(null)}
+            >
+              <X size={15} strokeWidth={3} aria-hidden="true" />
+            </button>
+          </span>
+        </div>
+      )
+    }
+
+    return (
+      <div key={entry.id} className="category-expense-row">
+        <span className="category-expense-main">
+          <span className="category-expense-date">
+            {format(fromLocalDateString(entry.date), 'EEE, MMM d')}
+          </span>
+          {entry.note && <span className="category-expense-note">{entry.note}</span>}
+        </span>
+        <span className="category-expense-trailing">
+          <strong className="category-expense-amount">S${entry.amount.toFixed(2)}</strong>
+          <button
+            type="button"
+            className="expense-delete-btn"
+            aria-label="Delete entry"
+            onClick={() => setConfirmingDeleteId(entry.id)}
+          >
+            <Minus size={15} strokeWidth={3} aria-hidden="true" />
+          </button>
+        </span>
+      </div>
+    )
   }
 
   return (
@@ -280,60 +345,65 @@ export default function Dashboard({ onSettings }: Props) {
                     No {categoryLabel.toLowerCase()} entries in the past 2 weeks.
                   </p>
                 ) : (
-                  categoryEntries.map(entry =>
-                    confirmingDeleteId === entry.id ? (
-                      <div key={entry.id} className="category-expense-row category-expense-row--confirm">
-                        <span className="category-expense-confirm-text">Delete this entry?</span>
-                        <span className="category-expense-confirm-actions">
-                          <button
-                            type="button"
-                            className="expense-confirm-btn expense-confirm-btn--yes"
-                            aria-label="Confirm delete"
-                            onClick={() => {
-                              setConfirmingDeleteId(null)
-                              void removeEntry(entry.id)
-                            }}
-                          >
-                            <Check size={15} strokeWidth={3} aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            className="expense-confirm-btn expense-confirm-btn--no"
-                            aria-label="Cancel delete"
-                            onClick={() => setConfirmingDeleteId(null)}
-                          >
-                            <X size={15} strokeWidth={3} aria-hidden="true" />
-                          </button>
-                        </span>
-                      </div>
-                    ) : (
-                      <div key={entry.id} className="category-expense-row">
-                        <span className="category-expense-main">
-                          <span className="category-expense-date">
-                            {format(fromLocalDateString(entry.date), 'EEE, MMM d')}
-                          </span>
-                          {entry.note && <span className="category-expense-note">{entry.note}</span>}
-                        </span>
-                        <span className="category-expense-trailing">
-                          <strong className="category-expense-amount">S${entry.amount.toFixed(2)}</strong>
-                          <button
-                            type="button"
-                            className="expense-delete-btn"
-                            aria-label="Delete entry"
-                            onClick={() => setConfirmingDeleteId(entry.id)}
-                          >
-                            <Minus size={15} strokeWidth={3} aria-hidden="true" />
-                          </button>
-                        </span>
-                      </div>
-                    ),
-                  )
+                  categoryEntries.map(renderExpenseRow)
                 )}
               </div>
             )}
           </article>
         )
       })}
+
+      {uncategorizedEntries.length > 0 && (
+        <article className="card category-row-card">
+          <div
+            role="button"
+            tabIndex={0}
+            className="category-row-toggle"
+            onClick={() => toggleCategory('uncategorized')}
+            onKeyDown={event => handleCategoryKeyDown(event, 'uncategorized')}
+            aria-expanded={uncategorizedExpanded}
+            aria-controls="category-expenses-uncategorized"
+          >
+            <span className="cat-row-top">
+              <span className="cat-name icon-label">
+                <BudgetIcon name="uncategorized" />
+                Uncategorized
+              </span>
+              <span className="cat-row-right">
+                <span className="cat-spent-group">
+                  <span className="cat-spent">S${uncategorizedTotal.toFixed(2)}</span>
+                  {uncategorizedExpanded ? (
+                    <ChevronUp className="cat-chevron" aria-hidden="true" strokeWidth={2.4} />
+                  ) : (
+                    <ChevronDown className="cat-chevron" aria-hidden="true" strokeWidth={2.4} />
+                  )}
+                </span>
+              </span>
+            </span>
+            <span className="cat-row-bottom">
+              <span className="muted">
+                {uncategorizedEntries.length} entr{uncategorizedEntries.length === 1 ? 'y' : 'ies'} to categorize in History
+              </span>
+            </span>
+          </div>
+
+          {uncategorizedExpanded && (
+            <div
+              id="category-expenses-uncategorized"
+              className="category-expense-list"
+              aria-label="Uncategorized expenses"
+            >
+              <div className="category-expense-header">
+                <span>Uncategorized Expenses</span>
+                <span>
+                  {uncategorizedEntries.length} entr{uncategorizedEntries.length === 1 ? 'y' : 'ies'}
+                </span>
+              </div>
+              {uncategorizedEntries.map(renderExpenseRow)}
+            </div>
+          )}
+        </article>
+      )}
 
       <div className="card week-strip">
         <span className="muted">This week</span>

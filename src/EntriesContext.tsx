@@ -8,7 +8,14 @@ import {
   deleteEntryApi,
   type NewManualEntry,
 } from './api'
-import { getQueue, setQueue, getTombstones, setTombstones } from './syncQueue'
+import {
+  getQueue,
+  setQueue,
+  getTombstones,
+  setTombstones,
+  getPendingCreates,
+  setPendingCreates,
+} from './syncQueue'
 
 interface EntriesContextValue {
   entries: Entry[]
@@ -87,19 +94,27 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
       const server = await fetchEntries()
       const migrated = await migrateIfNeeded(server)
       const fresh = migrated ? await fetchEntries() : server
-      // Netlify Blobs list() is eventually consistent: a just-deleted entry can still
-      // come back in this list for a short window. Keep hiding tombstoned ids until the
-      // server stops returning them, then prune the tombstone (deletion has propagated).
+      // Netlify Blobs list() is eventually consistent, so the refreshed server list can
+      // briefly lag a local mutation in BOTH directions. Reconcile both:
+      //  - hide just-deleted ids the stale list still returns (tombstones), and
+      //  - keep showing just-created ids the stale list doesn't return yet (pending
+      //    creates), pulling the entry from local state until the server catches up.
+      const serverIds = new Set(fresh.map(e => e.id))
+
       const tombstones = getTombstones()
-      if (tombstones.length > 0) {
-        const serverIds = new Set(fresh.map(e => e.id))
-        const stillPending = tombstones.filter(id => serverIds.has(id))
-        if (stillPending.length !== tombstones.length) setTombstones(stillPending)
-        const pending = new Set(stillPending)
-        commit(fresh.filter(e => !pending.has(e.id)))
-      } else {
-        commit(fresh)
-      }
+      const stillTombstoned = tombstones.filter(id => serverIds.has(id))
+      if (stillTombstoned.length !== tombstones.length) setTombstones(stillTombstoned)
+      const hidden = new Set(stillTombstoned)
+
+      const localById = new Map(entriesRef.current.map(e => [e.id, e]))
+      const pendingCreates = getPendingCreates()
+      const stillUnseen = pendingCreates.filter(
+        id => !serverIds.has(id) && !hidden.has(id) && localById.has(id),
+      )
+      if (stillUnseen.length !== pendingCreates.length) setPendingCreates(stillUnseen)
+      const extras = stillUnseen.map(id => localById.get(id)!)
+
+      commit([...fresh.filter(e => !hidden.has(e.id)), ...extras])
     } catch {
       // offline: keep showing cache
     }
@@ -124,6 +139,9 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
       source: 'manual',
     }
     commit([...entriesRef.current, optimistic])
+    // Mark the id pending so the post-create refresh (which may run before Blobs' list()
+    // has propagated the write) keeps showing it instead of dropping it.
+    setPendingCreates([...new Set([...getPendingCreates(), optimistic.id])])
     setQueue([...getQueue(), { op: 'create', entry: optimistic }])
     await flushQueue()
     void refresh()

@@ -177,6 +177,43 @@ describe('Dashboard category expense history', () => {
     expect(list).toHaveTextContent('S$12.50')
   })
 
+  it('lists entries with no category in an Uncategorized section', () => {
+    const rendered = renderWithEntries([
+      entry({ amount: 18.5, category: null, note: 'PayNow · AH HUAT', date: '2026-05-06' }),
+      entry({ amount: 12.5, category: 'lunch', date: '2026-05-04' }),
+    ])
+    root = rendered.root
+
+    clickCategory(rendered.container, 'Uncategorized')
+
+    const list = rendered.container.querySelector('#category-expenses-uncategorized')
+    expect(list).toHaveTextContent('PayNow · AH HUAT')
+    expect(list).toHaveTextContent('S$18.50')
+  })
+
+  it('shows uncategorized entries from earlier in the month, not just the past two weeks', () => {
+    vi.setSystemTime(new Date('2026-05-25T12:00:00'))
+    const rendered = renderWithEntries([
+      entry({ amount: 30, category: null, note: 'old import', date: '2026-05-02' }),
+    ])
+    root = rendered.root
+
+    clickCategory(rendered.container, 'Uncategorized')
+
+    const list = rendered.container.querySelector('#category-expenses-uncategorized')
+    expect(list).toHaveTextContent('old import')
+    expect(list).toHaveTextContent('S$30.00')
+  })
+
+  it('hides the Uncategorized section when every entry has a category', () => {
+    const rendered = renderWithEntries([
+      entry({ amount: 12.5, category: 'lunch', date: '2026-05-04' }),
+    ])
+    root = rendered.root
+
+    expect(rendered.container).not.toHaveTextContent('Uncategorized')
+  })
+
   it('uses the configured monthly income in the summary', () => {
     localStorage.setItem(
       'budget_config',

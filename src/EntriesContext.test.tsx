@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, act, waitFor } from '@testing-library/react'
 import { EntriesProvider, useEntries } from './EntriesContext'
+import type { Entry } from './types'
 
 function Probe() {
   const { entries, addEntry } = useEntries()
@@ -61,6 +62,36 @@ describe('EntriesContext', () => {
     expect(cached).toHaveLength(1)
     const queue = JSON.parse(localStorage.getItem('sync_queue') as string)
     expect(queue).toHaveLength(1)
+  })
+
+  it('keeps a just-added entry visible while the server list is briefly stale (Blobs eventual consistency)', async () => {
+    localStorage.setItem('api_token', 'tok')
+    let created: Entry | null = null
+    let staleGetsRemaining = 1 // the GET fired by the post-create refresh still sees the stale list
+    const fetchMock = vi.fn().mockImplementation((_url: string, opts?: RequestInit) => {
+      const method = opts?.method ?? 'GET'
+      if (method === 'POST') {
+        created = JSON.parse(opts!.body as string) as Entry
+        return Promise.resolve(jsonResponse(created, 201))
+      }
+      if (!created) return Promise.resolve(jsonResponse([]))
+      if (staleGetsRemaining > 0) {
+        staleGetsRemaining--
+        return Promise.resolve(jsonResponse([])) // list() hasn't propagated the create yet
+      }
+      return Promise.resolve(jsonResponse([created])) // server has caught up
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<EntriesProvider><Probe /></EntriesProvider>)
+    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('0'))
+
+    await act(async () => {
+      screen.getByText('add').click()
+    })
+
+    // The optimistic create must not be wiped by the stale (still-empty) refresh list.
+    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('1'))
   })
 
   it('migrates cached entries to an empty server, then shows the migrated entries', async () => {

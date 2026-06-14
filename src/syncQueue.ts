@@ -48,5 +48,24 @@ export function setTombstones(ids: string[]): void {
   localStorage.setItem(TOMBSTONES_KEY, JSON.stringify(ids))
 }
 
+// Pending creates: ids of entries created locally that Blobs `list()` may not return
+// yet. The mirror of tombstones — instead of hiding ids the stale list still returns,
+// we keep SHOWING these ids (from local state) until the server starts returning them,
+// then prune the id (creation confirmed propagated).
+const PENDING_CREATES_KEY = 'pending_creates'
+
+export function getPendingCreates(): string[] {
+  try {
+    const raw = localStorage.getItem(PENDING_CREATES_KEY)
+    return raw ? (JSON.parse(raw) as string[]) : []
+  } catch {
+    return []
+  }
+}
+
+export function setPendingCreates(ids: string[]): void {
+  localStorage.setItem(PENDING_CREATES_KEY, JSON.stringify(ids))
+}
+
 // Re-exported for callers that build create mutations.
 export type { NewManualEntry }

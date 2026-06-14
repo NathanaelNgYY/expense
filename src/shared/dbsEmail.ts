@@ -1,5 +1,7 @@
+export type DbsChannel = 'paynow' | 'card'
+
 export type DbsEmailParse =
-  | { ok: true; amount: number; merchant: string }
+  | { ok: true; amount: number; merchant: string; channel: DbsChannel }
   | { ok: false; reason: 'no-amount' | 'invalid-amount' }
 
 export function parseDbsEmail(rawBody: string): DbsEmailParse {
@@ -23,5 +25,10 @@ export function parseDbsEmail(rawBody: string): DbsEmailParse {
     .trim()
     .replace(/\s*\([^)]*\)\s*$/, '')
     .trim()
-  return { ok: true, amount, merchant }
+
+  // DBS sends one email shape for card swipes and another for PayNow transfers;
+  // the PayNow body says so explicitly. Used to label the entry's note.
+  const channel: DbsChannel = /paynow/i.test(body) ? 'paynow' : 'card'
+
+  return { ok: true, amount, merchant, channel }
 }

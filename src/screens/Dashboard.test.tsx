@@ -126,6 +126,57 @@ describe('Dashboard category expense history', () => {
     expect(list).not.toHaveTextContent('S$7.00')
   })
 
+  it('deletes an entry after confirming with the red minus button', () => {
+    const rendered = renderWithEntries([
+      entry({ amount: 12.5, category: 'lunch', date: '2026-05-04' }),
+    ])
+    root = rendered.root
+
+    clickCategory(rendered.container, 'Lunch')
+
+    const list = rendered.container.querySelector('#category-expenses-lunch') as HTMLElement
+    expect(list).toHaveTextContent('S$12.50')
+
+    const deleteBtn = list.querySelector('[aria-label="Delete entry"]') as HTMLElement
+    act(() => {
+      deleteBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(list).toHaveTextContent('Delete this entry?')
+
+    const confirmBtn = list.querySelector('[aria-label="Confirm delete"]') as HTMLElement
+    act(() => {
+      confirmBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const after = rendered.container.querySelector('#category-expenses-lunch') as HTMLElement
+    expect(after).not.toHaveTextContent('S$12.50')
+    expect(after).toHaveTextContent('No lunch entries in the past 2 weeks.')
+  })
+
+  it('keeps the entry when the delete confirmation is cancelled', () => {
+    const rendered = renderWithEntries([
+      entry({ amount: 12.5, category: 'lunch', date: '2026-05-04' }),
+    ])
+    root = rendered.root
+
+    clickCategory(rendered.container, 'Lunch')
+
+    const list = rendered.container.querySelector('#category-expenses-lunch') as HTMLElement
+    const deleteBtn = list.querySelector('[aria-label="Delete entry"]') as HTMLElement
+    act(() => {
+      deleteBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const cancelBtn = list.querySelector('[aria-label="Cancel delete"]') as HTMLElement
+    act(() => {
+      cancelBtn.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(list).not.toHaveTextContent('Delete this entry?')
+    expect(list).toHaveTextContent('S$12.50')
+  })
+
   it('uses the configured monthly income in the summary', () => {
     localStorage.setItem(
       'budget_config',

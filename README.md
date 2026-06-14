@@ -108,6 +108,35 @@ Transactions are captured automatically by two iOS Shortcuts that POST to the ap
 
 The server extracts the amount and merchant from `rawBody`, so parsing can be improved in code without editing the Shortcut. Each transaction gets a deterministic `dedupeKey`, so a re-fired automation will not create duplicate entries.
 
+### Testing & troubleshooting ingestion (no Apple Pay needed)
+
+The iOS Shortcut is just an HTTP POST, so you can exercise the whole pipeline without a real
+purchase:
+
+```bash
+npm run test:ingest         # the ingestHandler unit/integration tests (no network)
+# fire a real POST at a running server (start `npx netlify dev` first):
+npm run test:ingest:live    # → defaults to http://localhost:8888, token from $env:INGEST_TOKEN
+npm run test:ingest:live -- -Url https://<your-site>.netlify.app -Token <INGEST_TOKEN>   # hit prod
+```
+
+`scripts/test-ingest.ps1` prints the request and the response (`saved` / `duplicate` / an HTTP
+error). Firing the same body twice returns `duplicate`, proving dedupe. A `401` means the token
+doesn't match; a "no HTTP response" means the server isn't reachable.
+
+Common Shortcut errors:
+
+- **`{"error":"unauthorized"}` (401)** — the `Authorization` header must be `Bearer <INGEST_TOKEN>`
+  (the literal word `Bearer`, a space, then the token). A bare token fails the server's
+  `^Bearer\s+(.+)$` check. Paste the value rather than typing it (iOS autocapitalize/autocorrect
+  mangles long tokens). `Bearer` is case-sensitive.
+- **`kCFErrorDomainCFNetwork error -1005` ("network connection was lost")** — this is iOS's
+  networking layer, not the server. If `npm run test:ingest:live` against prod returns `saved`,
+  the backend is fine and the drop is on the device (Wallet automations fire mid-radio-handoff;
+  iCloud Private Relay / a flaky network can also cause it). Note Shortcuts has **no try/catch**,
+  so wrapping the request in *Repeat* does **not** retry on this error — the action aborts the
+  whole shortcut. The dedupe key makes a re-fired automation safe regardless.
+
 ## Budget Defaults
 
 Monthly income and every bucket are editable in Settings. Defaults (sum to the S$1,200 income):

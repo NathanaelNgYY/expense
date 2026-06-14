@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent } from 'react'
-import { CalendarDays, ChevronDown, ChevronUp, Settings as SettingsIcon, TrendingDown, TrendingUp } from 'lucide-react'
+import { CalendarDays, Check, ChevronDown, ChevronUp, Minus, Settings as SettingsIcon, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
 import { getBudgetConfig } from '../storage'
@@ -39,8 +39,9 @@ function entrySort(a: Entry, b: Entry): number {
 
 export default function Dashboard({ onSettings }: Props) {
   const [expandedCategory, setExpandedCategory] = useState<Category | null>(null)
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
   const now = new Date()
-  const { entries } = useEntries()
+  const { entries, removeEntry } = useEntries()
   const config = getBudgetConfig()
 
   const currentMonthEntries = entriesForMonth(entries, now.getFullYear(), now.getMonth())
@@ -71,6 +72,7 @@ export default function Dashboard({ onSettings }: Props) {
   const forecastOver = projectedDelta > 0
 
   function toggleCategory(category: Category) {
+    setConfirmingDeleteId(null)
     setExpandedCategory(current => (current === category ? null : category))
   }
 
@@ -278,17 +280,54 @@ export default function Dashboard({ onSettings }: Props) {
                     No {categoryLabel.toLowerCase()} entries in the past 2 weeks.
                   </p>
                 ) : (
-                  categoryEntries.map(entry => (
-                    <div key={entry.id} className="category-expense-row">
-                      <span className="category-expense-main">
-                        <span className="category-expense-date">
-                          {format(fromLocalDateString(entry.date), 'EEE, MMM d')}
+                  categoryEntries.map(entry =>
+                    confirmingDeleteId === entry.id ? (
+                      <div key={entry.id} className="category-expense-row category-expense-row--confirm">
+                        <span className="category-expense-confirm-text">Delete this entry?</span>
+                        <span className="category-expense-confirm-actions">
+                          <button
+                            type="button"
+                            className="expense-confirm-btn expense-confirm-btn--yes"
+                            aria-label="Confirm delete"
+                            onClick={() => {
+                              setConfirmingDeleteId(null)
+                              void removeEntry(entry.id)
+                            }}
+                          >
+                            <Check size={15} strokeWidth={3} aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="expense-confirm-btn expense-confirm-btn--no"
+                            aria-label="Cancel delete"
+                            onClick={() => setConfirmingDeleteId(null)}
+                          >
+                            <X size={15} strokeWidth={3} aria-hidden="true" />
+                          </button>
                         </span>
-                        {entry.note && <span className="category-expense-note">{entry.note}</span>}
-                      </span>
-                      <strong className="category-expense-amount">S${entry.amount.toFixed(2)}</strong>
-                    </div>
-                  ))
+                      </div>
+                    ) : (
+                      <div key={entry.id} className="category-expense-row">
+                        <span className="category-expense-main">
+                          <span className="category-expense-date">
+                            {format(fromLocalDateString(entry.date), 'EEE, MMM d')}
+                          </span>
+                          {entry.note && <span className="category-expense-note">{entry.note}</span>}
+                        </span>
+                        <span className="category-expense-trailing">
+                          <strong className="category-expense-amount">S${entry.amount.toFixed(2)}</strong>
+                          <button
+                            type="button"
+                            className="expense-delete-btn"
+                            aria-label="Delete entry"
+                            onClick={() => setConfirmingDeleteId(entry.id)}
+                          >
+                            <Minus size={15} strokeWidth={3} aria-hidden="true" />
+                          </button>
+                        </span>
+                      </div>
+                    ),
+                  )
                 )}
               </div>
             )}

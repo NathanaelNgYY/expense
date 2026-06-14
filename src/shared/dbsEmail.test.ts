@@ -18,6 +18,12 @@ describe('parseDbsEmail', () => {
     }
   })
 
+  it('flags a card alert as the "card" channel', () => {
+    const result = parseDbsEmail(SAMPLE)
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.channel).toBe('card')
+  })
+
   it('fails when no amount present', () => {
     const result = parseDbsEmail('Hello, this is not a transaction alert.')
     expect(result.ok).toBe(false)
@@ -46,9 +52,38 @@ If unauthorised, please call our DBS hotline.`
     }
   })
 
+  it('flags a PayNow alert as the "paynow" channel', () => {
+    const result = parseDbsEmail(PAYNOW)
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.channel).toBe('paynow')
+  })
+
   it('handles CRLF line endings', () => {
     const result = parseDbsEmail(PAYNOW.replace(/\n/g, '\r\n'))
     expect(result.ok).toBe(true)
     if (result.ok) expect(result.merchant).toBe('LFH SEAFOOD')
+  })
+
+  // Real person-to-person PayNow alert (from the user's actual inbox, redacted):
+  // recipient is a personal name with a trailing "(MOBILE ending ...)".
+  const PAYNOW_MOBILE = `Dear Customer,
+
+We refer to your PAYNOW dated 10 Jun. We are pleased to confirm that the transaction was completed.
+
+Date & Time:    10 Jun 13:28 (SGT)
+Amount:    SGD7.20
+From:    My Account A/C ending 0450
+To:    KHXX JIX SHEXX (MOBILE ending 5998)
+
+If unauthorised, please call our DBS hotline. To view transaction details, please login to digibank.`
+
+  it('parses a person-to-person PayNow alert (strips "MOBILE ending" parenthetical)', () => {
+    const result = parseDbsEmail(PAYNOW_MOBILE)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.amount).toBe(7.2)
+      expect(result.merchant).toBe('KHXX JIX SHEXX')
+      expect(result.channel).toBe('paynow')
+    }
   })
 })

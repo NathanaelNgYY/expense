@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:ingest": "vitest run ingestHandler",
+    "test:ingest:live": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-ingest.ps1"
   },
   "dependencies": {
     "@netlify/blobs": "^10.7.9",

@@ -12,6 +12,21 @@ function Probe() {
   )
 }
 
+function DeleteProbe() {
+  const { entries, removeEntry, refresh } = useEntries()
+  return (
+    <div>
+      <span data-testid="count">{entries.length}</span>
+      <button onClick={() => void removeEntry('s1')}>del</button>
+      <button onClick={() => void refresh()}>refresh</button>
+    </div>
+  )
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), { status })
+}
+
 beforeEach(() => {
   localStorage.clear()
   vi.restoreAllMocks()
@@ -75,5 +90,73 @@ describe('EntriesContext', () => {
     // After migration, the entry pushed to the server must be reflected (regression: state was wiped to [])
     await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('1'))
     expect(fetchMock.mock.calls.some(([, o]) => (o as RequestInit | undefined)?.method === 'POST')).toBe(true)
+  })
+
+  it('keeps a deleted entry gone even when the server list is briefly stale (Blobs eventual consistency)', async () => {
+    localStorage.setItem('api_token', 'tok')
+    const e1 = { id: 's1', amount: 2, category: 'lunch', note: '', date: '2026-06-09' }
+    let deleted = false
+    let staleGetsRemaining = 1 // the GET fired by the post-delete refresh still sees the stale list
+    const fetchMock = vi.fn().mockImplementation((_url: string, opts?: RequestInit) => {
+      const method = opts?.method ?? 'GET'
+      if (method === 'DELETE') {
+        deleted = true
+        return Promise.resolve(jsonResponse({ status: 'deleted' }))
+      }
+      if (!deleted) return Promise.resolve(jsonResponse([e1]))
+      if (staleGetsRemaining > 0) {
+        staleGetsRemaining--
+        return Promise.resolve(jsonResponse([e1])) // list() hasn't propagated the delete yet
+      }
+      return Promise.resolve(jsonResponse([])) // server has caught up
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<EntriesProvider><DeleteProbe /></EntriesProvider>)
+    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('1'))
+
+    await act(async () => {
+      screen.getByText('del').click()
+    })
+
+    // The optimistic delete must not be undone by the stale refresh list.
+    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('0'))
+    expect(JSON.parse(localStorage.getItem('deleted_ids') as string)).toEqual(['s1'])
+  })
+
+  it('prunes a tombstone once the server stops returning the deleted id', async () => {
+    localStorage.setItem('api_token', 'tok')
+    const e1 = { id: 's1', amount: 2, category: 'lunch', note: '', date: '2026-06-09' }
+    let deleted = false
+    let staleGetsRemaining = 1
+    const fetchMock = vi.fn().mockImplementation((_url: string, opts?: RequestInit) => {
+      const method = opts?.method ?? 'GET'
+      if (method === 'DELETE') {
+        deleted = true
+        return Promise.resolve(jsonResponse({ status: 'deleted' }))
+      }
+      if (!deleted) return Promise.resolve(jsonResponse([e1]))
+      if (staleGetsRemaining > 0) {
+        staleGetsRemaining--
+        return Promise.resolve(jsonResponse([e1]))
+      }
+      return Promise.resolve(jsonResponse([]))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<EntriesProvider><DeleteProbe /></EntriesProvider>)
+    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('1'))
+
+    await act(async () => {
+      screen.getByText('del').click()
+    })
+    await waitFor(() => expect(JSON.parse(localStorage.getItem('deleted_ids') as string)).toEqual(['s1']))
+
+    // A later refresh sees the server caught up (no s1) → tombstone is pruned.
+    await act(async () => {
+      screen.getByText('refresh').click()
+    })
+    await waitFor(() => expect(JSON.parse(localStorage.getItem('deleted_ids') as string)).toEqual([]))
+    expect(screen.getByTestId('count').textContent).toBe('0')
   })
 })

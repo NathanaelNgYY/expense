@@ -8,7 +8,7 @@ import {
   deleteEntryApi,
   type NewManualEntry,
 } from './api'
-import { getQueue, setQueue } from './syncQueue'
+import { getQueue, setQueue, getTombstones, setTombstones } from './syncQueue'
 
 interface EntriesContextValue {
   entries: Entry[]
@@ -87,7 +87,19 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
       const server = await fetchEntries()
       const migrated = await migrateIfNeeded(server)
       const fresh = migrated ? await fetchEntries() : server
-      commit(fresh)
+      // Netlify Blobs list() is eventually consistent: a just-deleted entry can still
+      // come back in this list for a short window. Keep hiding tombstoned ids until the
+      // server stops returning them, then prune the tombstone (deletion has propagated).
+      const tombstones = getTombstones()
+      if (tombstones.length > 0) {
+        const serverIds = new Set(fresh.map(e => e.id))
+        const stillPending = tombstones.filter(id => serverIds.has(id))
+        if (stillPending.length !== tombstones.length) setTombstones(stillPending)
+        const pending = new Set(stillPending)
+        commit(fresh.filter(e => !pending.has(e.id)))
+      } else {
+        commit(fresh)
+      }
     } catch {
       // offline: keep showing cache
     }
@@ -126,6 +138,8 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
 
   const removeEntry = useCallback(async (id: string) => {
     commit(entriesRef.current.filter(e => e.id !== id))
+    // Tombstone the id so an eventually-consistent server refresh can't resurrect it.
+    setTombstones([...new Set([...getTombstones(), id])])
     setQueue([...getQueue(), { op: 'delete', id }])
     await flushQueue()
     void refresh()

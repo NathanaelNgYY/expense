@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { guessCategory } from './category'
+import { guessCategory, categoryFromHistory } from './category'
+import type { Entry } from '../types'
 
 describe('guessCategory', () => {
   it('classifies transport merchants', () => {
@@ -13,7 +14,56 @@ describe('guessCategory', () => {
   it('classifies grocery as others', () => {
     expect(guessCategory('FairPrice Finest')).toBe('others')
   })
-  it('falls back to others for unknown', () => {
-    expect(guessCategory('Some Random Shop')).toBe('others')
+  it('returns null for unknown merchants (no silent "others")', () => {
+    expect(guessCategory('Some Random Shop')).toBeNull()
+    expect(guessCategory('')).toBeNull()
+  })
+})
+
+function entry(partial: Partial<Entry>): Entry {
+  return {
+    id: partial.id ?? Math.random().toString(36).slice(2),
+    amount: partial.amount ?? 1,
+    category: partial.category ?? null,
+    note: partial.note ?? '',
+    date: partial.date ?? '2026-06-01',
+    merchant: partial.merchant,
+    occurredAt: partial.occurredAt,
+  }
+}
+
+describe('categoryFromHistory', () => {
+  it('returns the category the user gave a matching merchant before', () => {
+    const history = [
+      entry({ merchant: 'AH HUAT TRADING', category: 'lunch', date: '2026-06-10' }),
+    ]
+    expect(categoryFromHistory(history, 'AH HUAT TRADING')).toBe('lunch')
+  })
+
+  it('matches merchants case- and whitespace-insensitively', () => {
+    const history = [entry({ merchant: 'Ah Huat   Trading', category: 'lunch' })]
+    expect(categoryFromHistory(history, '  ah huat trading ')).toBe('lunch')
+  })
+
+  it('ignores entries with no category and unrelated merchants', () => {
+    const history = [
+      entry({ merchant: 'AH HUAT TRADING', category: null }),
+      entry({ merchant: 'SOMEWHERE ELSE', category: 'transport' }),
+    ]
+    expect(categoryFromHistory(history, 'AH HUAT TRADING')).toBeNull()
+  })
+
+  it('returns the most frequent category, breaking ties by most recent', () => {
+    const history = [
+      entry({ merchant: 'AH HUAT', category: 'others', date: '2026-06-01' }),
+      entry({ merchant: 'AH HUAT', category: 'lunch', date: '2026-06-02' }),
+      entry({ merchant: 'AH HUAT', category: 'lunch', date: '2026-06-03' }),
+    ]
+    expect(categoryFromHistory(history, 'AH HUAT')).toBe('lunch')
+  })
+
+  it('returns null for an empty merchant', () => {
+    const history = [entry({ merchant: 'AH HUAT', category: 'lunch' })]
+    expect(categoryFromHistory(history, '')).toBeNull()
   })
 })

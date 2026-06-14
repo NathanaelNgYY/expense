@@ -772,6 +772,74 @@ input:focus-visible {
   font-feature-settings: "tnum";
 }
 
+.category-expense-trailing {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.expense-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--red) 18%, transparent);
+  color: var(--red);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.expense-delete-btn:active {
+  background: color-mix(in srgb, var(--red) 30%, transparent);
+}
+
+.category-expense-row--confirm {
+  align-items: center;
+}
+
+.category-expense-confirm-text {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.category-expense-confirm-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.expense-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.expense-confirm-btn--yes {
+  background: var(--green);
+  color: #06280f;
+}
+
+.expense-confirm-btn--no {
+  background: var(--bg-elev-2);
+  color: var(--text-secondary);
+}
+
 /* ─── Week strip (Dashboard) ─────────────────────────────── */
 
 .week-strip {

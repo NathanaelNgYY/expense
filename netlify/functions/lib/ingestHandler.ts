@@ -1,6 +1,7 @@
 import type { Entry } from '../../../src/types'
 import { buildEntryFromIngest, type IngestInput } from '../../../src/shared/entry'
 import { parseDbsEmail } from '../../../src/shared/dbsEmail'
+import { categoryFromHistory } from '../../../src/shared/category'
 import type { EntryStore } from './store'
 
 export type IngestBody =
@@ -22,10 +23,12 @@ export async function handleIngest(
     if (!Number.isFinite(body.amount) || body.amount <= 0) {
       return { status: 'error', reason: 'invalid-amount' }
     }
+    const merchant = body.merchant ?? ''
     input = {
       sourceKind: 'apple_pay',
       amount: Math.round(body.amount * 100) / 100,
-      merchant: body.merchant ?? '',
+      merchant,
+      learnedCategory: categoryFromHistory(await store.list(), merchant),
       occurredAt: body.occurredAt,
       currency: body.currency,
     }
@@ -38,6 +41,8 @@ export async function handleIngest(
       sourceKind: 'dbs_email',
       amount: parsed.amount,
       merchant: parsed.merchant,
+      channel: parsed.channel,
+      learnedCategory: categoryFromHistory(await store.list(), parsed.merchant),
       occurredAt: body.occurredAt,
       currency: body.currency,
     }

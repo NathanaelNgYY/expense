@@ -24,6 +24,16 @@ function DeleteProbe() {
   )
 }
 
+function EditProbe() {
+  const { entries, editEntry } = useEntries()
+  return (
+    <div>
+      <span data-testid="amount">{entries.find(e => e.id === 's1')?.amount ?? 0}</span>
+      <button onClick={() => void editEntry('s1', { amount: 99 })}>edit</button>
+    </div>
+  )
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status })
 }
@@ -153,6 +163,57 @@ describe('EntriesContext', () => {
     // The optimistic delete must not be undone by the stale refresh list.
     await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('0'))
     expect(JSON.parse(localStorage.getItem('deleted_ids') as string)).toEqual(['s1'])
+  })
+
+  it('removes optimistically without blocking on the network DELETE', async () => {
+    localStorage.setItem('api_token', 'tok')
+    const e1 = { id: 's1', amount: 2, category: 'lunch', note: '', date: '2026-06-09' }
+    // GET resolves; the DELETE stays pending so we can prove the UI doesn't wait for it.
+    let rejectNet: (err: Error) => void = () => {}
+    const pendingNet = new Promise<Response>((_, reject) => { rejectNet = reject })
+    pendingNet.catch(() => {}) // avoid an unhandled-rejection warning when we settle it
+    const fetchMock = vi.fn((_url: string, opts?: RequestInit) =>
+      (opts?.method ?? 'GET') === 'GET' ? Promise.resolve(jsonResponse([e1])) : pendingNet,
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<EntriesProvider><DeleteProbe /></EntriesProvider>)
+    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('1'))
+
+    await act(async () => {
+      screen.getByText('del').click()
+    })
+
+    // Optimistic delete + tombstone happen immediately, even though the DELETE never resolved.
+    expect(screen.getByTestId('count').textContent).toBe('0')
+    expect(JSON.parse(localStorage.getItem('deleted_ids') as string)).toEqual(['s1'])
+
+    // Settle the background flush so the in-flight guard resets for the next test.
+    await act(async () => { rejectNet(new Error('offline')) })
+  })
+
+  it('edits optimistically without blocking on the network PUT', async () => {
+    localStorage.setItem('api_token', 'tok')
+    const e1 = { id: 's1', amount: 2, category: 'lunch', note: '', date: '2026-06-09' }
+    let rejectNet: (err: Error) => void = () => {}
+    const pendingNet = new Promise<Response>((_, reject) => { rejectNet = reject })
+    pendingNet.catch(() => {})
+    const fetchMock = vi.fn((_url: string, opts?: RequestInit) =>
+      (opts?.method ?? 'GET') === 'GET' ? Promise.resolve(jsonResponse([e1])) : pendingNet,
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<EntriesProvider><EditProbe /></EntriesProvider>)
+    await waitFor(() => expect(screen.getByTestId('amount').textContent).toBe('2'))
+
+    await act(async () => {
+      screen.getByText('edit').click()
+    })
+
+    // The edit shows immediately, despite the PUT never resolving.
+    expect(screen.getByTestId('amount').textContent).toBe('99')
+
+    await act(async () => { rejectNet(new Error('offline')) })
   })
 
   it('prunes a tombstone once the server stops returning the deleted id', async () => {

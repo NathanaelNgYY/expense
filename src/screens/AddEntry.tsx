@@ -34,9 +34,12 @@ export default function AddEntry({ onSave }: Props) {
     })
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (amount <= 0) return
-    await addEntry({
+    // addEntry commits the optimistic, locally-durable entry synchronously and queues the
+    // network POST; don't await it, so we navigate home instantly instead of blocking the
+    // UI on the serverless round-trip. The sync queue flushes the create in the background.
+    void addEntry({
       amount,
       category,
       note,

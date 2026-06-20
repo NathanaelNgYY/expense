@@ -23,7 +23,29 @@ function renderWithEntries(
 ): { container: HTMLDivElement; root: Root } {
   localStorage.setItem('budget_entries', JSON.stringify(entries))
   localStorage.setItem('api_token', 'tok')
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(entries), { status: 200 })))
+  // A realistic server: mutations are reflected in subsequent GETs (the real backend persists
+  // them), so the background refresh after a mutation doesn't clobber the optimistic update.
+  const server = [...(entries as Entry[])]
+  vi.stubGlobal('fetch', vi.fn((url: string, opts?: RequestInit) => {
+    const method = opts?.method ?? 'GET'
+    const id = url.split('/').pop() ?? ''
+    if (method === 'POST') {
+      const created = JSON.parse(opts!.body as string) as Entry
+      server.push(created)
+      return Promise.resolve(new Response(JSON.stringify(created), { status: 201 }))
+    }
+    if (method === 'PUT') {
+      const idx = server.findIndex(e => e.id === id)
+      if (idx >= 0) server[idx] = { ...server[idx], ...(JSON.parse(opts!.body as string) as Partial<Entry>) }
+      return Promise.resolve(new Response(JSON.stringify(server[idx] ?? {}), { status: 200 }))
+    }
+    if (method === 'DELETE') {
+      const idx = server.findIndex(e => e.id === id)
+      if (idx >= 0) server.splice(idx, 1)
+      return Promise.resolve(new Response(JSON.stringify({ status: 'deleted' }), { status: 200 }))
+    }
+    return Promise.resolve(new Response(JSON.stringify(server), { status: 200 }))
+  }))
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
@@ -76,6 +98,10 @@ describe('History entry editing', () => {
     const testEntry = entry({ id: 'entry-1', source: 'apple-pay', importKey: 'apple-pay:key' })
     const rendered = renderWithEntries([testEntry])
     root = rendered.root
+
+    // Let the initial mount-time refresh settle before editing, mirroring a real session where
+    // the data has loaded before the user interacts (otherwise its in-flight GET races the edit).
+    await act(async () => {})
 
     const entryButton = [...rendered.container.querySelectorAll('button')].find(button =>
       button.textContent?.includes('Old note'),

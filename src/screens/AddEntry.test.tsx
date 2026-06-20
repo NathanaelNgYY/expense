@@ -54,4 +54,34 @@ describe('AddEntry', () => {
     const saveButton = screen.getByRole('button', { name: /save/i })
     expect(saveButton).not.toBeDisabled()
   })
+
+  it('navigates away immediately without waiting for the network POST', async () => {
+    localStorage.setItem('api_token', 'tok')
+    // GET on mount resolves; POST hangs forever to simulate a slow serverless round-trip.
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) =>
+      init?.method === 'POST'
+        ? new Promise<Response>(() => {}) // never resolves
+        : Promise.resolve(new Response('[]', { status: 200 })),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const onSave = vi.fn()
+    await act(async () => {
+      render(
+        <EntriesProvider>
+          <AddEntry onSave={onSave} />
+        </EntriesProvider>,
+      )
+    })
+
+    act(() => {
+      screen.getByRole('button', { name: '5' }).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      screen.getByRole('button', { name: /save/i }).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    // The optimistic save is durable locally; the UI must not block on the hung POST.
+    expect(onSave).toHaveBeenCalledTimes(1)
+  })
 })

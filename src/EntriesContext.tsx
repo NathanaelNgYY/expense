@@ -29,9 +29,16 @@ const EntriesContext = createContext<EntriesContextValue | null>(null)
 
 const MIGRATION_KEY = 'migration_done'
 
-async function flushQueue(): Promise<boolean> {
-  let queue = getQueue()
-  while (queue.length > 0) {
+// Only one drain runs at a time. Re-reading the queue each iteration (instead of working off
+// a snapshot) lets a single in-flight drain pick up mutations that other callers append while
+// a network round-trip is pending — so bulk operations (clear-month, CSV import) that fire many
+// mutations back-to-back stay correct without each one serialising on the network.
+let flushInFlight: Promise<boolean> | null = null
+
+async function drainQueue(): Promise<boolean> {
+  for (;;) {
+    const queue = getQueue()
+    if (queue.length === 0) return true
     const mutation = queue[0]
     try {
       if (mutation.op === 'create') {
@@ -50,10 +57,13 @@ async function flushQueue(): Promise<boolean> {
     } catch {
       return false // still offline; keep the queue for next time
     }
-    queue = queue.slice(1)
-    setQueue(queue)
+    setQueue(getQueue().slice(1)) // re-read: drop the head we just sent, keep any newly-queued tail
   }
-  return true
+}
+
+function flushQueue(): Promise<boolean> {
+  if (!flushInFlight) flushInFlight = drainQueue().finally(() => { flushInFlight = null })
+  return flushInFlight
 }
 
 // Returns true if it pushed cached entries up (so the caller should re-fetch).
@@ -143,15 +153,15 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
     // has propagated the write) keeps showing it instead of dropping it.
     setPendingCreates([...new Set([...getPendingCreates(), optimistic.id])])
     setQueue([...getQueue(), { op: 'create', entry: optimistic }])
-    await flushQueue()
+    // The entry is already locally durable (state + cache + queue); flush and reconcile in the
+    // background instead of awaiting the network so the UI never blocks on the serverless round-trip.
     void refresh()
   }, [commit, refresh])
 
   const editEntry = useCallback(async (id: string, patch: Partial<Entry>) => {
     commit(entriesRef.current.map(e => (e.id === id ? { ...e, ...patch } : e)))
     setQueue([...getQueue(), { op: 'update', id, patch }])
-    await flushQueue()
-    void refresh()
+    void refresh() // background flush + reconcile; the edit is already locally durable
   }, [commit, refresh])
 
   const removeEntry = useCallback(async (id: string) => {
@@ -159,8 +169,7 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
     // Tombstone the id so an eventually-consistent server refresh can't resurrect it.
     setTombstones([...new Set([...getTombstones(), id])])
     setQueue([...getQueue(), { op: 'delete', id }])
-    await flushQueue()
-    void refresh()
+    void refresh() // background flush + reconcile; the delete is already locally durable
   }, [commit, refresh])
 
   return (

@@ -1,4 +1,4 @@
-import type { Category, Entry } from './types'
+import type { Entry } from './types'
 
 const TOKEN_KEY = 'api_token'
 
@@ -37,7 +37,7 @@ async function request<T>(url: string, init: RequestInit = {}): Promise<T> {
 
 export interface NewManualEntry {
   amount: number
-  category: Category | null
+  category: string | null
   note: string
   date: string
   id?: string // optional; lets imports/migration preserve a stable id so re-runs are idempotent

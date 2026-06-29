@@ -16,10 +16,10 @@ import {
   isFutureDateString,
   toLocalDateString,
 } from '../dates'
-import { getBudgetConfig } from '../storage'
+import { getBudgetConfig, getCustomCategories } from '../storage'
 import { useEntries } from '../EntriesContext'
 import { CATEGORIES, CATEGORY_LABELS } from '../types'
-import type { Category, Entry } from '../types'
+import type { Entry } from '../types'
 
 interface Props {
   initialEditingEntryId?: string | null
@@ -28,7 +28,7 @@ interface Props {
 
 interface EditDraft {
   amountText: string
-  category: Category | null
+  category: string | null
   note: string
   date: string
 }
@@ -120,13 +120,22 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
   const [month, setMonth] = useState(initialState.month)
   const [selectedDate, setSelectedDate] = useState(initialState.selectedDate)
   const [amountText, setAmountText] = useState('')
-  const [category, setCategory] = useState<Category | null>(null)
+  const [category, setCategory] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const [savedMessage, setSavedMessage] = useState('')
   const [editingEntryId, setEditingEntryId] = useState<string | null>(initialState.editingEntryId)
   const [editDraft, setEditDraft] = useState<EditDraft | null>(initialState.editDraft)
 
   const config = getBudgetConfig()
+  const customCategories = getCustomCategories()
+  const categoryOptions: { id: string; label: string; icon: string }[] = [
+    ...CATEGORIES.map(c => ({ id: c as string, label: CATEGORY_LABELS[c], icon: c as string })),
+    ...customCategories.map(c => ({ id: c.id, label: c.label, icon: c.icon })),
+  ]
+  const labelForCategory = (id: string): string =>
+    (CATEGORY_LABELS as Record<string, string>)[id] ?? customCategories.find(c => c.id === id)?.label ?? id
+  const iconForCategory = (id: string): string =>
+    (CATEGORIES as string[]).includes(id) ? id : customCategories.find(c => c.id === id)?.icon ?? id
   const weeks = weeksInMonth(year, month)
   const monthEntries = entriesForMonth(entries, year, month).sort(entrySort)
   const monthTotal = monthEntries.reduce((sum, entry) => sum + entry.amount, 0)
@@ -312,18 +321,18 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
           Category <span className="muted">(optional)</span>
         </p>
         <div className="chips chips--compact">
-          {CATEGORIES.map(cat => (
+          {categoryOptions.map(opt => (
             <button
-              key={cat}
+              key={opt.id}
               type="button"
-              className={`chip chip--compact ${category === cat ? 'chip--selected' : ''}`}
+              className={`chip chip--compact ${category === opt.id ? 'chip--selected' : ''}`}
               onClick={() => {
-                setCategory(currentCategory => (currentCategory === cat ? null : cat))
+                setCategory(currentCategory => (currentCategory === opt.id ? null : opt.id))
                 setSavedMessage('')
               }}
             >
-              <BudgetIcon name={cat} />
-              <span>{CATEGORY_LABELS[cat]}</span>
+              <BudgetIcon name={opt.icon} />
+              <span>{opt.label}</span>
             </button>
           ))}
         </div>
@@ -436,8 +445,8 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
                 >
                   <span className="entry-main">
                     <span className="entry-category icon-label">
-                      <BudgetIcon name={entry.category ?? 'uncategorized'} />
-                      {entry.category ? CATEGORY_LABELS[entry.category] : 'Uncategorized'}
+                      <BudgetIcon name={entry.category ? iconForCategory(entry.category) : 'uncategorized'} />
+                      {entry.category ? labelForCategory(entry.category) : 'Uncategorized'}
                     </span>
                     <span className="entry-date">{format(fromLocalDateString(entry.date), 'EEE, MMM d')}</span>
                     {entry.note && <span className="entry-note">{entry.note}</span>}
@@ -485,19 +494,19 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
                       Category <span className="muted">(optional)</span>
                     </p>
                     <div className="chips chips--compact">
-                      {CATEGORIES.map(cat => (
+                      {categoryOptions.map(opt => (
                         <button
-                          key={cat}
+                          key={opt.id}
                           type="button"
-                          className={`chip chip--compact ${editDraft.category === cat ? 'chip--selected' : ''}`}
+                          className={`chip chip--compact ${editDraft.category === opt.id ? 'chip--selected' : ''}`}
                           onClick={() =>
                             handleEditDraftChange({
-                              category: editDraft.category === cat ? null : cat,
+                              category: editDraft.category === opt.id ? null : opt.id,
                             })
                           }
                         >
-                          <BudgetIcon name={cat} />
-                          <span>{CATEGORY_LABELS[cat]}</span>
+                          <BudgetIcon name={opt.icon} />
+                          <span>{opt.label}</span>
                         </button>
                       ))}
                     </div>

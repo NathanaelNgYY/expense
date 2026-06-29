@@ -1,7 +1,25 @@
 // src/compute.ts
 import { startOfWeek, endOfWeek, isWithinInterval, parseISO, addWeeks } from 'date-fns'
-import type { Entry, BudgetConfig, Category } from './types'
+import type { Entry, BudgetConfig, Category, CustomCategory } from './types'
 import { CATEGORIES } from './types'
+
+export function allCategoryIds(custom: CustomCategory[] = []): string[] {
+  return [...CATEGORIES, ...custom.map(c => c.id)]
+}
+
+export function categoryBudgets(
+  config: BudgetConfig,
+  custom: CustomCategory[] = [],
+): Record<string, number> {
+  const budgets: Record<string, number> = {}
+  for (const c of CATEGORIES) budgets[c] = config[c] ?? 0
+  for (const c of custom) budgets[c.id] = c.budget ?? 0
+  return budgets
+}
+
+export function customBudgetTotal(custom: CustomCategory[] = []): number {
+  return custom.reduce((sum, c) => sum + (c.budget ?? 0), 0)
+}
 
 const COMMITMENT_CATEGORIES = new Set<Category>(['savings', 'investments'])
 const SPENDING_CATEGORIES = CATEGORIES.filter(category => !COMMITMENT_CATEGORIES.has(category))
@@ -42,7 +60,7 @@ export interface MonthComparison {
 }
 
 export interface SpendFilterOptions {
-  excludedCategories?: Category[]
+  excludedCategories?: string[]
 }
 
 export function entriesForMonth(entries: Entry[], year: number, month: number): Entry[] {
@@ -55,10 +73,11 @@ export function entriesForMonth(entries: Entry[], year: number, month: number): 
 export function monthlySpendByCategory(
   entries: Entry[],
   year: number,
-  month: number
-): Record<Category, number> {
+  month: number,
+  custom: CustomCategory[] = [],
+): Record<string, number> {
   const monthly = entriesForMonth(entries, year, month)
-  const result = Object.fromEntries(CATEGORIES.map(c => [c, 0])) as Record<Category, number>
+  const result = Object.fromEntries(allCategoryIds(custom).map(c => [c, 0])) as Record<string, number>
   for (const entry of monthly) {
     if (entry.category && entry.category in result) result[entry.category] += entry.amount
   }
@@ -66,16 +85,19 @@ export function monthlySpendByCategory(
 }
 
 export function categoryDeficits(
-  spend: Record<Category, number>,
-  config: BudgetConfig
-): Record<Category, number> {
+  spend: Record<string, number>,
+  config: BudgetConfig,
+  custom: CustomCategory[] = [],
+): Record<string, number> {
+  const budgets = categoryBudgets(config, custom)
+  const ids = new Set([...Object.keys(spend), ...Object.keys(budgets)])
   return Object.fromEntries(
-    CATEGORIES.map(c => [c, (config[c] ?? 0) - (spend[c] ?? 0)])
-  ) as Record<Category, number>
+    [...ids].map(c => [c, (budgets[c] ?? 0) - (spend[c] ?? 0)]),
+  ) as Record<string, number>
 }
 
 export function bufferRemaining(
-  deficits: Record<Category, number>,
+  deficits: Record<string, number>,
   config: BudgetConfig
 ): number {
   const othersBudget = config.others ?? config.buffer

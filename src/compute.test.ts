@@ -19,7 +19,7 @@ import {
 } from './compute'
 import { DEFAULT_BUDGET, CATEGORIES } from './types'
 import type { Entry, CustomCategory } from './types'
-import { allCategoryIds, categoryBudgets, customBudgetTotal } from './compute'
+import { allCategoryIds, categoryBudgets, customBudgetTotal, countEntriesForCategory } from './compute'
 
 function e(overrides: Partial<Entry> = {}): Entry {
   return { id: '1', amount: 10, category: 'lunch', note: '', date: '2026-05-04', ...overrides }
@@ -536,5 +536,18 @@ describe('custom category compute seam', () => {
     expect(deficits.cat_groc).toBe(-30) // 100 budget - 130 spent
     // 30 over a non-'others' category eats into the buffer
     expect(bufferRemaining(deficits, DEFAULT_BUDGET)).toBe(DEFAULT_BUDGET.buffer - 30)
+  })
+})
+
+describe('countEntriesForCategory', () => {
+  it('counts entries tagged with the given category across all dates', () => {
+    const entries = [
+      e({ category: 'cat_groc', date: '2026-05-04' }),
+      e({ category: 'cat_groc', date: '2024-01-01' }),
+      e({ category: 'lunch', date: '2026-05-04' }),
+      e({ category: null, date: '2026-05-04' }),
+    ]
+    expect(countEntriesForCategory(entries, 'cat_groc')).toBe(2)
+    expect(countEntriesForCategory(entries, 'cat_unused')).toBe(0)
   })
 })

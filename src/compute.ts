@@ -21,6 +21,12 @@ export function customBudgetTotal(custom: CustomCategory[] = []): number {
   return custom.reduce((sum, c) => sum + (c.budget ?? 0), 0)
 }
 
+// How many entries (any date) reference this category id. Used to block removal
+// of an in-use category so no entry is left pointing at a deleted category.
+export function countEntriesForCategory(entries: Entry[], categoryId: string): number {
+  return entries.reduce((n, entry) => (entry.category === categoryId ? n + 1 : n), 0)
+}
+
 const COMMITMENT_CATEGORIES = new Set<Category>(['savings', 'investments'])
 const SPENDING_CATEGORIES = CATEGORIES.filter(category => !COMMITMENT_CATEGORIES.has(category))
 

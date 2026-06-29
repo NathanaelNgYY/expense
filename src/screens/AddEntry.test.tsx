@@ -84,4 +84,30 @@ describe('AddEntry', () => {
     // The optimistic save is durable locally; the UI must not block on the hung POST.
     expect(onSave).toHaveBeenCalledTimes(1)
   })
+
+  it('renders a chip for each custom category', async () => {
+    localStorage.setItem(
+      'budget_custom_categories',
+      JSON.stringify([{ id: 'cat_gym_1', label: 'Gym', budget: null, icon: 'Dumbbell' }]),
+    )
+    await act(async () => {
+      renderWithEntries()
+    })
+    expect(screen.getByRole('button', { name: /gym/i })).toBeInTheDocument()
+  })
+
+  it('lets you select a custom category chip', async () => {
+    localStorage.setItem(
+      'budget_custom_categories',
+      JSON.stringify([{ id: 'cat_gym_1', label: 'Gym', budget: null, icon: 'Dumbbell' }]),
+    )
+    await act(async () => {
+      renderWithEntries()
+    })
+    const chip = screen.getByRole('button', { name: /gym/i })
+    act(() => {
+      chip.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    expect(chip.className).toContain('chip--selected')
+  })
 })

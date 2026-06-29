@@ -1,9 +1,10 @@
 // src/storage.ts
-import type { Entry, BudgetConfig, PokerSession } from './types'
+import type { Entry, BudgetConfig, PokerSession, CustomCategory } from './types'
 import { DEFAULT_BUDGET } from './types'
 
 const ENTRIES_KEY = 'budget_entries'
 const CONFIG_KEY = 'budget_config'
+const CUSTOM_CATEGORIES_KEY = 'budget_custom_categories'
 
 export function getEntries(): Entry[] {
   try {
@@ -44,6 +45,24 @@ export function getBudgetConfig(): BudgetConfig {
 
 export function saveBudgetConfig(config: BudgetConfig): void {
   localStorage.setItem(CONFIG_KEY, JSON.stringify(config))
+}
+
+export function getCustomCategories(): CustomCategory[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_CATEGORIES_KEY)
+    return raw ? (JSON.parse(raw) as CustomCategory[]) : []
+  } catch {
+    return []
+  }
+}
+
+export function saveCustomCategories(categories: CustomCategory[]): void {
+  localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(categories))
+}
+
+export function makeCustomCategoryId(label: string): string {
+  const slug = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'category'
+  return `cat_${slug}_${Math.random().toString(36).slice(2, 7)}`
 }
 
 const POKER_SESSIONS_KEY = 'poker_sessions'

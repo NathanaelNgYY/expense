@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getEntries, saveEntries, updateEntry, getCachedEntries, setCachedEntries } from './storage'
-import type { Entry } from './types'
+import { getEntries, saveEntries, updateEntry, getCachedEntries, setCachedEntries, getCustomCategories, saveCustomCategories, makeCustomCategoryId } from './storage'
+import type { Entry, CustomCategory } from './types'
 
 function entry(overrides: Partial<Entry> = {}): Entry {
   return {
@@ -56,6 +56,36 @@ describe('updateEntry', () => {
       source: 'apple-pay',
       importKey: 'apple-pay:2026-05-19:12.50:fairprice',
     })
+  })
+})
+
+describe('custom categories storage', () => {
+  beforeEach(() => localStorage.clear())
+
+  const cat = (o: Partial<CustomCategory> = {}): CustomCategory => ({
+    id: 'cat_groceries_x1', label: 'Groceries', budget: 120, icon: 'ShoppingBag', ...o,
+  })
+
+  it('returns [] when nothing is stored', () => {
+    expect(getCustomCategories()).toEqual([])
+  })
+
+  it('round-trips saved categories', () => {
+    const cats = [cat(), cat({ id: 'cat_gym_x2', label: 'Gym', budget: null, icon: 'Dumbbell' })]
+    saveCustomCategories(cats)
+    expect(getCustomCategories()).toEqual(cats)
+  })
+
+  it('returns [] when stored JSON is corrupt', () => {
+    localStorage.setItem('budget_custom_categories', '{not json')
+    expect(getCustomCategories()).toEqual([])
+  })
+
+  it('makeCustomCategoryId slugifies the label and is unique', () => {
+    const a = makeCustomCategoryId('My Gym!')
+    const b = makeCustomCategoryId('My Gym!')
+    expect(a).toMatch(/^cat_my_gym_/)
+    expect(a).not.toEqual(b)
   })
 })
 

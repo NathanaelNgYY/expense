@@ -1244,6 +1244,55 @@ input:focus-visible {
   margin-left: 8px;
 }
 
+.settings-row-trailing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-remove-btn {
+  background: none;
+  border: none;
+  color: var(--red);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.category-add-form {
+  padding: 8px;
+}
+
+.icon-picker {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.icon-picker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--separator);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.icon-picker-btn--selected {
+  border-color: var(--green);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+}
+
+.category-add-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .settings .save-btn {
   margin-top: 4px;
 }

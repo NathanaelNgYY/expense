@@ -1,12 +1,20 @@
 // src/screens/Settings.tsx
 import { useRef, useState, type ChangeEvent } from 'react'
-import { ChevronLeft, Download, Save, Trash2, Upload, Wallet } from 'lucide-react'
+import { ChevronLeft, Download, Plus, Save, Trash2, Upload, Wallet } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
+import { CUSTOM_ICON_NAMES } from '../components/budgetIcons'
 import { entriesToCsv, parseEntriesCsv } from '../csvEntries'
-import { getBudgetConfig, saveBudgetConfig } from '../storage'
+import {
+  getBudgetConfig,
+  saveBudgetConfig,
+  getCustomCategories,
+  saveCustomCategories,
+  makeCustomCategoryId,
+} from '../storage'
+import { countEntriesForCategory } from '../compute'
 import { getApiToken, setApiToken } from '../api'
 import { useEntries } from '../EntriesContext'
-import type { BudgetConfig } from '../types'
+import type { BudgetConfig, CustomCategory } from '../types'
 
 interface Props {
   onBack: () => void
@@ -29,13 +37,20 @@ function isEntryInMonth(date: string, year: number, month: number): boolean {
 
 export default function Settings({ onBack }: Props) {
   const [config, setConfig] = useState<BudgetConfig>(getBudgetConfig)
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>(getCustomCategories)
+  const [showAdd, setShowAdd] = useState(false)
+  const [newLabel, setNewLabel] = useState('')
+  const [newBudget, setNewBudget] = useState('')
+  const [newIcon, setNewIcon] = useState<string>(CUSTOM_ICON_NAMES[0])
+  const [removeError, setRemoveError] = useState('')
   const [importMessage, setImportMessage] = useState('')
   const [importError, setImportError] = useState(false)
   const [token, setToken] = useState(getApiToken())
   const importInputRef = useRef<HTMLInputElement>(null)
   const { entries, addEntry, removeEntry, refresh } = useEntries()
 
-  const total = BUDGET_FIELDS.reduce((sum, field) => sum + config[field.key], 0)
+  const customTotal = customCategories.reduce((sum, c) => sum + (c.budget ?? 0), 0)
+  const total = BUDGET_FIELDS.reduce((sum, field) => sum + config[field.key], 0) + customTotal
   const totalMismatch = Math.abs(total - config.monthlyIncome) > 0.01
 
   function handleChange(key: keyof BudgetConfig, value: string) {
@@ -49,7 +64,36 @@ export default function Settings({ onBack }: Props) {
 
   function handleSave() {
     saveBudgetConfig(config)
+    saveCustomCategories(customCategories)
     onBack()
+  }
+
+  function handleAddCategory() {
+    const label = newLabel.trim()
+    if (!label) return
+    const trimmed = newBudget.trim()
+    const budget = trimmed === '' ? null : Math.max(0, parseFloat(trimmed) || 0)
+    setCustomCategories(prev => [...prev, { id: makeCustomCategoryId(label), label, budget, icon: newIcon }])
+    setNewLabel('')
+    setNewBudget('')
+    setNewIcon(CUSTOM_ICON_NAMES[0])
+    setShowAdd(false)
+  }
+
+  function handleCustomBudgetChange(id: string, value: string) {
+    const trimmed = value.trim()
+    const budget = trimmed === '' ? null : Math.max(0, parseFloat(trimmed) || 0)
+    setCustomCategories(prev => prev.map(c => (c.id === id ? { ...c, budget } : c)))
+  }
+
+  function handleRemoveCategory(cat: CustomCategory) {
+    const count = countEntriesForCategory(entries, cat.id)
+    if (count > 0) {
+      setRemoveError(`${count} entr${count === 1 ? 'y' : 'ies'} use "${cat.label}". Re-tag or delete them first.`)
+      return
+    }
+    setRemoveError('')
+    setCustomCategories(prev => prev.filter(c => c.id !== cat.id))
   }
 
   async function handleReset() {
@@ -160,6 +204,96 @@ export default function Settings({ onBack }: Props) {
           </div>
         ))}
       </div>
+
+      {customCategories.length > 0 && (
+        <div className="ios-list">
+          {customCategories.map(cat => (
+            <div key={cat.id} className="settings-row">
+              <label className="settings-label icon-label" htmlFor={`custom-${cat.id}`}>
+                <BudgetIcon name={cat.icon} />
+                {cat.label}
+              </label>
+              <div className="settings-row-trailing">
+                <input
+                  id={`custom-${cat.id}`}
+                  type="number"
+                  className="settings-input"
+                  value={cat.budget ?? ''}
+                  placeholder="No budget"
+                  min="0"
+                  step="1"
+                  inputMode="decimal"
+                  onChange={event => handleCustomBudgetChange(cat.id, event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="category-remove-btn"
+                  aria-label={`Remove ${cat.label}`}
+                  onClick={() => handleRemoveCategory(cat)}
+                >
+                  <Trash2 size={16} strokeWidth={2.3} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showAdd ? (
+        <div className="ios-list category-add-form">
+          <div className="settings-row">
+            <label className="settings-label" htmlFor="new-cat-name">Category name</label>
+            <input
+              id="new-cat-name"
+              type="text"
+              className="settings-input"
+              value={newLabel}
+              onChange={event => setNewLabel(event.target.value)}
+            />
+          </div>
+          <div className="settings-row">
+            <label className="settings-label" htmlFor="new-cat-budget">Category budget</label>
+            <input
+              id="new-cat-budget"
+              type="number"
+              className="settings-input"
+              value={newBudget}
+              placeholder="Optional"
+              min="0"
+              step="1"
+              inputMode="decimal"
+              onChange={event => setNewBudget(event.target.value)}
+            />
+          </div>
+          <div className="icon-picker" role="group" aria-label="Choose an icon">
+            {CUSTOM_ICON_NAMES.map(name => (
+              <button
+                key={name}
+                type="button"
+                className={`icon-picker-btn ${newIcon === name ? 'icon-picker-btn--selected' : ''}`}
+                aria-label={`Icon ${name}`}
+                aria-pressed={newIcon === name}
+                onClick={() => setNewIcon(name)}
+              >
+                <BudgetIcon name={name} />
+              </button>
+            ))}
+          </div>
+          <div className="category-add-actions">
+            <button type="button" className="save-btn" onClick={handleAddCategory} disabled={!newLabel.trim()}>Add</button>
+            <button type="button" className="export-btn" onClick={() => setShowAdd(false)}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" className="export-btn" onClick={() => setShowAdd(true)}>
+          <Plus aria-hidden="true" size={18} strokeWidth={2.3} />
+          Add category
+        </button>
+      )}
+
+      {removeError && (
+        <p className="save-feedback save-feedback--error" role="status">{removeError}</p>
+      )}
 
       <div className="settings-total">
         Total: S${total.toFixed(2)}

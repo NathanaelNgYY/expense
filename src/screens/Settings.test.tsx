@@ -62,6 +62,14 @@ function clickSave(container: HTMLElement): void {
   })
 }
 
+function clickButton(container: HTMLElement, predicate: (b: HTMLButtonElement) => boolean): void {
+  const button = [...container.querySelectorAll('button')].find(predicate)
+  if (!button) throw new Error('Button not found')
+  act(() => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+}
+
 async function importCsv(container: HTMLElement, csv: string): Promise<void> {
   const input = container.querySelector<HTMLInputElement>('input[type="file"]')
 
@@ -142,5 +150,91 @@ describe('Settings monthly income', () => {
     // Note: onBack is a no-op here so the component stays mounted long enough
     // to assert the message before unmount.
     expect(rendered.container).toHaveTextContent('Imported 1 entr')
+  })
+})
+
+describe('Settings custom categories', () => {
+  let root: Root | null = null
+
+  beforeEach(() => {
+    ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    localStorage.clear()
+  })
+
+  afterEach(() => {
+    act(() => {
+      root?.unmount()
+    })
+    document.body.replaceChildren()
+    root = null
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  function readCustom(): Array<{ label: string; budget: number | null }> {
+    return JSON.parse(localStorage.getItem('budget_custom_categories') ?? '[]')
+  }
+
+  it('adds a custom category with a budget and persists on save', () => {
+    const rendered = renderWithEntries()
+    root = rendered.root
+    const { container } = rendered
+
+    clickButton(container, b => b.textContent?.trim() === 'Add category')
+    changeInput(container.querySelector<HTMLInputElement>('#new-cat-name')!, 'Groceries')
+    changeInput(container.querySelector<HTMLInputElement>('#new-cat-budget')!, '120')
+    clickButton(container, b => b.textContent?.trim() === 'Add')
+    clickSave(container)
+
+    const saved = readCustom()
+    expect(saved).toHaveLength(1)
+    expect(saved[0]).toMatchObject({ label: 'Groceries', budget: 120 })
+  })
+
+  it('allows an empty budget (null)', () => {
+    const rendered = renderWithEntries()
+    root = rendered.root
+    const { container } = rendered
+
+    clickButton(container, b => b.textContent?.trim() === 'Add category')
+    changeInput(container.querySelector<HTMLInputElement>('#new-cat-name')!, 'Gym')
+    clickButton(container, b => b.textContent?.trim() === 'Add')
+    clickSave(container)
+
+    expect(readCustom()[0]).toMatchObject({ label: 'Gym', budget: null })
+  })
+
+  it('removes a category with no entries', () => {
+    localStorage.setItem(
+      'budget_custom_categories',
+      JSON.stringify([{ id: 'cat_gym_1', label: 'Gym', budget: null, icon: 'Dumbbell' }]),
+    )
+    const rendered = renderWithEntries()
+    root = rendered.root
+    const { container } = rendered
+
+    clickButton(container, b => b.getAttribute('aria-label') === 'Remove Gym')
+    clickSave(container)
+
+    expect(readCustom()).toEqual([])
+  })
+
+  it('blocks removal when entries use the category', () => {
+    localStorage.setItem(
+      'budget_custom_categories',
+      JSON.stringify([{ id: 'cat_gym_1', label: 'Gym', budget: null, icon: 'Dumbbell' }]),
+    )
+    const rendered = renderWithEntries([
+      { id: 'g1', amount: 10, category: 'cat_gym_1', note: '', date: '2026-05-04' },
+    ])
+    root = rendered.root
+    const { container } = rendered
+
+    clickButton(container, b => b.getAttribute('aria-label') === 'Remove Gym')
+    clickSave(container)
+
+    // Removal blocked: the category survives and an error is shown.
+    expect(readCustom()).toHaveLength(1)
+    expect(container).toHaveTextContent(/use "Gym"/)
   })
 })

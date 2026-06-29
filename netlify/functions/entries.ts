@@ -2,6 +2,7 @@ import type { Context } from '@netlify/functions'
 import { isAuthorized } from './lib/auth'
 import { BlobEntryStore } from './lib/store'
 import { listEntries, createEntry, updateEntryById, deleteEntryById, type NewManualEntry } from './lib/entriesHandler'
+import { API_RATE_LIMIT, AUTH_FAILURE_RATE_LIMIT, checkRateLimit, rateLimitedResponse } from './lib/rateLimit'
 
 export const config = { path: ['/api/entries', '/api/entries/:id'] }
 
@@ -19,8 +20,14 @@ async function parseJson<T>(req: Request): Promise<T | null> {
 
 export default async (req: Request, context: Context): Promise<Response> => {
   if (!isAuthorized(req.headers.get('authorization'), process.env.INGEST_TOKEN)) {
+    const limit = checkRateLimit(req, AUTH_FAILURE_RATE_LIMIT)
+    if (limit.limited) return rateLimitedResponse(limit)
     return json({ error: 'unauthorized' }, 401)
   }
+
+  const limit = checkRateLimit(req, API_RATE_LIMIT)
+  if (limit.limited) return rateLimitedResponse(limit)
+
   const store = new BlobEntryStore()
   const id = context.params?.id
 

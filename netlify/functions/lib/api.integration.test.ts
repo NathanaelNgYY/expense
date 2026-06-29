@@ -29,6 +29,7 @@ vi.mock('@netlify/blobs', () => ({ getStore: () => store }))
 
 import ingest from '../ingest'
 import entries from '../entries'
+import { AUTH_FAILURE_RATE_LIMIT, resetRateLimits } from './rateLimit'
 
 type AnyContext = { params?: Record<string, string> }
 
@@ -44,6 +45,7 @@ function makeReq(url: string, method: string, body?: unknown, token: string | nu
 
 beforeEach(() => {
   store.map.clear()
+  resetRateLimits()
   process.env.INGEST_TOKEN = 'tok'
 })
 
@@ -95,6 +97,17 @@ describe('POST /api/ingest', () => {
   it('rejects a missing/wrong token with 401', async () => {
     const res = await ingest(makeReq('http://x/api/ingest', 'POST', applePay, null), {} as AnyContext as never)
     expect(res.status).toBe(401)
+  })
+
+  it('rate limits repeated unauthorized attempts', async () => {
+    let res: Response | null = null
+    for (let index = 0; index <= AUTH_FAILURE_RATE_LIMIT.limit; index += 1) {
+      res = await ingest(makeReq('http://x/api/ingest', 'POST', applePay, 'wrong'), {} as AnyContext as never)
+    }
+
+    expect(res?.status).toBe(429)
+    expect(res?.headers.get('retry-after')).toBeTruthy()
+    expect(await res?.json()).toMatchObject({ error: 'rate-limited' })
   })
 })
 

@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
-import BudgetIcon, { CUSTOM_ICON_NAMES, ICON_COMPONENTS } from './BudgetIcon'
+import BudgetIcon from './BudgetIcon'
+import { CUSTOM_ICON_NAMES, ICON_COMPONENTS } from './budgetIcons'
 
 describe('BudgetIcon', () => {
   it('exposes a non-empty curated icon set, all resolvable', () => {

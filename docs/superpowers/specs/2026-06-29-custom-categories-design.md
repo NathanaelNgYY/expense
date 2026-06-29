@@ -49,7 +49,8 @@ New localStorage key `budget_custom_categories`, with `getCustomCategories()` / 
 - A budget lookup: `budgetFor(id, config, custom)` and/or a `Record<string, number>` budget map → built-in budgets from `config`, custom budgets from `cat.budget ?? 0`.
 
 Functions that enumerate categories take the id list instead of the global `CATEGORIES`:
-- `monthlySpendByCategory`, `categoryDeficits`, `monthComparison`.
+- `monthlySpendByCategory`, `categoryDeficits` (their return types widen to `Record<string, number>`).
+- `monthComparison` and the Insights panel stay **built-in-only** — `InsightsSection` indexes `CATEGORY_LABELS` directly, so surfacing custom ids there would break types and render `undefined` labels. Insights over custom categories is out of scope.
 - `bufferRemaining` already sums overages across all non-`others` deficits, so **custom spend overages spill into the buffer automatically** once customs appear in the deficits map. No buffer-formula change.
 - Commitment exclusion stays limited to `savings`/`investments`, so customs always count in the spend forecast.
 
@@ -100,3 +101,4 @@ Gains a lookup: built-in names keep their hardcoded icons; otherwise resolve the
 - Commitment-type custom categories.
 - Server-side category definitions / multi-device sync of category list (stays local like all budget config).
 - Auto-categorization (keyword/history) of custom categories.
+- Insights / month-comparison highlighting of custom categories (stays built-in-only).

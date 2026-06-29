@@ -2,7 +2,7 @@ import { useState, type KeyboardEvent } from 'react'
 import { CalendarDays, Check, ChevronDown, ChevronUp, Minus, Settings as SettingsIcon, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
-import { getBudgetConfig } from '../storage'
+import { getBudgetConfig, getCustomCategories } from '../storage'
 import {
   bufferRemaining,
   categoryDeficits,
@@ -11,6 +11,9 @@ import {
   monthlySpendByCategory,
   safeToSpendPerDay,
   weeklyTotal,
+  allCategoryIds,
+  categoryBudgets,
+  customBudgetTotal,
 } from '../compute'
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
 import { CATEGORY_LABELS, CATEGORIES } from '../types'
@@ -26,7 +29,8 @@ const COMMITTED_CATEGORY_SET = new Set<Category>(COMMITTED_CATEGORIES)
 
 // Which collapsible spend list is open. 'uncategorized' is the triage bucket for entries
 // (often auto-imported) that have no category yet — they have no budget line of their own.
-type ExpandKey = Category | 'uncategorized'
+// A key is any category id (built-in or custom) or the 'uncategorized' bucket.
+type ExpandKey = string
 
 function formatSignedCurrency(value: number): string {
   const sign = value < 0 ? '-' : ''
@@ -47,6 +51,13 @@ export default function Dashboard({ onSettings }: Props) {
   const now = new Date()
   const { entries, removeEntry } = useEntries()
   const config = getBudgetConfig()
+  const customCategories = getCustomCategories()
+  const categoryIds = allCategoryIds(customCategories)
+  const budgets = categoryBudgets(config, customCategories)
+  const labelFor = (id: string): string =>
+    (CATEGORY_LABELS as Record<string, string>)[id] ?? customCategories.find(c => c.id === id)?.label ?? id
+  const iconFor = (id: string): string =>
+    (CATEGORIES as string[]).includes(id) ? id : customCategories.find(c => c.id === id)?.icon ?? id
 
   const currentMonthEntries = entriesForMonth(entries, now.getFullYear(), now.getMonth())
   // Triage bucket: this month's entries that still have no category (e.g. auto-imported
@@ -58,13 +69,13 @@ export default function Dashboard({ onSettings }: Props) {
   const todayDate = toLocalDateString(now)
   const recentExpenseStartDate = toLocalDateString(addDays(now, -14))
   const monthTotal = currentMonthEntries.reduce((sum, entry) => sum + entry.amount, 0)
-  const spend = monthlySpendByCategory(entries, now.getFullYear(), now.getMonth())
-  const deficits = categoryDeficits(spend, config)
+  const spend = monthlySpendByCategory(entries, now.getFullYear(), now.getMonth(), customCategories)
+  const deficits = categoryDeficits(spend, config, customCategories)
   const buffer = bufferRemaining(deficits, config)
   const thisWeek = weeklyTotal(entries, now)
   const monthlyIncome = config.monthlyIncome
   const budgetUsedPct = monthlyIncome > 0 ? Math.min(100, (monthTotal / monthlyIncome) * 100) : monthTotal > 0 ? 100 : 0
-  const spendableBudget = config.lunch + config.transport + config.buffer
+  const spendableBudget = config.lunch + config.transport + config.buffer + customBudgetTotal(customCategories)
   const spendFilter = { excludedCategories: COMMITTED_CATEGORIES }
   const forecast = monthlySpendForecast(entries, now.getFullYear(), now.getMonth(), now, spendFilter)
   const safeToSpend = safeToSpendPerDay(
@@ -248,11 +259,13 @@ export default function Dashboard({ onSettings }: Props) {
       </div>
 
       <h3 className="section-title">Categories</h3>
-      {CATEGORIES.map(cat => {
+      {categoryIds.map(cat => {
         const spent = spend[cat]
         const deficit = deficits[cat]
-        const over = deficit < 0
-        const committed = COMMITTED_CATEGORY_SET.has(cat)
+        const budget = budgets[cat]
+        const hasBudget = budget > 0
+        const over = hasBudget && deficit < 0
+        const committed = COMMITTED_CATEGORY_SET.has(cat as Category)
         const expanded = expandedCategory === cat
         const categoryEntries = currentMonthEntries
           .filter(
@@ -262,15 +275,17 @@ export default function Dashboard({ onSettings }: Props) {
               entry.date <= todayDate,
           )
           .sort(entrySort)
-        const categoryLabel = CATEGORY_LABELS[cat]
-        const pct = config[cat] > 0 ? Math.min(100, (spent / config[cat]) * 100) : spent > 0 ? 100 : 0
+        const categoryLabel = labelFor(cat)
+        const pct = hasBudget ? Math.min(100, (spent / budget) * 100) : 0
         const statusLabel = committed
-          ? spent >= config[cat]
+          ? spent >= budget
             ? 'Committed'
             : `S$${deficit.toFixed(2)} to commit`
-          : over
-            ? `S$${Math.abs(deficit).toFixed(2)} over`
-            : `S$${deficit.toFixed(2)} left`
+          : !hasBudget
+            ? ''
+            : over
+              ? `S$${Math.abs(deficit).toFixed(2)} over`
+              : `S$${deficit.toFixed(2)} left`
 
         return (
           <article
@@ -288,7 +303,7 @@ export default function Dashboard({ onSettings }: Props) {
             >
               <span className="cat-row-top">
                 <span className="cat-name icon-label">
-                  <BudgetIcon name={cat} />
+                  <BudgetIcon name={iconFor(cat)} />
                   {categoryLabel}
                 </span>
                 <span className="cat-row-right">
@@ -324,7 +339,7 @@ export default function Dashboard({ onSettings }: Props) {
               </span>
               <span className="cat-row-bottom">
                 <span className="muted">
-                  {committed ? 'Monthly commitment' : 'Budget'} S${config[cat]}
+                  {hasBudget ? `${committed ? 'Monthly commitment' : 'Budget'} S$${budget}` : 'No budget set'}
                 </span>
                 {over && <span className="over-note">Taken from buffer</span>}
               </span>

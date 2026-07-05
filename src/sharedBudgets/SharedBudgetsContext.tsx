@@ -12,7 +12,7 @@ import {
 import { isSupabaseConfigured } from '../lib/supabaseClient'
 import { applyEntriesChange, type EntryChange } from './applyEntriesChange'
 import * as sharedApi from './sharedApi'
-import type { ActiveBudgetData, NewSharedEntry, Profile, SharedBudget } from './types'
+import type { ActiveBudgetData, NewSharedEntry, Profile, SharedBudget, SharedCategory } from './types'
 
 export interface SharedBudgetsContextValue {
   configured: boolean
@@ -31,6 +31,11 @@ export interface SharedBudgetsContextValue {
   editEntry: (id: string, patch: Partial<NewSharedEntry>) => Promise<void>
   removeEntry: (id: string) => Promise<void>
   addCategory: (input: { label: string; budgetAmount: number | null; icon: string }) => Promise<void>
+  updateCategory: (
+    id: string,
+    patch: Partial<{ label: string; budgetAmount: number | null; icon: string }>,
+  ) => Promise<void>
+  removeCategory: (id: string) => Promise<void>
   updateActiveBudget: (patch: { name?: string; monthlyLimit?: number | null }) => Promise<void>
   regenerateCode: () => Promise<void>
   removeMember: (userId: string) => Promise<void>
@@ -203,6 +208,31 @@ export function SharedBudgetsProvider({ children }: { children: ReactNode }) {
     [active, run],
   )
 
+  const updateCategory = useCallback(
+    async (
+      id: string,
+      patch: Partial<{ label: string; budgetAmount: number | null; icon: string }>,
+    ) =>
+      run(async () => {
+        const category = await sharedApi.updateCategory(id, patch)
+        const replaceCategory = (categories: SharedCategory[]) =>
+          categories.map(c => (c.id === id ? category : c))
+        setActive(prev => (prev ? { ...prev, categories: replaceCategory(prev.categories) } : prev))
+      }),
+    [run],
+  )
+
+  const removeCategory = useCallback(
+    async (id: string) =>
+      run(async () => {
+        await sharedApi.deleteCategory(id)
+        setActive(prev =>
+          prev ? { ...prev, categories: prev.categories.filter(c => c.id !== id) } : prev,
+        )
+      }),
+    [run],
+  )
+
   const updateActiveBudget = useCallback(
     async (patch: { name?: string; monthlyLimit?: number | null }) =>
       run(async () => {
@@ -290,6 +320,8 @@ export function SharedBudgetsProvider({ children }: { children: ReactNode }) {
         editEntry,
         removeEntry,
         addCategory,
+        updateCategory,
+        removeCategory,
         updateActiveBudget,
         regenerateCode,
         removeMember,

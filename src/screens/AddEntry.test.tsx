@@ -3,6 +3,40 @@ import { act } from 'react'
 import { render, screen } from '@testing-library/react'
 import AddEntry from './AddEntry'
 import { EntriesProvider } from '../EntriesContext'
+import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
+
+const sharedCtx = vi.hoisted(() => ({
+  value: {
+    configured: true,
+    authReady: true,
+    session: { user: { id: 'u1' } },
+    profile: { id: 'u1', displayName: 'Nat' },
+    budgets: [] as SharedBudget[],
+    active: null as ActiveBudgetData | null,
+    error: null as string | null,
+    refreshProfile: vi.fn(),
+    createBudget: vi.fn(),
+    joinBudget: vi.fn(),
+    openBudget: vi.fn(),
+    closeBudget: vi.fn(),
+    addEntry: vi.fn(),
+    editEntry: vi.fn(),
+    removeEntry: vi.fn(),
+    addCategory: vi.fn(),
+    updateCategory: vi.fn(),
+    removeCategory: vi.fn(),
+    updateActiveBudget: vi.fn(),
+    regenerateCode: vi.fn(),
+    removeMember: vi.fn(),
+    leaveActiveBudget: vi.fn(),
+    deleteActiveBudget: vi.fn(),
+    signOut: vi.fn(),
+  },
+}))
+
+vi.mock('../sharedBudgets/SharedBudgetsContext', () => ({
+  useSharedBudgets: () => sharedCtx.value,
+}))
 
 function renderWithEntries(entries: unknown[] = []) {
   localStorage.setItem('budget_entries', JSON.stringify(entries))
@@ -19,6 +53,9 @@ describe('AddEntry', () => {
   beforeEach(() => {
     ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
     localStorage.clear()
+    vi.clearAllMocks()
+    sharedCtx.value.budgets = []
+    sharedCtx.value.active = null
   })
 
   afterEach(() => {
@@ -147,5 +184,53 @@ describe('AddEntry', () => {
       chip.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
     expect(chip.className).toContain('chip--selected')
+  })
+
+  it('saves an entry to the selected shared budget from the normal Add tab', async () => {
+    const budget: SharedBudget = {
+      id: 'b1',
+      name: 'Family',
+      monthlyLimit: 300,
+      currency: 'SGD',
+      inviteCode: 'ABC123',
+      ownerId: 'u1',
+      createdAt: '2026-07-01T00:00:00Z',
+    }
+    sharedCtx.value.budgets = [budget]
+    sharedCtx.value.active = {
+      budget,
+      categories: [{ id: 'c1', budgetId: 'b1', label: 'Groceries', budgetAmount: 120, icon: 'ShoppingBag' }],
+      entries: [],
+      members: [{ userId: 'u1', role: 'owner', displayName: 'Nat', joinedAt: '2026-07-01T00:00:00Z' }],
+    }
+    sharedCtx.value.addEntry.mockResolvedValue(undefined)
+    const onSave = vi.fn()
+
+    await act(async () => {
+      render(
+        <EntriesProvider>
+          <AddEntry onSave={onSave} />
+        </EntriesProvider>,
+      )
+    })
+
+    await act(async () => {
+      screen.getByRole('button', { name: 'Family' }).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    act(() => {
+      screen.getByRole('button', { name: '5' }).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      screen.getByRole('button', { name: /groceries/i }).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await act(async () => {
+      screen.getByRole('button', { name: /save/i }).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(sharedCtx.value.addEntry).toHaveBeenCalledWith({
+      amount: 5,
+      categoryId: 'c1',
+      note: '',
+      date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    })
+    expect(onSave).toHaveBeenCalledTimes(1)
   })
 })

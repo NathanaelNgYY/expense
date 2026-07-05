@@ -1,11 +1,12 @@
 // src/screens/AddEntry.tsx
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Delete } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import { toLocalDateString } from '../dates'
 import { useEntries } from '../EntriesContext'
 import { getCustomCategories } from '../storage'
 import { CATEGORY_LABELS, CATEGORIES } from '../types'
+import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
 
 interface Props {
   onSave: () => void
@@ -18,17 +19,41 @@ export default function AddEntry({ onSave }: Props) {
   const [animationCue, setAnimationCue] = useState({ key: '', version: 0 })
   const [category, setCategory] = useState<string | null>(null)
   const [note, setNote] = useState('')
-  const { addEntry } = useEntries()
+  const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const { addEntry: addPersonalEntry } = useEntries()
+  const shared = useSharedBudgets()
 
   const customCategories = getCustomCategories()
-  const categoryOptions: { id: string; label: string; icon: string }[] = [
+  const selectedSharedBudget = shared.budgets.find(b => b.id === selectedBudgetId) ?? null
+  const isSharedDestination = selectedBudgetId !== null
+  const activeSharedReady = shared.active?.budget.id === selectedBudgetId
+  const personalCategoryOptions: { id: string; label: string; icon: string }[] = [
     ...CATEGORIES.map(c => ({ id: c as string, label: CATEGORY_LABELS[c], icon: c as string })),
     ...customCategories.map(c => ({ id: c.id, label: c.label, icon: c.icon })),
   ]
+  const sharedCategoryOptions =
+    activeSharedReady && shared.active
+      ? shared.active.categories.map(c => ({ id: c.id, label: c.label, icon: c.icon }))
+      : []
+  const categoryOptions = isSharedDestination ? sharedCategoryOptions : personalCategoryOptions
 
   const amount = parseFloat(digits) || 0
   const amountText = `S$${amount.toFixed(2)}`
   const activeGlyphIndex = getActiveGlyphIndex(digits, amountText, animationCue.key)
+  const sharedSaveDisabled =
+    isSharedDestination && (!selectedSharedBudget || !activeSharedReady || busy)
+
+  useEffect(() => {
+    if (!selectedBudgetId || shared.budgets.some(b => b.id === selectedBudgetId)) return
+    setSelectedBudgetId(null)
+    setCategory(null)
+  }, [selectedBudgetId, shared.budgets])
+
+  useEffect(() => {
+    if (!isSharedDestination || !selectedBudgetId || activeSharedReady) return
+    void shared.openBudget(selectedBudgetId).catch(() => {})
+  }, [activeSharedReady, isSharedDestination, selectedBudgetId, shared.openBudget])
 
   function handleDigit(key: string) {
     const nextDigits = getNextDigits(digits, key)
@@ -41,12 +66,31 @@ export default function AddEntry({ onSave }: Props) {
     }))
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (amount <= 0) return
+    if (isSharedDestination) {
+      if (!activeSharedReady || busy) return
+      setBusy(true)
+      try {
+        await shared.addEntry({
+          amount,
+          categoryId: category,
+          note,
+          date: toLocalDateString(),
+        })
+        onSave()
+      } catch {
+        // The shared context exposes the operation error.
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
+
     // addEntry commits the optimistic, locally-durable entry synchronously and queues the
     // network POST; don't await it, so we navigate home instantly instead of blocking the
     // UI on the serverless round-trip. The sync queue flushes the create in the background.
-    void addEntry({
+    void addPersonalEntry({
       amount,
       category,
       note,
@@ -58,6 +102,38 @@ export default function AddEntry({ onSave }: Props) {
   return (
     <div className="screen add-entry">
       <p className="screen-title">ADD ENTRY</p>
+
+      {shared.budgets.length > 0 && (
+        <div className="scope-switch" role="group" aria-label="Expense destination">
+          <button
+            type="button"
+            className={!isSharedDestination ? 'scope-switch-btn scope-switch-btn--active' : 'scope-switch-btn'}
+            onClick={() => {
+              setSelectedBudgetId(null)
+              setCategory(null)
+            }}
+          >
+            Personal
+          </button>
+          {shared.budgets.map(budget => (
+            <button
+              key={budget.id}
+              type="button"
+              className={
+                selectedBudgetId === budget.id
+                  ? 'scope-switch-btn scope-switch-btn--active'
+                  : 'scope-switch-btn'
+              }
+              onClick={() => {
+                setSelectedBudgetId(budget.id)
+                setCategory(null)
+              }}
+            >
+              {budget.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="amount-display" aria-label="Entered amount" aria-live="polite">
         <span className="amount-glyph-set" aria-hidden="true">
@@ -101,19 +177,27 @@ export default function AddEntry({ onSave }: Props) {
       <p className="category-label">
         Category <span className="muted">(optional)</span>
       </p>
-      <div className="chips">
-        {categoryOptions.map(opt => (
-          <button
-            key={opt.id}
-            type="button"
-            className={`chip ${category === opt.id ? 'chip--selected' : ''}`}
-            onClick={() => setCategory(prev => (prev === opt.id ? null : opt.id))}
-          >
-            <BudgetIcon name={opt.icon} />
-            <span>{opt.label}</span>
-          </button>
-        ))}
-      </div>
+      {isSharedDestination && !activeSharedReady ? (
+        <p className="muted">Loading {selectedSharedBudget?.name ?? 'shared budget'} categories...</p>
+      ) : categoryOptions.length === 0 ? (
+        <p className="muted">
+          {isSharedDestination ? 'No categories yet. Add shared categories in Settings.' : 'No categories yet.'}
+        </p>
+      ) : (
+        <div className="chips">
+          {categoryOptions.map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              className={`chip ${category === opt.id ? 'chip--selected' : ''}`}
+              onClick={() => setCategory(prev => (prev === opt.id ? null : opt.id))}
+            >
+              <BudgetIcon name={opt.icon} />
+              <span>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <input
         type="text"
@@ -123,9 +207,15 @@ export default function AddEntry({ onSave }: Props) {
         onChange={e => setNote(e.target.value)}
       />
 
-      <button className="save-btn" type="button" onClick={handleSave} disabled={amount <= 0}>
+      <button
+        className="save-btn"
+        type="button"
+        onClick={() => void handleSave()}
+        disabled={amount <= 0 || sharedSaveDisabled}
+      >
         Save
       </button>
+      {isSharedDestination && shared.error && <p className="form-error">{shared.error}</p>}
     </div>
   )
 }

@@ -25,6 +25,8 @@ const api = vi.hoisted(() => ({
   updateSharedEntry: vi.fn(),
   deleteSharedEntry: vi.fn(),
   createCategory: vi.fn(),
+  updateCategory: vi.fn(),
+  deleteCategory: vi.fn(),
   updateBudget: vi.fn(),
   deleteBudget: vi.fn(),
   regenerateInviteCode: vi.fn(),

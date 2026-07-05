@@ -320,6 +320,23 @@ export async function createCategory(
   return mapCategory(ok<CategoryRow>(res))
 }
 
+export async function updateCategory(
+  id: string,
+  patch: Partial<{ label: string; budgetAmount: number | null; icon: string }>,
+): Promise<SharedCategory> {
+  const row: Record<string, unknown> = {}
+  if (patch.label !== undefined) row.label = patch.label
+  if (patch.budgetAmount !== undefined) row.budget_amount = patch.budgetAmount
+  if (patch.icon !== undefined) row.icon = patch.icon
+  const res = await getSupabase().from('shared_categories').update(row).eq('id', id).select().single()
+  return mapCategory(ok<CategoryRow>(res))
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  const res = await getSupabase().from('shared_categories').delete().eq('id', id)
+  if (res.error) throw friendly(res.error.message)
+}
+
 export interface BudgetRealtimeHandlers {
   onEntryChange: (change: EntryChange) => void
   onMembersChange: () => void

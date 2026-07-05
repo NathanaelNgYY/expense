@@ -1,5 +1,5 @@
 // src/screens/Settings.tsx
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { ChevronLeft, Download, Plus, Save, Trash2, Upload, Wallet } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import { CUSTOM_ICON_NAMES } from '../components/budgetIcons'
@@ -15,6 +15,7 @@ import { countEntriesForCategory } from '../compute'
 import { getApiToken, setApiToken } from '../api'
 import { useEntries } from '../EntriesContext'
 import type { BudgetConfig, CustomCategory } from '../types'
+import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
 
 interface Props {
   onBack: () => void
@@ -46,12 +47,47 @@ export default function Settings({ onBack }: Props) {
   const [importMessage, setImportMessage] = useState('')
   const [importError, setImportError] = useState(false)
   const [token, setToken] = useState(getApiToken())
+  const [settingsScope, setSettingsScope] = useState<'personal' | 'shared'>('personal')
+  const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
+  const [sharedLimit, setSharedLimit] = useState('')
+  const [sharedCategoryBudgets, setSharedCategoryBudgets] = useState<Record<string, string>>({})
+  const [showSharedAdd, setShowSharedAdd] = useState(false)
+  const [sharedNewLabel, setSharedNewLabel] = useState('')
+  const [sharedNewBudget, setSharedNewBudget] = useState('')
+  const [sharedNewIcon, setSharedNewIcon] = useState<string>(CUSTOM_ICON_NAMES[0])
+  const [sharedBusy, setSharedBusy] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
   const { entries, addEntry, removeEntry, refresh } = useEntries()
+  const shared = useSharedBudgets()
 
   const customTotal = customCategories.reduce((sum, c) => sum + (c.budget ?? 0), 0)
   const total = BUDGET_FIELDS.reduce((sum, field) => sum + config[field.key], 0) + customTotal
   const totalMismatch = Math.abs(total - config.monthlyIncome) > 0.01
+  const selectedSharedBudgetId =
+    selectedBudgetId ?? shared.active?.budget.id ?? shared.budgets[0]?.id ?? null
+  const activeSharedReady =
+    selectedSharedBudgetId !== null && shared.active?.budget.id === selectedSharedBudgetId
+  const isSharedOwner = Boolean(shared.active && shared.session?.user.id === shared.active.budget.ownerId)
+
+  useEffect(() => {
+    if (settingsScope !== 'shared' || !selectedSharedBudgetId || activeSharedReady) return
+    void shared.openBudget(selectedSharedBudgetId).catch(() => {})
+  }, [activeSharedReady, selectedSharedBudgetId, settingsScope, shared.openBudget])
+
+  useEffect(() => {
+    if (!shared.active) return
+    setSharedLimit(
+      shared.active.budget.monthlyLimit === null ? '' : String(shared.active.budget.monthlyLimit),
+    )
+    setSharedCategoryBudgets(
+      Object.fromEntries(
+        shared.active.categories.map(category => [
+          category.id,
+          category.budgetAmount === null ? '' : String(category.budgetAmount),
+        ]),
+      ),
+    )
+  }, [shared.active])
 
   function handleChange(key: keyof BudgetConfig, value: string) {
     const nextValue = Math.max(0, parseFloat(value) || 0)
@@ -78,6 +114,51 @@ export default function Settings({ onBack }: Props) {
     setNewBudget('')
     setNewIcon(CUSTOM_ICON_NAMES[0])
     setShowAdd(false)
+  }
+
+  function parseOptionalBudget(value: string): number | null {
+    const trimmed = value.trim()
+    return trimmed === '' ? null : Math.max(0, parseFloat(trimmed) || 0)
+  }
+
+  async function handleAddSharedCategory() {
+    const label = sharedNewLabel.trim()
+    if (!label) return
+    setSharedBusy(true)
+    try {
+      await shared.addCategory({
+        label,
+        budgetAmount: parseOptionalBudget(sharedNewBudget),
+        icon: sharedNewIcon,
+      })
+      setSharedNewLabel('')
+      setSharedNewBudget('')
+      setSharedNewIcon(CUSTOM_ICON_NAMES[0])
+      setShowSharedAdd(false)
+    } catch {
+      // Shared context exposes the operation error.
+    } finally {
+      setSharedBusy(false)
+    }
+  }
+
+  async function handleSaveShared() {
+    if (!shared.active || !isSharedOwner) return
+    setSharedBusy(true)
+    try {
+      await shared.updateActiveBudget({ monthlyLimit: parseOptionalBudget(sharedLimit) })
+      for (const category of shared.active.categories) {
+        const nextBudget = parseOptionalBudget(sharedCategoryBudgets[category.id] ?? '')
+        if (nextBudget !== category.budgetAmount) {
+          await shared.updateCategory(category.id, { budgetAmount: nextBudget })
+        }
+      }
+      onBack()
+    } catch {
+      // Shared context exposes the operation error.
+    } finally {
+      setSharedBusy(false)
+    }
   }
 
   function handleCustomBudgetChange(id: string, value: string) {
@@ -161,6 +242,204 @@ export default function Settings({ onBack }: Props) {
         <div className="settings-header-spacer" />
       </div>
 
+      {shared.budgets.length > 0 && (
+        <div className="scope-switch" role="group" aria-label="Settings scope">
+          <button
+            type="button"
+            className={
+              settingsScope === 'personal' ? 'scope-switch-btn scope-switch-btn--active' : 'scope-switch-btn'
+            }
+            onClick={() => setSettingsScope('personal')}
+          >
+            Personal
+          </button>
+          <button
+            type="button"
+            className={
+              settingsScope === 'shared' ? 'scope-switch-btn scope-switch-btn--active' : 'scope-switch-btn'
+            }
+            onClick={() => setSettingsScope('shared')}
+          >
+            Shared
+          </button>
+        </div>
+      )}
+
+      {settingsScope === 'shared' ? (
+        <>
+          {shared.budgets.length > 1 && (
+            <div className="scope-switch scope-switch--compact" role="group" aria-label="Shared budget">
+              {shared.budgets.map(budget => (
+                <button
+                  key={budget.id}
+                  type="button"
+                  className={
+                    selectedSharedBudgetId === budget.id
+                      ? 'scope-switch-btn scope-switch-btn--active'
+                      : 'scope-switch-btn'
+                  }
+                  onClick={() => setSelectedBudgetId(budget.id)}
+                >
+                  {budget.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {!activeSharedReady || !shared.active ? (
+            <p className="muted">Loading shared budget settings...</p>
+          ) : !isSharedOwner ? (
+            <p className="muted">Only the budget owner can change shared budget settings.</p>
+          ) : (
+            <>
+              <h3 className="section-title">{shared.active.budget.name}</h3>
+              <div className="ios-list">
+                <div className="settings-row">
+                  <label className="settings-label icon-label" htmlFor="shared-monthly-limit">
+                    <Wallet className="ui-icon" aria-hidden="true" strokeWidth={2.2} />
+                    Monthly limit
+                  </label>
+                  <input
+                    id="shared-monthly-limit"
+                    type="number"
+                    className="settings-input"
+                    value={sharedLimit}
+                    placeholder="No limit"
+                    min="0"
+                    step="1"
+                    inputMode="decimal"
+                    onChange={event => setSharedLimit(event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <h3 className="section-title">Shared Categories (S$)</h3>
+              {shared.active.categories.length > 0 && (
+                <div className="ios-list">
+                  {shared.active.categories.map(category => (
+                    <div key={category.id} className="settings-row">
+                      <label className="settings-label icon-label" htmlFor={`shared-cat-${category.id}`}>
+                        <BudgetIcon name={category.icon} />
+                        {category.label}
+                      </label>
+                      <div className="settings-row-trailing">
+                        <input
+                          id={`shared-cat-${category.id}`}
+                          type="number"
+                          className="settings-input"
+                          value={sharedCategoryBudgets[category.id] ?? ''}
+                          placeholder="No budget"
+                          min="0"
+                          step="1"
+                          inputMode="decimal"
+                          onChange={event =>
+                            setSharedCategoryBudgets(prev => ({
+                              ...prev,
+                              [category.id]: event.target.value,
+                            }))
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="category-remove-btn"
+                          aria-label={`Remove ${category.label}`}
+                          disabled={sharedBusy}
+                          onClick={() => void shared.removeCategory(category.id)}
+                        >
+                          <Trash2 size={16} strokeWidth={2.3} aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {showSharedAdd ? (
+                <div className="ios-list category-add-form">
+                  <div className="settings-row">
+                    <label className="settings-label" htmlFor="shared-new-cat-name">Category name</label>
+                    <input
+                      id="shared-new-cat-name"
+                      type="text"
+                      className="settings-input"
+                      value={sharedNewLabel}
+                      onChange={event => setSharedNewLabel(event.target.value)}
+                    />
+                  </div>
+                  <div className="settings-row">
+                    <label className="settings-label" htmlFor="shared-new-cat-budget">Category budget</label>
+                    <input
+                      id="shared-new-cat-budget"
+                      type="number"
+                      className="settings-input"
+                      value={sharedNewBudget}
+                      placeholder="Optional"
+                      min="0"
+                      step="1"
+                      inputMode="decimal"
+                      onChange={event => setSharedNewBudget(event.target.value)}
+                    />
+                  </div>
+                  <div className="icon-picker" role="group" aria-label="Choose an icon">
+                    {CUSTOM_ICON_NAMES.map(name => (
+                      <button
+                        key={name}
+                        type="button"
+                        className={`icon-picker-btn ${sharedNewIcon === name ? 'icon-picker-btn--selected' : ''}`}
+                        aria-label={`Icon ${name}`}
+                        aria-pressed={sharedNewIcon === name}
+                        onClick={() => setSharedNewIcon(name)}
+                      >
+                        <BudgetIcon name={name} />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="category-add-actions">
+                    <button
+                      type="button"
+                      className="save-btn"
+                      onClick={() => void handleAddSharedCategory()}
+                      disabled={sharedBusy || !sharedNewLabel.trim()}
+                    >
+                      Add
+                    </button>
+                    <button type="button" className="export-btn" onClick={() => setShowSharedAdd(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" className="export-btn" onClick={() => setShowSharedAdd(true)}>
+                  <Plus aria-hidden="true" size={18} strokeWidth={2.3} />
+                  Add category
+                </button>
+              )}
+
+              <div className="settings-total">
+                Total: S$
+                {shared.active.categories
+                  .reduce(
+                    (sum, category) => sum + (parseOptionalBudget(sharedCategoryBudgets[category.id] ?? '') ?? 0),
+                    0,
+                  )
+                  .toFixed(2)}
+              </div>
+
+              <button
+                className="save-btn"
+                type="button"
+                disabled={sharedBusy}
+                onClick={() => void handleSaveShared()}
+              >
+                <Save aria-hidden="true" size={18} strokeWidth={2.3} />
+                Save Shared Budget
+              </button>
+            </>
+          )}
+          {shared.error && <p className="form-error">{shared.error}</p>}
+        </>
+      ) : (
+        <>
       <h3 className="section-title">Income</h3>
 
       <div className="ios-list">
@@ -346,6 +625,8 @@ export default function Settings({ onBack }: Props) {
         <Trash2 aria-hidden="true" size={18} strokeWidth={2.3} />
         Reset This Month&apos;s Data
       </button>
+        </>
+      )}
     </div>
   )
 }

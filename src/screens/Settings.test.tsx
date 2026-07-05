@@ -3,6 +3,40 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import Settings from './Settings'
 import { EntriesProvider } from '../EntriesContext'
+import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
+
+const sharedCtx = vi.hoisted(() => ({
+  value: {
+    configured: true,
+    authReady: true,
+    session: { user: { id: 'u1' } },
+    profile: { id: 'u1', displayName: 'Nat' },
+    budgets: [] as SharedBudget[],
+    active: null as ActiveBudgetData | null,
+    error: null as string | null,
+    refreshProfile: vi.fn(),
+    createBudget: vi.fn(),
+    joinBudget: vi.fn(),
+    openBudget: vi.fn(),
+    closeBudget: vi.fn(),
+    addEntry: vi.fn(),
+    editEntry: vi.fn(),
+    removeEntry: vi.fn(),
+    addCategory: vi.fn(),
+    updateCategory: vi.fn(),
+    removeCategory: vi.fn(),
+    updateActiveBudget: vi.fn(),
+    regenerateCode: vi.fn(),
+    removeMember: vi.fn(),
+    leaveActiveBudget: vi.fn(),
+    deleteActiveBudget: vi.fn(),
+    signOut: vi.fn(),
+  },
+}))
+
+vi.mock('../sharedBudgets/SharedBudgetsContext', () => ({
+  useSharedBudgets: () => sharedCtx.value,
+}))
 
 function renderWithEntries(entries: unknown[] = []) {
   localStorage.setItem('budget_entries', JSON.stringify(entries))
@@ -93,6 +127,9 @@ describe('Settings monthly income', () => {
   beforeEach(() => {
     ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
     localStorage.clear()
+    vi.clearAllMocks()
+    sharedCtx.value.budgets = []
+    sharedCtx.value.active = null
   })
 
   afterEach(() => {
@@ -159,6 +196,9 @@ describe('Settings custom categories', () => {
   beforeEach(() => {
     ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
     localStorage.clear()
+    vi.clearAllMocks()
+    sharedCtx.value.budgets = []
+    sharedCtx.value.active = null
   })
 
   afterEach(() => {
@@ -236,5 +276,48 @@ describe('Settings custom categories', () => {
     // Removal blocked: the category survives and an error is shown.
     expect(readCustom()).toHaveLength(1)
     expect(container).toHaveTextContent(/use "Gym"/)
+  })
+
+  it('edits the selected shared budget limit and categories from Settings', async () => {
+    const budget: SharedBudget = {
+      id: 'b1',
+      name: 'Family',
+      monthlyLimit: 100,
+      currency: 'SGD',
+      inviteCode: 'ABC123',
+      ownerId: 'u1',
+      createdAt: '2026-07-01T00:00:00Z',
+    }
+    sharedCtx.value.budgets = [budget]
+    sharedCtx.value.active = {
+      budget,
+      categories: [{ id: 'c1', budgetId: 'b1', label: 'Groceries', budgetAmount: 40, icon: 'ShoppingBag' }],
+      entries: [],
+      members: [{ userId: 'u1', role: 'owner', displayName: 'Nat', joinedAt: '2026-07-01T00:00:00Z' }],
+    }
+    sharedCtx.value.updateActiveBudget.mockResolvedValue(undefined)
+    sharedCtx.value.addCategory.mockResolvedValue(undefined)
+    const rendered = renderWithEntries()
+    root = rendered.root
+    const { container } = rendered
+
+    clickButton(container, b => b.textContent?.trim() === 'Shared')
+    changeInput(container.querySelector<HTMLInputElement>('#shared-monthly-limit')!, '250')
+    clickButton(container, b => b.textContent?.trim() === 'Add category')
+    changeInput(container.querySelector<HTMLInputElement>('#shared-new-cat-name')!, 'Snacks')
+    changeInput(container.querySelector<HTMLInputElement>('#shared-new-cat-budget')!, '25')
+    const addButton = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Add')
+    if (!addButton) throw new Error('Add button was not found')
+    await act(async () => {
+      addButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    clickButton(container, b => b.textContent?.includes('Save Shared Budget') ?? false)
+
+    expect(sharedCtx.value.addCategory).toHaveBeenCalledWith({
+      label: 'Snacks',
+      budgetAmount: 25,
+      icon: expect.any(String),
+    })
+    expect(sharedCtx.value.updateActiveBudget).toHaveBeenCalledWith({ monthlyLimit: 250 })
   })
 })

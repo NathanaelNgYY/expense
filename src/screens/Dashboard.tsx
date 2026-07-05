@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react'
+import { useEffect, useState, type KeyboardEvent } from 'react'
 import { CalendarDays, Check, ChevronDown, ChevronUp, Minus, Settings as SettingsIcon, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
@@ -19,6 +19,14 @@ import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
 import { CATEGORY_LABELS, CATEGORIES } from '../types'
 import type { Category, Entry } from '../types'
 import { useEntries } from '../EntriesContext'
+import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
+import {
+  computeMemberTotals,
+  currentSgtMonth,
+  entriesForMonth as sharedEntriesForMonth,
+  totalSpent as sharedTotalSpent,
+} from '../sharedBudgets/memberTotals'
+import type { SharedEntry } from '../sharedBudgets/types'
 
 interface Props {
   onSettings: () => void
@@ -45,11 +53,18 @@ function entrySort(a: Entry, b: Entry): number {
   return b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
 }
 
+function sharedEntrySort(a: SharedEntry, b: SharedEntry): number {
+  return b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)
+}
+
 export default function Dashboard({ onSettings }: Props) {
   const [expandedCategory, setExpandedCategory] = useState<ExpandKey | null>(null)
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
+  const [viewScope, setViewScope] = useState<'personal' | 'shared'>('personal')
+  const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
   const now = new Date()
   const { entries, removeEntry } = useEntries()
+  const shared = useSharedBudgets()
   const config = getBudgetConfig()
   const customCategories = getCustomCategories()
   const categoryIds = allCategoryIds(customCategories)
@@ -91,6 +106,16 @@ export default function Dashboard({ onSettings }: Props) {
   const monthLabel = now.toLocaleString('default', { month: 'long', year: 'numeric' })
   const totalOverage = config.buffer - buffer
   const forecastOver = projectedDelta > 0
+  const selectedSharedBudgetId =
+    selectedBudgetId ?? shared.active?.budget.id ?? shared.budgets[0]?.id ?? null
+  const selectedSharedBudget = shared.budgets.find(b => b.id === selectedSharedBudgetId) ?? null
+  const activeSharedReady =
+    selectedSharedBudgetId !== null && shared.active?.budget.id === selectedSharedBudgetId
+
+  useEffect(() => {
+    if (viewScope !== 'shared' || !selectedSharedBudgetId || activeSharedReady) return
+    void shared.openBudget(selectedSharedBudgetId).catch(() => {})
+  }, [activeSharedReady, selectedSharedBudgetId, shared.openBudget, viewScope])
 
   function toggleCategory(category: ExpandKey) {
     setConfirmingDeleteId(null)
@@ -170,6 +195,40 @@ export default function Dashboard({ onSettings }: Props) {
           <SettingsIcon aria-hidden="true" size={19} strokeWidth={2} />
         </button>
       </header>
+
+      {shared.budgets.length > 0 && (
+        <div className="scope-switch" role="group" aria-label="Dashboard scope">
+          <button
+            type="button"
+            className={viewScope === 'personal' ? 'scope-switch-btn scope-switch-btn--active' : 'scope-switch-btn'}
+            onClick={() => setViewScope('personal')}
+          >
+            Personal
+          </button>
+          <button
+            type="button"
+            className={viewScope === 'shared' ? 'scope-switch-btn scope-switch-btn--active' : 'scope-switch-btn'}
+            onClick={() => setViewScope('shared')}
+          >
+            Shared
+          </button>
+        </div>
+      )}
+
+      {viewScope === 'shared' && (
+        <SharedBudgetDashboard
+          selectedBudgetId={selectedSharedBudgetId}
+          selectedBudgetName={selectedSharedBudget?.name ?? null}
+          onSelectBudget={id => {
+            setSelectedBudgetId(id)
+            setExpandedCategory(null)
+            setConfirmingDeleteId(null)
+          }}
+        />
+      )}
+
+      {viewScope === 'personal' && (
+        <>
 
       <div className="card summary-card">
         <div className="summary-card-top">
@@ -424,6 +483,153 @@ export default function Dashboard({ onSettings }: Props) {
         <span className="muted">This week</span>
         <span className="week-amount">S${thisWeek.toFixed(2)}</span>
       </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function SharedBudgetDashboard({
+  selectedBudgetId,
+  selectedBudgetName,
+  onSelectBudget,
+}: {
+  selectedBudgetId: string | null
+  selectedBudgetName: string | null
+  onSelectBudget: (id: string) => void
+}) {
+  const { budgets, active, error } = useSharedBudgets()
+
+  if (budgets.length === 0) {
+    return <p className="muted">Create or join a shared budget from the Shared tab.</p>
+  }
+
+  if (!selectedBudgetId || !active || active.budget.id !== selectedBudgetId) {
+    return <p className="muted">Loading {selectedBudgetName ?? 'shared budget'}...</p>
+  }
+
+  const { budget, entries, categories, members } = active
+  const month = currentSgtMonth()
+  const monthEntries = sharedEntriesForMonth(entries, month)
+  const spent = sharedTotalSpent(monthEntries)
+  const pct =
+    budget.monthlyLimit !== null && budget.monthlyLimit > 0
+      ? Math.min(100, (spent / budget.monthlyLimit) * 100)
+      : spent > 0
+        ? 100
+        : 0
+  const memberTotals = computeMemberTotals(monthEntries, members)
+  const nameOf = new Map(members.map(m => [m.userId, m.displayName]))
+
+  return (
+    <div className="shared-dashboard">
+      {budgets.length > 1 && (
+        <div className="scope-switch scope-switch--compact" role="group" aria-label="Shared budget">
+          {budgets.map(option => (
+            <button
+              key={option.id}
+              type="button"
+              className={
+                option.id === budget.id
+                  ? 'scope-switch-btn scope-switch-btn--active'
+                  : 'scope-switch-btn'
+              }
+              onClick={() => onSelectBudget(option.id)}
+            >
+              {option.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="card summary-card">
+        <div className="summary-card-top">
+          <div>
+            <span className="summary-label">{budget.name}</span>
+            <strong className="summary-amount summary-amount--large">
+              S${spent.toFixed(2)}
+            </strong>
+          </div>
+          <div className="summary-pill">{monthEntries.length} entries</div>
+        </div>
+        <div className="progress-bar" aria-hidden="true">
+          <div
+            className="progress-fill"
+            style={{
+              width: `${pct}%`,
+              background:
+                budget.monthlyLimit !== null && spent > budget.monthlyLimit
+                  ? 'var(--red)'
+                  : 'var(--green)',
+            }}
+          />
+        </div>
+        <div className="summary-card-bottom">
+          <span className="muted">
+            {budget.monthlyLimit !== null
+              ? `S$${spent.toFixed(2)} of S$${budget.monthlyLimit.toFixed(2)}`
+              : 'No monthly limit set'}
+          </span>
+        </div>
+      </div>
+
+      <h3 className="section-title">Members</h3>
+      <div className="ios-list">
+        {memberTotals.map(total => (
+          <div key={total.userId} className="settings-row">
+            <span className="settings-label">{total.displayName}</span>
+            <strong>S${total.total.toFixed(2)}</strong>
+          </div>
+        ))}
+      </div>
+
+      <h3 className="section-title">Categories</h3>
+      {categories.length === 0 ? (
+        <p className="muted">No shared categories yet. Add them from Settings.</p>
+      ) : (
+        <div className="ios-list">
+          {categories.map(category => {
+            const categoryEntries = monthEntries.filter(entry => entry.categoryId === category.id)
+            const categorySpent = sharedTotalSpent(categoryEntries)
+            const hasBudget = category.budgetAmount !== null && category.budgetAmount > 0
+            const over = hasBudget && categorySpent > category.budgetAmount!
+            return (
+              <div key={category.id} className="settings-row shared-category-summary-row">
+                <span className="settings-label icon-label">
+                  <BudgetIcon name={category.icon} />
+                  {category.label}
+                </span>
+                <span className={over ? 'cat-status cat-status--over' : 'cat-status cat-status--ok'}>
+                  {hasBudget
+                    ? `S$${categorySpent.toFixed(2)} / S$${category.budgetAmount!.toFixed(2)}`
+                    : `S$${categorySpent.toFixed(2)}`}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <h3 className="section-title">Entries</h3>
+      <div className="shared-entries">
+        {monthEntries.length === 0 ? (
+          <p className="muted">No shared expenses this month.</p>
+        ) : (
+          monthEntries.sort(sharedEntrySort).map(entry => (
+            <div key={entry.id} className="shared-entry-row">
+              <div className="shared-entry-main">
+                <span>{entry.note || 'No note'}</span>
+                <span className="muted">
+                  {nameOf.get(entry.userId) ?? 'Former member'} -{' '}
+                  {format(fromLocalDateString(entry.date), 'EEE, MMM d')}
+                </span>
+              </div>
+              <strong>S${entry.amount.toFixed(2)}</strong>
+            </div>
+          ))
+        )}
+      </div>
+      {error && <p className="form-error">{error}</p>}
     </div>
   )
 }

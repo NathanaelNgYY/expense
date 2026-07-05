@@ -195,6 +195,40 @@ button {
   transition: width 220ms ease, background 220ms ease;
 }
 
+.scope-switch {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 6px;
+  padding: 4px;
+  margin: 10px 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: var(--fill);
+}
+
+.scope-switch--compact {
+  grid-auto-columns: minmax(0, 1fr);
+  overflow-x: auto;
+}
+
+.scope-switch-btn {
+  min-height: 38px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.scope-switch-btn--active {
+  background: var(--bg-elev);
+  color: var(--text);
+}
+
 /* ─── Buttons ────────────────────────────────────────────── */
 
 .save-btn,

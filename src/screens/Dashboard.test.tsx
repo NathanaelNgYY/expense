@@ -4,6 +4,40 @@ import { createRoot, type Root } from 'react-dom/client'
 import Dashboard from './Dashboard'
 import { EntriesProvider } from '../EntriesContext'
 import type { Entry } from '../types'
+import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
+
+const sharedCtx = vi.hoisted(() => ({
+  value: {
+    configured: true,
+    authReady: true,
+    session: { user: { id: 'u1' } },
+    profile: { id: 'u1', displayName: 'Nat' },
+    budgets: [] as SharedBudget[],
+    active: null as ActiveBudgetData | null,
+    error: null as string | null,
+    refreshProfile: vi.fn(),
+    createBudget: vi.fn(),
+    joinBudget: vi.fn(),
+    openBudget: vi.fn(),
+    closeBudget: vi.fn(),
+    addEntry: vi.fn(),
+    editEntry: vi.fn(),
+    removeEntry: vi.fn(),
+    addCategory: vi.fn(),
+    updateCategory: vi.fn(),
+    removeCategory: vi.fn(),
+    updateActiveBudget: vi.fn(),
+    regenerateCode: vi.fn(),
+    removeMember: vi.fn(),
+    leaveActiveBudget: vi.fn(),
+    deleteActiveBudget: vi.fn(),
+    signOut: vi.fn(),
+  },
+}))
+
+vi.mock('../sharedBudgets/SharedBudgetsContext', () => ({
+  useSharedBudgets: () => sharedCtx.value,
+}))
 
 let nextId = 0
 
@@ -49,6 +83,14 @@ function clickCategory(container: HTMLElement, label: string): void {
   })
 }
 
+function clickButton(container: HTMLElement, predicate: (b: HTMLButtonElement) => boolean): void {
+  const button = [...container.querySelectorAll('button')].find(predicate)
+  if (!button) throw new Error('Button not found')
+  act(() => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+}
+
 describe('Dashboard category expense history', () => {
   let root: Root | null = null
 
@@ -58,6 +100,9 @@ describe('Dashboard category expense history', () => {
     vi.setSystemTime(new Date('2026-05-07T12:00:00'))
     localStorage.clear()
     nextId = 0
+    vi.clearAllMocks()
+    sharedCtx.value.budgets = []
+    sharedCtx.value.active = null
   })
 
   afterEach(() => {
@@ -266,5 +311,46 @@ describe('Dashboard category expense history', () => {
     expect(rendered.container).toHaveTextContent('No budget set')
     // a no-budget category must not be reported as "over"
     expect(rendered.container).not.toHaveTextContent('S$25.00 over')
+  })
+
+  it('shows the selected shared budget from the Home shared view', () => {
+    const budget: SharedBudget = {
+      id: 'b1',
+      name: 'Family',
+      monthlyLimit: 100,
+      currency: 'SGD',
+      inviteCode: 'ABC123',
+      ownerId: 'u1',
+      createdAt: '2026-05-01T00:00:00Z',
+    }
+    sharedCtx.value.budgets = [budget]
+    sharedCtx.value.active = {
+      budget,
+      categories: [{ id: 'c1', budgetId: 'b1', label: 'Groceries', budgetAmount: 60, icon: 'ShoppingBag' }],
+      entries: [
+        {
+          id: 'e1',
+          budgetId: 'b1',
+          userId: 'u1',
+          amount: 20,
+          categoryId: 'c1',
+          note: 'kopi',
+          date: '2026-05-06',
+          createdAt: '2026-05-06T00:00:00Z',
+          updatedAt: '2026-05-06T00:00:00Z',
+        },
+      ],
+      members: [{ userId: 'u1', role: 'owner', displayName: 'Nat', joinedAt: '2026-05-01T00:00:00Z' }],
+    }
+
+    const rendered = renderWithEntries([])
+    root = rendered.root
+
+    clickButton(rendered.container, b => b.textContent?.trim() === 'Shared')
+
+    expect(rendered.container).toHaveTextContent('Family')
+    expect(rendered.container).toHaveTextContent('S$20.00 of S$100.00')
+    expect(rendered.container).toHaveTextContent('Nat')
+    expect(rendered.container).toHaveTextContent('kopi')
   })
 })

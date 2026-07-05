@@ -19,82 +19,27 @@ async function submitWithState(
 }
 
 export default function AuthGate() {
-  const [step, setStep] = useState<'email' | 'sent'>('email')
-  const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const trimmedEmail = email.trim()
 
   return (
     <div className="shared-auth">
       <p className="screen-title">SHARED BUDGETS</p>
-      {step === 'email' ? (
-        <>
-          <p className="muted">Sign in to create or join shared budgets.</p>
-          <button
-            type="button"
-            className="save-btn"
-            disabled={busy}
-            onClick={() =>
-              void submitWithState(
-                () => sharedApi.signInWithGoogle(),
-                setBusy,
-                setError,
-              )
-            }
-          >
-            Continue with Google
-          </button>
-          <p className="muted">Or use an email sign-in link.</p>
-          <input
-            type="email"
-            className="note-input"
-            placeholder="you@email.com"
-            autoComplete="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-          />
-          <button
-            type="button"
-            className="save-btn"
-            disabled={busy || !email.includes('@')}
-            onClick={() =>
-              void submitWithState(
-                async () => {
-                  await sharedApi.requestOtp(trimmedEmail)
-                  setStep('sent')
-                },
-                setBusy,
-                setError,
-              )
-            }
-          >
-            Send sign-in link
-          </button>
-        </>
-      ) : (
-        <>
-          <p className="muted">We sent a sign-in link to {trimmedEmail}.</p>
-          <p className="muted">Open that email on this device and tap the link to continue.</p>
-          <button
-            type="button"
-            className="save-btn"
-            disabled={busy}
-            onClick={() =>
-              void submitWithState(
-                () => sharedApi.requestOtp(trimmedEmail),
-                setBusy,
-                setError,
-              )
-            }
-          >
-            Send another link
-          </button>
-          <button type="button" className="link-btn" onClick={() => setStep('email')}>
-            Use a different email
-          </button>
-        </>
-      )}
+      <p className="muted">Sign in with Google to create or join shared budgets.</p>
+      <button
+        type="button"
+        className="save-btn"
+        disabled={busy}
+        onClick={() =>
+          void submitWithState(
+            () => sharedApi.signInWithGoogle(),
+            setBusy,
+            setError,
+          )
+        }
+      >
+        Continue with Google
+      </button>
       {error && <p className="form-error">{error}</p>}
     </div>
   )

@@ -34,7 +34,7 @@ describe('SharedScreen', () => {
 
   it('shows the auth gate when signed out', () => {
     renderWith({ session: null })
-    expect(screen.getByPlaceholderText('you@email.com')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument()
   })
 
   it('prompts for a display name right after first sign-in', () => {

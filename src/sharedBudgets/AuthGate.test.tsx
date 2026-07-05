@@ -5,7 +5,6 @@ import type { SharedBudgetsContextValue } from './SharedBudgetsContext'
 import { SharedBudgetsContext } from './SharedBudgetsContext'
 
 const api = vi.hoisted(() => ({
-  requestOtp: vi.fn(),
   signInWithGoogle: vi.fn(),
   saveDisplayName: vi.fn(),
 }))
@@ -31,38 +30,17 @@ describe('AuthGate', () => {
     await waitFor(() => expect(api.signInWithGoogle).toHaveBeenCalled())
   })
 
-  it('requests a sign-in link then shows the sent step', async () => {
-    api.requestOtp.mockResolvedValue(undefined)
+  it('does not show email sign-in controls', () => {
     renderWithCtx(<AuthGate />)
-    fireEvent.change(screen.getByPlaceholderText('you@email.com'), {
-      target: { value: 'nat@example.com' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Send sign-in link' }))
-    await waitFor(() => expect(api.requestOtp).toHaveBeenCalledWith('nat@example.com'))
-    expect(screen.getByText('We sent a sign-in link to nat@example.com.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Send another link' })).toBeInTheDocument()
+    expect(screen.queryByPlaceholderText('you@email.com')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Send sign-in link' })).not.toBeInTheDocument()
   })
 
-  it('resends the sign-in link', async () => {
-    api.requestOtp.mockResolvedValue(undefined)
+  it('shows the error message when Google sign-in fails', async () => {
+    api.signInWithGoogle.mockRejectedValue(new Error('provider not enabled'))
     renderWithCtx(<AuthGate />)
-    fireEvent.change(screen.getByPlaceholderText('you@email.com'), {
-      target: { value: 'nat@example.com' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Send sign-in link' }))
-    await screen.findByRole('button', { name: 'Send another link' })
-    fireEvent.click(screen.getByRole('button', { name: 'Send another link' }))
-    await waitFor(() => expect(api.requestOtp).toHaveBeenCalledTimes(2))
-  })
-
-  it('shows the error message when sending fails', async () => {
-    api.requestOtp.mockRejectedValue(new Error('rate limited'))
-    renderWithCtx(<AuthGate />)
-    fireEvent.change(screen.getByPlaceholderText('you@email.com'), {
-      target: { value: 'nat@example.com' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Send sign-in link' }))
-    expect(await screen.findByText('rate limited')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }))
+    expect(await screen.findByText('provider not enabled')).toBeInTheDocument()
   })
 })
 

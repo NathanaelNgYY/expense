@@ -8,6 +8,8 @@ import History from './screens/History'
 import Settings from './screens/Settings'
 import Poker from './screens/Poker'
 import { EntriesProvider } from './EntriesContext'
+import SharedScreen from './sharedBudgets/SharedScreen'
+import { SharedBudgetsProvider } from './sharedBudgets/SharedBudgetsContext'
 
 function initialTab(): Tab {
   const params = new URLSearchParams(window.location.search)
@@ -43,6 +45,7 @@ function AppShell() {
         />
       )}
       {tab === 'poker' && <Poker />}
+      {tab === 'shared' && <SharedScreen />}
       <TabBar active={tab} onChange={setTab} />
     </div>
   )
@@ -51,7 +54,9 @@ function AppShell() {
 export default function App() {
   return (
     <EntriesProvider>
-      <AppShell />
+      <SharedBudgetsProvider>
+        <AppShell />
+      </SharedBudgetsProvider>
     </EntriesProvider>
   )
 }

@@ -234,4 +234,37 @@ describe('Dashboard category expense history', () => {
     expect(rendered.container).toHaveTextContent('Monthly income')
     expect(rendered.container).toHaveTextContent('S$1,800')
   })
+
+  it('shows a card for a budgeted custom category and its spend', () => {
+    localStorage.setItem(
+      'budget_custom_categories',
+      JSON.stringify([{ id: 'cat_groc_1', label: 'Groceries', budget: 100, icon: 'ShoppingBag' }]),
+    )
+    const rendered = renderWithEntries([
+      entry({ amount: 40, category: 'cat_groc_1', date: '2026-05-04' }),
+    ])
+    root = rendered.root
+
+    expect(rendered.container).toHaveTextContent('Groceries')
+    expect(rendered.container).toHaveTextContent('S$40.00')
+    // budgeted custom category shows its remaining budget (100 - 40)
+    expect(rendered.container).toHaveTextContent('S$60.00 left')
+  })
+
+  it('shows a no-budget custom category card with its spend', () => {
+    localStorage.setItem(
+      'budget_custom_categories',
+      JSON.stringify([{ id: 'cat_gym_1', label: 'Gym', budget: null, icon: 'Dumbbell' }]),
+    )
+    const rendered = renderWithEntries([
+      entry({ amount: 25, category: 'cat_gym_1', date: '2026-05-04' }),
+    ])
+    root = rendered.root
+
+    expect(rendered.container).toHaveTextContent('Gym')
+    expect(rendered.container).toHaveTextContent('S$25.00')
+    expect(rendered.container).toHaveTextContent('No budget set')
+    // a no-budget category must not be reported as "over"
+    expect(rendered.container).not.toHaveTextContent('S$25.00 over')
+  })
 })

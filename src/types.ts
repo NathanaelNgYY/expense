@@ -5,7 +5,7 @@ export type EntrySource = 'manual' | 'apple-pay' | 'dbs-email'
 export interface Entry {
   id: string
   amount: number
-  category: Category | null
+  category: string | null
   note: string
   date: string // YYYY-MM-DD (local SGT date used by all budget computations)
   source?: EntrySource
@@ -45,6 +45,13 @@ export const CATEGORY_LABELS: Record<Category, string> = {
 }
 
 export const CATEGORIES: Category[] = ['lunch', 'transport', 'others', 'savings', 'investments']
+
+export interface CustomCategory {
+  id: string            // stable id stored as Entry.category (e.g. "cat_groceries_x7")
+  label: string
+  budget: number | null // null = no target ("leave it empty")
+  icon: string          // a lucide icon name from the curated set (see BudgetIcon)
+}
 
 export interface PokerSession {
   id: string

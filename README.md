@@ -156,3 +156,21 @@ totals but not the per-category rows.
 ## Data Notes
 
 Transactions are stored server-side in Netlify Blobs (the source of truth) and cached in browser `localStorage` for offline viewing; on first load after deploy, any pre-existing local entries are migrated up to the server. Each entry has a deterministic `dedupeKey`, so re-fired automations and re-imported CSVs won't create duplicates. Budget settings and poker sessions live only in `localStorage`. The Settings screen can export and import entries as CSV and reset the current month's entries.
+
+## Shared Budgets (Supabase)
+
+Shared budgets let friends or family spend from a common pot with live updates.
+Personal budget data stays on Netlify Blobs; Supabase only stores shared budgets.
+
+One-time setup:
+
+1. Create a free project at https://supabase.com.
+2. In the SQL editor, run `supabase/migrations/001_shared_budgets.sql`.
+3. In Auth > Email Templates > Magic Link, make sure the body contains
+   `{{ .Token }}` so sign-in emails include the 6-digit code the app asks for.
+4. Copy `.env.example` to `.env.local` and fill in the Project URL and anon key
+   from Settings > API. Add the same two vars in Netlify > Site > Environment
+   variables, then redeploy.
+
+Sign in on the Shared tab with your email and the emailed code. Create a budget,
+then share its invite code; anyone who signs in and enters the code joins.

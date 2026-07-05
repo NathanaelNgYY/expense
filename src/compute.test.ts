@@ -17,8 +17,9 @@ import {
   safeToSpendPerDay,
   monthComparison,
 } from './compute'
-import { DEFAULT_BUDGET } from './types'
-import type { Entry } from './types'
+import { DEFAULT_BUDGET, CATEGORIES } from './types'
+import type { Entry, CustomCategory } from './types'
+import { allCategoryIds, categoryBudgets, customBudgetTotal, countEntriesForCategory } from './compute'
 
 function e(overrides: Partial<Entry> = {}): Entry {
   return { id: '1', amount: 10, category: 'lunch', note: '', date: '2026-05-04', ...overrides }
@@ -497,5 +498,56 @@ describe('monthComparison', () => {
       biggestIncrease: { category: 'lunch', current: 150, previous: 100, delta: 50 },
       biggestDecrease: { category: 'transport', current: 10, previous: 40, delta: -30 },
     })
+  })
+})
+
+const groceries: CustomCategory = { id: 'cat_groc', label: 'Groceries', budget: 100, icon: 'ShoppingBag' }
+const gym: CustomCategory = { id: 'cat_gym', label: 'Gym', budget: null, icon: 'Dumbbell' }
+
+describe('custom category compute seam', () => {
+  it('allCategoryIds appends custom ids after built-ins', () => {
+    expect(allCategoryIds([groceries])).toEqual([...CATEGORIES, 'cat_groc'])
+    expect(allCategoryIds()).toEqual([...CATEGORIES])
+  })
+
+  it('categoryBudgets reads built-ins from config and customs from .budget', () => {
+    const budgets = categoryBudgets(DEFAULT_BUDGET, [groceries, gym])
+    expect(budgets.lunch).toBe(DEFAULT_BUDGET.lunch)
+    expect(budgets.cat_groc).toBe(100)
+    expect(budgets.cat_gym).toBe(0) // null budget -> 0
+  })
+
+  it('customBudgetTotal sums custom budgets treating null as 0', () => {
+    expect(customBudgetTotal([groceries, gym])).toBe(100)
+  })
+
+  it('monthlySpendByCategory tallies custom categories', () => {
+    const entries = [e({ amount: 30, category: 'cat_groc', date: '2026-05-04' })]
+    const spend = monthlySpendByCategory(entries, 2026, 4, [groceries])
+    expect(spend.cat_groc).toBe(30)
+    expect(spend.lunch).toBe(0)
+  })
+
+  it('categoryDeficits and buffer spill cover custom overspend', () => {
+    const spend = monthlySpendByCategory(
+      [e({ amount: 130, category: 'cat_groc', date: '2026-05-04' })], 2026, 4, [groceries],
+    )
+    const deficits = categoryDeficits(spend, DEFAULT_BUDGET, [groceries])
+    expect(deficits.cat_groc).toBe(-30) // 100 budget - 130 spent
+    // 30 over a non-'others' category eats into the buffer
+    expect(bufferRemaining(deficits, DEFAULT_BUDGET)).toBe(DEFAULT_BUDGET.buffer - 30)
+  })
+})
+
+describe('countEntriesForCategory', () => {
+  it('counts entries tagged with the given category across all dates', () => {
+    const entries = [
+      e({ category: 'cat_groc', date: '2026-05-04' }),
+      e({ category: 'cat_groc', date: '2024-01-01' }),
+      e({ category: 'lunch', date: '2026-05-04' }),
+      e({ category: null, date: '2026-05-04' }),
+    ]
+    expect(countEntriesForCategory(entries, 'cat_groc')).toBe(2)
+    expect(countEntriesForCategory(entries, 'cat_unused')).toBe(0)
   })
 })

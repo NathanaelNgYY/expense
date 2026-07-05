@@ -26,6 +26,13 @@ export default defineConfig({
       workbox: { globPatterns: ['**/*.{js,css,html,ico,png,svg}'] },
     }),
   ],
+  // Only scan the real app entry for dependency pre-bundling. Without this, Vite
+  // also crawls generated artifacts like graphify-out/solar-system.html (the 3D
+  // "Code Galaxy" viz), which imports three.js — not an app dependency — and the
+  // scan fails noisily even though the dev server runs fine.
+  optimizeDeps: {
+    entries: ['index.html'],
+  },
   test: {
     globals: true,
     environment: 'jsdom',

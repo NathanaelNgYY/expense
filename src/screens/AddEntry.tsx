@@ -4,8 +4,8 @@ import { Delete } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import { toLocalDateString } from '../dates'
 import { useEntries } from '../EntriesContext'
+import { getCustomCategories } from '../storage'
 import { CATEGORY_LABELS, CATEGORIES } from '../types'
-import type { Category } from '../types'
 
 interface Props {
   onSave: () => void
@@ -15,9 +15,15 @@ const NUMPAD_KEYS = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
 
 export default function AddEntry({ onSave }: Props) {
   const [digits, setDigits] = useState('0')
-  const [category, setCategory] = useState<Category | null>(null)
+  const [category, setCategory] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const { addEntry } = useEntries()
+
+  const customCategories = getCustomCategories()
+  const categoryOptions: { id: string; label: string; icon: string }[] = [
+    ...CATEGORIES.map(c => ({ id: c as string, label: CATEGORY_LABELS[c], icon: c as string })),
+    ...customCategories.map(c => ({ id: c.id, label: c.label, icon: c.icon })),
+  ]
 
   const amount = parseFloat(digits) || 0
 
@@ -74,15 +80,15 @@ export default function AddEntry({ onSave }: Props) {
         Category <span className="muted">(optional)</span>
       </p>
       <div className="chips">
-        {CATEGORIES.map(cat => (
+        {categoryOptions.map(opt => (
           <button
-            key={cat}
+            key={opt.id}
             type="button"
-            className={`chip ${category === cat ? 'chip--selected' : ''}`}
-            onClick={() => setCategory(prev => (prev === cat ? null : cat))}
+            className={`chip ${category === opt.id ? 'chip--selected' : ''}`}
+            onClick={() => setCategory(prev => (prev === opt.id ? null : opt.id))}
           >
-            <BudgetIcon name={cat} />
-            <span>{CATEGORY_LABELS[cat]}</span>
+            <BudgetIcon name={opt.icon} />
+            <span>{opt.label}</span>
           </button>
         ))}
       </div>

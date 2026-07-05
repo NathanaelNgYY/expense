@@ -37,11 +37,11 @@ export function guessCategory(merchantText: string): Category | null {
 // before, reuse that category. Most frequent wins, ties broken by most recent
 // (so a fresh correction takes effect). Entries with no category or a different
 // merchant are ignored. Returns null when there's nothing to learn from.
-export function categoryFromHistory(entries: Entry[], merchant: string): Category | null {
+export function categoryFromHistory(entries: Entry[], merchant: string): string | null {
   const target = normalizeText(merchant)
   if (!target) return null
 
-  const stats = new Map<Category, { count: number; recent: string }>()
+  const stats = new Map<string, { count: number; recent: string }>()
   for (const entry of entries) {
     if (entry.category == null || !entry.merchant) continue
     if (normalizeText(entry.merchant) !== target) continue
@@ -55,7 +55,7 @@ export function categoryFromHistory(entries: Entry[], merchant: string): Categor
     }
   }
 
-  let best: Category | null = null
+  let best: string | null = null
   let bestStat = { count: 0, recent: '' }
   for (const [category, stat] of stats) {
     if (

@@ -278,6 +278,50 @@ describe('Settings custom categories', () => {
     expect(container).toHaveTextContent(/use "Gym"/)
   })
 
+  it('renames a basic category and persists the override on save', () => {
+    const rendered = renderWithEntries()
+    root = rendered.root
+    const { container } = rendered
+
+    clickButton(container, b => b.getAttribute('aria-label') === 'Edit Lunch')
+    changeInput(container.querySelector<HTMLInputElement>('#edit-cat-name')!, 'Food')
+    clickButton(container, b => b.textContent?.trim() === 'Done')
+    clickSave(container)
+
+    expect(JSON.parse(localStorage.getItem('budget_category_overrides') ?? '{}')).toEqual({
+      lunch: { label: 'Food' },
+    })
+  })
+
+  it('edits a custom category name and icon and persists on save', () => {
+    localStorage.setItem(
+      'budget_custom_categories',
+      JSON.stringify([{ id: 'cat_gym_1', label: 'Gym', budget: 30, icon: 'Dumbbell' }]),
+    )
+    const rendered = renderWithEntries()
+    root = rendered.root
+    const { container } = rendered
+
+    clickButton(container, b => b.getAttribute('aria-label') === 'Edit Gym')
+    changeInput(container.querySelector<HTMLInputElement>('#edit-cat-name')!, 'Fitness')
+    clickButton(container, b => b.getAttribute('aria-label') === 'Icon Heart')
+    clickButton(container, b => b.textContent?.trim() === 'Done')
+    clickSave(container)
+
+    const saved = readCustom()
+    expect(saved[0]).toMatchObject({ label: 'Fitness', icon: 'Heart', budget: 30 })
+  })
+
+  it('does not offer rename/delete for the Buffer basic category', () => {
+    const rendered = renderWithEntries()
+    root = rendered.root
+    const { container } = rendered
+
+    const editButtons = [...container.querySelectorAll('button')].map(b => b.getAttribute('aria-label'))
+    expect(editButtons).toContain('Edit Lunch')
+    expect(editButtons).not.toContain('Edit Buffer')
+  })
+
   it('edits the selected shared budget limit and categories from Settings', async () => {
     const budget: SharedBudget = {
       id: 'b1',

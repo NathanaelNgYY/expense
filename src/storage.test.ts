@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getEntries, saveEntries, updateEntry, getCachedEntries, setCachedEntries, getCustomCategories, saveCustomCategories, makeCustomCategoryId } from './storage'
+import { getEntries, saveEntries, updateEntry, getCachedEntries, setCachedEntries, getCustomCategories, saveCustomCategories, makeCustomCategoryId, getCategoryOverrides, saveCategoryOverrides } from './storage'
 import type { Entry, CustomCategory } from './types'
 
 function entry(overrides: Partial<Entry> = {}): Entry {
@@ -86,6 +86,25 @@ describe('custom categories storage', () => {
     const b = makeCustomCategoryId('My Gym!')
     expect(a).toMatch(/^cat_my_gym_/)
     expect(a).not.toEqual(b)
+  })
+})
+
+describe('category overrides storage', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('returns {} when nothing is stored', () => {
+    expect(getCategoryOverrides()).toEqual({})
+  })
+
+  it('round-trips saved overrides', () => {
+    const overrides = { lunch: { label: 'Food', icon: 'Coffee' }, transport: { label: 'Commute' } }
+    saveCategoryOverrides(overrides)
+    expect(getCategoryOverrides()).toEqual(overrides)
+  })
+
+  it('returns {} when stored JSON is corrupt', () => {
+    localStorage.setItem('budget_category_overrides', '{not json')
+    expect(getCategoryOverrides()).toEqual({})
   })
 })
 

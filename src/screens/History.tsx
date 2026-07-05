@@ -16,9 +16,9 @@ import {
   isFutureDateString,
   toLocalDateString,
 } from '../dates'
-import { getBudgetConfig, getCustomCategories } from '../storage'
+import { getBudgetConfig, getCustomCategories, getCategoryOverrides } from '../storage'
+import { buildCategoryOptions, categoryIcon, categoryLabel } from '../categoryDisplay'
 import { useEntries } from '../EntriesContext'
-import { CATEGORIES, CATEGORY_LABELS } from '../types'
 import type { Entry } from '../types'
 
 interface Props {
@@ -128,14 +128,10 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
 
   const config = getBudgetConfig()
   const customCategories = getCustomCategories()
-  const categoryOptions: { id: string; label: string; icon: string }[] = [
-    ...CATEGORIES.map(c => ({ id: c as string, label: CATEGORY_LABELS[c], icon: c as string })),
-    ...customCategories.map(c => ({ id: c.id, label: c.label, icon: c.icon })),
-  ]
-  const labelForCategory = (id: string): string =>
-    (CATEGORY_LABELS as Record<string, string>)[id] ?? customCategories.find(c => c.id === id)?.label ?? id
-  const iconForCategory = (id: string): string =>
-    (CATEGORIES as string[]).includes(id) ? id : customCategories.find(c => c.id === id)?.icon ?? id
+  const overrides = getCategoryOverrides()
+  const categoryOptions = buildCategoryOptions(overrides, customCategories)
+  const labelForCategory = (id: string): string => categoryLabel(id, overrides, customCategories)
+  const iconForCategory = (id: string): string => categoryIcon(id, overrides, customCategories)
   const weeks = weeksInMonth(year, month)
   const monthEntries = entriesForMonth(entries, year, month).sort(entrySort)
   const monthTotal = monthEntries.reduce((sum, entry) => sum + entry.amount, 0)

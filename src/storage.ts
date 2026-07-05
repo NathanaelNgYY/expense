@@ -1,10 +1,11 @@
 // src/storage.ts
-import type { Entry, BudgetConfig, PokerSession, CustomCategory } from './types'
+import type { Entry, BudgetConfig, CategoryOverrides, PokerSession, CustomCategory } from './types'
 import { DEFAULT_BUDGET } from './types'
 
 const ENTRIES_KEY = 'budget_entries'
 const CONFIG_KEY = 'budget_config'
 const CUSTOM_CATEGORIES_KEY = 'budget_custom_categories'
+const CATEGORY_OVERRIDES_KEY = 'budget_category_overrides'
 
 export function getEntries(): Entry[] {
   try {
@@ -58,6 +59,20 @@ export function getCustomCategories(): CustomCategory[] {
 
 export function saveCustomCategories(categories: CustomCategory[]): void {
   localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(categories))
+}
+
+// Display overrides (rename / re-icon) for the built-in basic categories.
+export function getCategoryOverrides(): CategoryOverrides {
+  try {
+    const raw = localStorage.getItem(CATEGORY_OVERRIDES_KEY)
+    return raw ? (JSON.parse(raw) as CategoryOverrides) : {}
+  } catch {
+    return {}
+  }
+}
+
+export function saveCategoryOverrides(overrides: CategoryOverrides): void {
+  localStorage.setItem(CATEGORY_OVERRIDES_KEY, JSON.stringify(overrides))
 }
 
 export function makeCustomCategoryId(label: string): string {

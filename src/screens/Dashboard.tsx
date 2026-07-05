@@ -2,7 +2,8 @@ import { useEffect, useState, type KeyboardEvent } from 'react'
 import { CalendarDays, Check, ChevronDown, ChevronUp, Minus, Settings as SettingsIcon, TrendingDown, TrendingUp, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
-import { getBudgetConfig, getCustomCategories } from '../storage'
+import { getBudgetConfig, getCustomCategories, getCategoryOverrides } from '../storage'
+import { categoryIcon, categoryLabel } from '../categoryDisplay'
 import {
   bufferRemaining,
   categoryDeficits,
@@ -16,7 +17,6 @@ import {
   customBudgetTotal,
 } from '../compute'
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
-import { CATEGORY_LABELS, CATEGORIES } from '../types'
 import type { Category, Entry } from '../types'
 import { useEntries } from '../EntriesContext'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
@@ -67,12 +67,11 @@ export default function Dashboard({ onSettings }: Props) {
   const shared = useSharedBudgets()
   const config = getBudgetConfig()
   const customCategories = getCustomCategories()
+  const overrides = getCategoryOverrides()
   const categoryIds = allCategoryIds(customCategories)
   const budgets = categoryBudgets(config, customCategories)
-  const labelFor = (id: string): string =>
-    (CATEGORY_LABELS as Record<string, string>)[id] ?? customCategories.find(c => c.id === id)?.label ?? id
-  const iconFor = (id: string): string =>
-    (CATEGORIES as string[]).includes(id) ? id : customCategories.find(c => c.id === id)?.icon ?? id
+  const labelFor = (id: string): string => categoryLabel(id, overrides, customCategories)
+  const iconFor = (id: string): string => categoryIcon(id, overrides, customCategories)
 
   const currentMonthEntries = entriesForMonth(entries, now.getFullYear(), now.getMonth())
   // Triage bucket: this month's entries that still have no category (e.g. auto-imported

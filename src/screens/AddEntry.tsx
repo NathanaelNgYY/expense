@@ -4,8 +4,8 @@ import { Delete } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import { toLocalDateString } from '../dates'
 import { useEntries } from '../EntriesContext'
-import { getCustomCategories } from '../storage'
-import { CATEGORY_LABELS, CATEGORIES } from '../types'
+import { getCustomCategories, getCategoryOverrides } from '../storage'
+import { buildCategoryOptions } from '../categoryDisplay'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
 
 interface Props {
@@ -35,10 +35,7 @@ export default function AddEntry({ onSave }: Props) {
   const selectedSharedBudget = shared.budgets.find(b => b.id === selectedBudgetId) ?? null
   const isSharedDestination = selectedBudgetId !== null
   const activeSharedReady = shared.active?.budget.id === selectedBudgetId
-  const personalCategoryOptions: { id: string; label: string; icon: string }[] = [
-    ...CATEGORIES.map(c => ({ id: c as string, label: CATEGORY_LABELS[c], icon: c as string })),
-    ...customCategories.map(c => ({ id: c.id, label: c.label, icon: c.icon })),
-  ]
+  const personalCategoryOptions = buildCategoryOptions(getCategoryOverrides(), customCategories)
   const sharedCategoryOptions =
     activeSharedReady && shared.active
       ? shared.active.categories.map(c => ({ id: c.id, label: c.label, icon: c.icon }))

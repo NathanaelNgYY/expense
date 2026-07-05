@@ -9,7 +9,9 @@ import {
   monthOverMonthDelta,
   monthComparison,
 } from '../compute'
-import { CATEGORIES, CATEGORY_LABELS } from '../types'
+import { CATEGORIES } from '../types'
+import { categoryLabel } from '../categoryDisplay'
+import { getCategoryOverrides } from '../storage'
 import { fromLocalDateString } from '../dates'
 import type { Entry } from '../types'
 
@@ -25,6 +27,7 @@ function formatSignedCurrency(value: number): string {
 }
 
 export default function InsightsSection({ entries, year, month }: Props) {
+  const overrides = getCategoryOverrides()
   const topCat = mostExpensiveCategory(entries, year, month)
   const avgLunch = averageLunchPerEntry(entries, year, month)
   const topDay = highestSpendingDay(entries, year, month)
@@ -37,7 +40,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
       })
     : ''
   const reviewParts = [
-    topCat ? `${CATEGORY_LABELS[topCat.category]} led the month` : null,
+    topCat ? `${categoryLabel(topCat.category, overrides)} led the month` : null,
     topDay ? `Peak day ${format(fromLocalDateString(topDay.date), 'MMM d')}` : null,
     delta !== null
       ? `${delta > 0 ? 'Up' : 'Down'} S$${Math.abs(delta).toFixed(2)} vs last month`
@@ -62,7 +65,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
               Most expensive
             </span>
             <span className="insight-value">
-              {CATEGORY_LABELS[topCat.category]} - S${topCat.amount.toFixed(2)}
+              {categoryLabel(topCat.category, overrides)} - S${topCat.amount.toFixed(2)}
             </span>
           </div>
         )}
@@ -135,7 +138,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
                   Biggest increase
                 </span>
                 <span className="insight-value" style={{ color: 'var(--red)' }}>
-                  {CATEGORY_LABELS[comparison.biggestIncrease.category]}{' '}
+                  {categoryLabel(comparison.biggestIncrease.category, overrides)}{' '}
                   {formatSignedCurrency(comparison.biggestIncrease.delta)}
                 </span>
               </div>
@@ -147,7 +150,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
                   Best improvement
                 </span>
                 <span className="insight-value" style={{ color: 'var(--green)' }}>
-                  {CATEGORY_LABELS[comparison.biggestDecrease.category]}{' '}
+                  {categoryLabel(comparison.biggestDecrease.category, overrides)}{' '}
                   {formatSignedCurrency(comparison.biggestDecrease.delta)}
                 </span>
               </div>
@@ -159,7 +162,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
                 <div key={category} className="breakdown-row insight-row">
                   <span className="icon-label">
                     <BudgetIcon name={category} />
-                    {CATEGORY_LABELS[category]}
+                    {categoryLabel(category, overrides)}
                   </span>
                   <span
                     className="insight-value"

@@ -1,6 +1,6 @@
 // src/screens/Settings.tsx
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { ChevronLeft, Download, Plus, Save, Trash2, Upload, Wallet } from 'lucide-react'
+import { ChevronLeft, Download, Pencil, Plus, Save, Trash2, Upload, Wallet } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import { CUSTOM_ICON_NAMES } from '../components/budgetIcons'
 import { entriesToCsv, parseEntriesCsv } from '../csvEntries'
@@ -9,12 +9,16 @@ import {
   saveBudgetConfig,
   getCustomCategories,
   saveCustomCategories,
+  getCategoryOverrides,
+  saveCategoryOverrides,
   makeCustomCategoryId,
 } from '../storage'
+import { categoryIcon, categoryLabel } from '../categoryDisplay'
 import { countEntriesForCategory } from '../compute'
 import { getApiToken, setApiToken } from '../api'
 import { useEntries } from '../EntriesContext'
-import type { BudgetConfig, CustomCategory } from '../types'
+import { CATEGORY_LABELS } from '../types'
+import type { BudgetConfig, Category, CategoryOverride, CustomCategory } from '../types'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
 
 interface Props {
@@ -31,6 +35,10 @@ const BUDGET_FIELDS: Array<{ key: BudgetFieldKey; label: string }> = [
   { key: 'buffer', label: 'Buffer' },
 ]
 
+// Basic categories the user can rename / re-icon. Buffer is a computed budget
+// concept, not a tag, so it stays fixed.
+const EDITABLE_BASICS = new Set<string>(['lunch', 'transport', 'savings', 'investments'])
+
 function isEntryInMonth(date: string, year: number, month: number): boolean {
   const [entryYear, entryMonth] = date.split('-').map(Number)
   return entryYear === year && entryMonth === month + 1
@@ -39,6 +47,10 @@ function isEntryInMonth(date: string, year: number, month: number): boolean {
 export default function Settings({ onBack }: Props) {
   const [config, setConfig] = useState<BudgetConfig>(getBudgetConfig)
   const [customCategories, setCustomCategories] = useState<CustomCategory[]>(getCustomCategories)
+  const [overrides, setOverrides] = useState(getCategoryOverrides)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editLabel, setEditLabel] = useState('')
+  const [editIcon, setEditIcon] = useState('')
   const [showAdd, setShowAdd] = useState(false)
   const [newLabel, setNewLabel] = useState('')
   const [newBudget, setNewBudget] = useState('')
@@ -105,7 +117,43 @@ export default function Settings({ onBack }: Props) {
   function handleSave() {
     saveBudgetConfig(config)
     saveCustomCategories(customCategories)
+    saveCategoryOverrides(overrides)
     onBack()
+  }
+
+  function startEditBasic(key: Category) {
+    setEditingId(key)
+    setEditLabel(categoryLabel(key, overrides))
+    setEditIcon(categoryIcon(key, overrides))
+  }
+
+  function startEditCustom(cat: CustomCategory) {
+    setEditingId(cat.id)
+    setEditLabel(cat.label)
+    setEditIcon(cat.icon)
+  }
+
+  // Only store an override when the display actually differs from the built-in
+  // default, so clearing an edit prunes the entry and keeps storage tidy.
+  function saveBasicEdit(key: Category) {
+    const label = editLabel.trim()
+    const override: CategoryOverride = {}
+    if (label && label !== CATEGORY_LABELS[key]) override.label = label
+    if (editIcon && editIcon !== key) override.icon = editIcon
+    const next = { ...overrides }
+    if (Object.keys(override).length > 0) next[key] = override
+    else delete next[key]
+    setOverrides(next)
+    setEditingId(null)
+  }
+
+  function saveCustomEdit(cat: CustomCategory) {
+    const label = editLabel.trim()
+    if (!label) return
+    setCustomCategories(prev =>
+      prev.map(c => (c.id === cat.id ? { ...c, label, icon: editIcon || c.icon } : c)),
+    )
+    setEditingId(null)
   }
 
   function handleAddCategory() {
@@ -233,6 +281,41 @@ export default function Settings({ onBack }: Props) {
       setImportError(true)
       setImportMessage(error instanceof Error ? error.message : 'Could not import this CSV file.')
     }
+  }
+
+  function renderCategoryEditor(onDone: () => void) {
+    return (
+      <div className="ios-list category-add-form">
+        <div className="settings-row">
+          <label className="settings-label" htmlFor="edit-cat-name">Category name</label>
+          <input
+            id="edit-cat-name"
+            type="text"
+            className="settings-input"
+            value={editLabel}
+            onChange={event => setEditLabel(event.target.value)}
+          />
+        </div>
+        <div className="icon-picker" role="group" aria-label="Choose an icon">
+          {CUSTOM_ICON_NAMES.map(name => (
+            <button
+              key={name}
+              type="button"
+              className={`icon-picker-btn ${editIcon === name ? 'icon-picker-btn--selected' : ''}`}
+              aria-label={`Icon ${name}`}
+              aria-pressed={editIcon === name}
+              onClick={() => setEditIcon(name)}
+            >
+              <BudgetIcon name={name} />
+            </button>
+          ))}
+        </div>
+        <div className="category-add-actions">
+          <button type="button" className="save-btn" onClick={onDone} disabled={!editLabel.trim()}>Done</button>
+          <button type="button" className="export-btn" onClick={() => setEditingId(null)}>Cancel</button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -468,55 +551,86 @@ export default function Settings({ onBack }: Props) {
       <h3 className="section-title">Monthly Budgets (S$)</h3>
 
       <div className="ios-list">
-        {BUDGET_FIELDS.map(({ key, label }) => (
-          <div key={key} className="settings-row">
-            <label className="settings-label icon-label" htmlFor={`budget-${key}`}>
-              <BudgetIcon name={key} />
-              {label}
-            </label>
-            <input
-              id={`budget-${key}`}
-              type="number"
-              className="settings-input"
-              value={config[key]}
-              min="0"
-              step="1"
-              inputMode="decimal"
-              onChange={event => handleChange(key, event.target.value)}
-            />
-          </div>
-        ))}
+        {BUDGET_FIELDS.map(({ key, label }) => {
+          const editable = EDITABLE_BASICS.has(key)
+          const displayLabel = editable ? categoryLabel(key, overrides) : label
+          const displayIcon = editable ? categoryIcon(key, overrides) : key
+          return (
+            <div key={key}>
+              <div className="settings-row">
+                <label className="settings-label icon-label" htmlFor={`budget-${key}`}>
+                  <BudgetIcon name={displayIcon} />
+                  {displayLabel}
+                </label>
+                <div className="settings-row-trailing">
+                  <input
+                    id={`budget-${key}`}
+                    type="number"
+                    className="settings-input"
+                    value={config[key]}
+                    min="0"
+                    step="1"
+                    inputMode="decimal"
+                    onChange={event => handleChange(key, event.target.value)}
+                  />
+                  {editable && (
+                    <button
+                      type="button"
+                      className="category-edit-btn"
+                      aria-label={`Edit ${displayLabel}`}
+                      onClick={() => startEditBasic(key as Category)}
+                    >
+                      <Pencil size={16} strokeWidth={2.3} aria-hidden="true" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              {editingId === key && renderCategoryEditor(() => saveBasicEdit(key as Category))}
+            </div>
+          )
+        })}
       </div>
 
       {customCategories.length > 0 && (
         <div className="ios-list">
           {customCategories.map(cat => (
-            <div key={cat.id} className="settings-row">
-              <label className="settings-label icon-label" htmlFor={`custom-${cat.id}`}>
-                <BudgetIcon name={cat.icon} />
-                {cat.label}
-              </label>
-              <div className="settings-row-trailing">
-                <input
-                  id={`custom-${cat.id}`}
-                  type="number"
-                  className="settings-input"
-                  value={cat.budget ?? ''}
-                  placeholder="No budget"
-                  min="0"
-                  step="1"
-                  inputMode="decimal"
-                  onChange={event => handleCustomBudgetChange(cat.id, event.target.value)}
-                />
-                <button
-                  type="button"
-                  className="category-remove-btn"
-                  aria-label={`Remove ${cat.label}`}
-                  onClick={() => handleRemoveCategory(cat)}
-                >
-                  <Trash2 size={16} strokeWidth={2.3} aria-hidden="true" />
-                </button>
+            <div key={cat.id}>
+              <div className="settings-row">
+                <label className="settings-label icon-label" htmlFor={`custom-${cat.id}`}>
+                  <BudgetIcon name={cat.icon} />
+                  {cat.label}
+                </label>
+                <div className="settings-row-trailing">
+                  <input
+                    id={`custom-${cat.id}`}
+                    type="number"
+                    className="settings-input"
+                    value={cat.budget ?? ''}
+                    placeholder="No budget"
+                    min="0"
+                    step="1"
+                    inputMode="decimal"
+                    onChange={event => handleCustomBudgetChange(cat.id, event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="category-edit-btn"
+                    aria-label={`Edit ${cat.label}`}
+                    onClick={() => startEditCustom(cat)}
+                  >
+                    <Pencil size={16} strokeWidth={2.3} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="category-remove-btn"
+                    aria-label={`Remove ${cat.label}`}
+                    onClick={() => handleRemoveCategory(cat)}
+                  >
+                    <Trash2 size={16} strokeWidth={2.3} aria-hidden="true" />
+                  </button>
+                </div>
               </div>
+              {editingId === cat.id && renderCategoryEditor(() => saveCustomEdit(cat))}
             </div>
           ))}
         </div>

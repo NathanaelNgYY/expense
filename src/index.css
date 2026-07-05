@@ -1410,6 +1410,16 @@ input:focus-visible {
   cursor: pointer;
 }
 
+.category-edit-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
 .category-add-form {
   padding: 8px;
 }

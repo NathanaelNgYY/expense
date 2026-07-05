@@ -53,6 +53,15 @@ export interface CustomCategory {
   icon: string          // a lucide icon name from the curated set (see BudgetIcon)
 }
 
+export interface CategoryOverride {
+  label?: string
+  icon?: string
+}
+
+// User-facing renames / re-icons for the built-in basic categories. Their *ids*
+// never change (all budget math keys on them); only how they display changes.
+export type CategoryOverrides = Partial<Record<Category, CategoryOverride>>
+
 export interface PokerSession {
   id: string
   date: string

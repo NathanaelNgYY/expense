@@ -55,6 +55,44 @@ describe('AddEntry', () => {
     expect(saveButton).not.toBeDisabled()
   })
 
+  it('renders the amount as individually animated glyphs', async () => {
+    await act(async () => {
+      renderWithEntries()
+    })
+
+    act(() => {
+      screen.getByRole('button', { name: '5' }).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const amountDisplay = screen.getByLabelText('Entered amount')
+    const glyphs = Array.from(amountDisplay.querySelectorAll('.amount-glyph'))
+
+    expect(amountDisplay).toHaveAttribute('aria-live', 'polite')
+    expect(amountDisplay).toHaveTextContent('S$5.00')
+    expect(glyphs.map(glyph => glyph.textContent).join('')).toBe('S$5.00')
+    expect(glyphs.every(glyph => glyph.getAttribute('aria-hidden') === 'true')).toBe(true)
+  })
+
+  it('animates only the newly entered digit when the amount grows', async () => {
+    await act(async () => {
+      renderWithEntries()
+    })
+
+    act(() => {
+      screen.getByRole('button', { name: '5' }).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    act(() => {
+      screen.getByRole('button', { name: '6' }).dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const amountDisplay = screen.getByLabelText('Entered amount')
+    const glyphs = Array.from(amountDisplay.querySelectorAll('.amount-glyph'))
+    const animatedGlyphs = glyphs.filter(glyph => glyph.classList.contains('amount-glyph--enter'))
+
+    expect(glyphs.map(glyph => glyph.textContent).join('')).toBe('S$56.00')
+    expect(animatedGlyphs.map(glyph => glyph.textContent)).toEqual(['6'])
+  })
+
   it('navigates away immediately without waiting for the network POST', async () => {
     localStorage.setItem('api_token', 'tok')
     // GET on mount resolves; POST hangs forever to simulate a slow serverless round-trip.

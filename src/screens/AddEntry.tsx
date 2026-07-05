@@ -15,6 +15,7 @@ const NUMPAD_KEYS = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
 
 export default function AddEntry({ onSave }: Props) {
   const [digits, setDigits] = useState('0')
+  const [animationCue, setAnimationCue] = useState({ key: '', version: 0 })
   const [category, setCategory] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const { addEntry } = useEntries()
@@ -26,18 +27,18 @@ export default function AddEntry({ onSave }: Props) {
   ]
 
   const amount = parseFloat(digits) || 0
+  const amountText = `S$${amount.toFixed(2)}`
+  const activeGlyphIndex = getActiveGlyphIndex(digits, amountText, animationCue.key)
 
   function handleDigit(key: string) {
-    if (key === 'backspace') {
-      setDigits(prev => (prev.length <= 1 ? '0' : prev.slice(0, -1)))
-      return
-    }
-    setDigits(prev => {
-      if (key === '.' && prev.includes('.')) return prev
-      if (prev === '0' && key !== '.') return key
-      if (prev.includes('.') && prev.split('.')[1].length >= 2) return prev
-      return prev + key
-    })
+    const nextDigits = getNextDigits(digits, key)
+    if (nextDigits === digits) return
+
+    setDigits(nextDigits)
+    setAnimationCue(prev => ({
+      key,
+      version: prev.version + 1,
+    }))
   }
 
   function handleSave() {
@@ -58,8 +59,29 @@ export default function AddEntry({ onSave }: Props) {
     <div className="screen add-entry">
       <p className="screen-title">ADD ENTRY</p>
 
-      <div className="amount-display">
-        S${amount.toFixed(2)}
+      <div className="amount-display" aria-label="Entered amount" aria-live="polite">
+        <span className="amount-glyph-set" aria-hidden="true">
+          {Array.from(amountText).map((char, index) => {
+            const isActive = index === activeGlyphIndex
+            const isMinor = index > amountText.indexOf('.')
+            const isPrefix = index < 2
+            return (
+              <span
+                key={`amount-${index}-${char}-${isActive ? animationCue.version : 'stable'}`}
+                className={[
+                  'amount-glyph',
+                  isActive ? 'amount-glyph--enter' : '',
+                  isMinor ? 'amount-glyph--minor' : '',
+                  isPrefix ? 'amount-glyph--prefix' : '',
+                ].filter(Boolean).join(' ')}
+                aria-hidden="true"
+              >
+                {char}
+              </span>
+            )
+          })}
+        </span>
+        <span className="amount-screenreader">{amountText}</span>
       </div>
 
       <div className="numpad">
@@ -106,4 +128,32 @@ export default function AddEntry({ onSave }: Props) {
       </button>
     </div>
   )
+}
+
+function getNextDigits(current: string, key: string) {
+  if (key === 'backspace') {
+    return current.length <= 1 ? '0' : current.slice(0, -1)
+  }
+
+  if (key === '.' && current.includes('.')) return current
+  if (current === '0' && key !== '.') return key
+  if (current.includes('.') && current.split('.')[1].length >= 2) return current
+
+  return current + key
+}
+
+function getActiveGlyphIndex(digits: string, amountText: string, key: string) {
+  if (!key || key === 'backspace') return -1
+
+  const decimalIndex = amountText.indexOf('.')
+
+  if (key === '.') return decimalIndex
+  if (decimalIndex === -1) return -1
+
+  const [, cents = ''] = digits.split('.')
+  if (digits.includes('.') && cents.length > 0) {
+    return Math.min(decimalIndex + cents.length, amountText.length - 1)
+  }
+
+  return decimalIndex - 1
 }

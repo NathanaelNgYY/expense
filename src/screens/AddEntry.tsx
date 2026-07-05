@@ -146,7 +146,11 @@ export default function AddEntry({ onSave }: Props) {
                 key={`amount-${index}-${char}-${isActive ? animationCue.version : 'stable'}`}
                 className={[
                   'amount-glyph',
-                  isActive ? 'amount-glyph--enter' : '',
+                  isActive
+                    ? animationCue.key === 'backspace'
+                      ? 'amount-glyph--delete'
+                      : 'amount-glyph--enter'
+                    : '',
                   isMinor ? 'amount-glyph--minor' : '',
                   isPrefix ? 'amount-glyph--prefix' : '',
                 ].filter(Boolean).join(' ')}
@@ -233,12 +237,22 @@ function getNextDigits(current: string, key: string) {
 }
 
 function getActiveGlyphIndex(digits: string, amountText: string, key: string) {
-  if (!key || key === 'backspace') return -1
+  if (!key) return -1
 
   const decimalIndex = amountText.indexOf('.')
+  if (decimalIndex === -1) return -1
+
+  if (key === 'backspace') {
+    // Nothing meaningful to punctuate once the amount is back to zero.
+    if (digits === '0') return -1
+    // A deleted cent digit reverts to a trailing 0; punctuate that position.
+    // Otherwise the trailing integer digit is what visually changed.
+    const [, cents = ''] = digits.split('.')
+    if (!digits.includes('.')) return decimalIndex - 1
+    return cents.length >= 1 ? decimalIndex + 2 : decimalIndex + 1
+  }
 
   if (key === '.') return decimalIndex
-  if (decimalIndex === -1) return -1
 
   const [, cents = ''] = digits.split('.')
   if (digits.includes('.') && cents.length > 0) {

@@ -396,8 +396,13 @@ input:focus-visible {
 }
 
 .amount-glyph--enter {
-  animation: amount-digit-settle 240ms cubic-bezier(0.18, 1.15, 0.28, 1) both;
-  will-change: transform, opacity;
+  animation: amount-digit-settle 260ms cubic-bezier(0.22, 1.08, 0.3, 1) both;
+  will-change: transform, opacity, filter;
+}
+
+.amount-glyph--delete {
+  animation: amount-digit-delete 190ms cubic-bezier(0.2, 0.72, 0.28, 1) both;
+  will-change: transform, opacity, filter;
 }
 
 .amount-glyph--prefix {
@@ -430,24 +435,48 @@ input:focus-visible {
 
 @keyframes amount-digit-settle {
   0% {
-    opacity: 0.18;
-    transform: translate3d(0, 0.26em, 0) scale(0.985);
+    opacity: 0;
+    filter: blur(6px);
+    transform: translate3d(0, 0.3em, 0) scale(0.955);
   }
 
-  64% {
+  55% {
     opacity: 1;
-    transform: translate3d(0, -0.035em, 0) scale(1.018);
+    filter: blur(0);
+    transform: translate3d(0, -0.03em, 0) scale(1.012);
   }
 
   100% {
     opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes amount-digit-delete {
+  0% {
+    opacity: 0.4;
+    filter: blur(4px);
+    transform: translate3d(0, -0.05em, 0) scale(1.06);
+  }
+
+  100% {
+    opacity: 1;
+    filter: blur(0);
     transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .amount-glyph--enter {
+  .amount-glyph--enter,
+  .amount-glyph--delete {
     animation: none;
+  }
+
+  .numpad-key,
+  .numpad-key:active {
+    transition: background 100ms ease;
+    transform: none;
   }
 }
 
@@ -469,12 +498,16 @@ input:focus-visible {
   cursor: pointer;
   font-size: 26px;
   font-weight: 400;
-  transition: background 100ms ease, transform 100ms ease;
+  will-change: transform;
+  /* Release: springy bounce-back with a soft overshoot. */
+  transition: transform 280ms cubic-bezier(0.22, 1.25, 0.32, 1), background 220ms ease;
 }
 
 .numpad-key:active {
-  background: rgba(255, 255, 255, 0.1);
-  transform: scale(0.94);
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(0.9);
+  /* Press-in: near-instant so the tap feels tactile and immediate. */
+  transition: transform 55ms ease-out, background 55ms ease-out;
 }
 
 .numpad-icon {

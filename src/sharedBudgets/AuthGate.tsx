@@ -30,7 +30,22 @@ export default function AuthGate() {
       <p className="screen-title">SHARED BUDGETS</p>
       {step === 'email' ? (
         <>
-          <p className="muted">Sign in with your email to use shared budgets.</p>
+          <p className="muted">Sign in to create or join shared budgets.</p>
+          <button
+            type="button"
+            className="save-btn"
+            disabled={busy}
+            onClick={() =>
+              void submitWithState(
+                () => sharedApi.signInWithGoogle(),
+                setBusy,
+                setError,
+              )
+            }
+          >
+            Continue with Google
+          </button>
+          <p className="muted">Or use an email sign-in link.</p>
           <input
             type="email"
             className="note-input"

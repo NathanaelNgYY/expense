@@ -6,6 +6,7 @@ import { SharedBudgetsContext } from './SharedBudgetsContext'
 
 const api = vi.hoisted(() => ({
   requestOtp: vi.fn(),
+  signInWithGoogle: vi.fn(),
   saveDisplayName: vi.fn(),
 }))
 vi.mock('./sharedApi', () => api)
@@ -23,6 +24,13 @@ function renderWithCtx(ui: ReactElement) {
 beforeEach(() => vi.clearAllMocks())
 
 describe('AuthGate', () => {
+  it('starts Google sign-in from the primary button', async () => {
+    api.signInWithGoogle.mockResolvedValue(undefined)
+    renderWithCtx(<AuthGate />)
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Google' }))
+    await waitFor(() => expect(api.signInWithGoogle).toHaveBeenCalled())
+  })
+
   it('requests a sign-in link then shows the sent step', async () => {
     api.requestOtp.mockResolvedValue(undefined)
     renderWithCtx(<AuthGate />)

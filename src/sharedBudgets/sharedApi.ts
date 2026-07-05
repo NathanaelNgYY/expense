@@ -139,6 +139,14 @@ export async function requestOtp(email: string): Promise<void> {
   if (error) throw friendly(error.message)
 }
 
+export async function signInWithGoogle(): Promise<void> {
+  const { error } = await getSupabase().auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin },
+  })
+  if (error) throw friendly(error.message)
+}
+
 export async function verifyOtpCode(email: string, code: string): Promise<void> {
   const { error } = await getSupabase().auth.verifyOtp({ email, token: code.trim(), type: 'email' })
   if (error) throw friendly(error.message)

@@ -1,12 +1,18 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const rpc = vi.fn()
+const signInWithOAuth = vi.fn()
 vi.mock('../lib/supabaseClient', () => ({
-  getSupabase: () => ({ rpc }),
+  getSupabase: () => ({ rpc, auth: { signInWithOAuth } }),
   isSupabaseConfigured: () => true,
 }))
 
-import { joinBudget, mapBudget, mapEntry, mapMember } from './sharedApi'
+import { joinBudget, mapBudget, mapEntry, mapMember, signInWithGoogle } from './sharedApi'
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.clearAllMocks()
+})
 
 const budgetRow = {
   id: 'b1',
@@ -78,5 +84,19 @@ describe('joinBudget', () => {
   it('throws a friendly error on invalid_code', async () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'invalid_code' } })
     await expect(joinBudget('NOPE')).rejects.toThrow('Code not found')
+  })
+})
+
+describe('signInWithGoogle', () => {
+  it('starts Google OAuth with the current origin as the redirect target', async () => {
+    vi.stubGlobal('window', { location: { origin: 'https://budget.example' } })
+    signInWithOAuth.mockResolvedValue({ data: {}, error: null })
+
+    await signInWithGoogle()
+
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: 'https://budget.example' },
+    })
   })
 })

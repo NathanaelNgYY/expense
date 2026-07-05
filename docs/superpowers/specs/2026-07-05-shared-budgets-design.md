@@ -23,6 +23,7 @@ Realtime), accessed directly from the client via `supabase-js` with Row Level Se
 | Invites | Shareable invite code (e.g. `FAM-7K2Q`) sent via share sheet; owner can regenerate to revoke |
 | Integration style | `supabase-js` directly in the client + RLS policies. No Netlify Functions proxy |
 | Entry permissions | Any member can edit/delete any entry (trusted-group model); budget settings/deletion/invite code are owner-only |
+| Membership exit | Owner can remove members; a member can also leave voluntarily ("Leave budget"). The owner can never leave their own budget (added 2026-07-05 after Task 1 review) |
 
 ## Data model (Supabase Postgres)
 

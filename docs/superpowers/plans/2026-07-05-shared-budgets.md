@@ -45,6 +45,9 @@ Create `supabase/migrations/001_shared_budgets.sql` with exactly:
 --   5. As B: join_budget('XXXXXX') (bad code) -> error 'invalid_code'.
 --   6. As A: regenerate_invite_code -> old code no longer joins.
 --   7. As A: remove B from members -> B's budget list no longer shows it.
+--   8. As B (re-joined): leave the budget yourself -> your list no longer
+--      shows it. As A: try to delete your own member row -> 0 rows (the
+--      owner can never leave their own budget).
 --
 -- SUPABASE DASHBOARD SETUP (one-time, not SQL):
 --   Auth > Email Templates > Magic Link: body must contain {{ .Token }} so the
@@ -214,8 +217,16 @@ create policy members_select on public.budget_members for select
   using (public.is_member(budget_id));
 -- No INSERT policy: memberships are created only by the security-definer
 -- functions handle_new_budget() and join_budget().
+-- Delete: the owner removes members, or a member leaves voluntarily. The
+-- owner's own row is never deletable, so a budget can't be left ownerless.
 create policy members_delete on public.budget_members for delete
-  using (exists (select 1 from public.budgets b where b.id = budget_id and b.owner_id = auth.uid()));
+  using (
+    user_id <> (select b.owner_id from public.budgets b where b.id = budget_id)
+    and (
+      user_id = auth.uid()
+      or exists (select 1 from public.budgets b where b.id = budget_id and b.owner_id = auth.uid())
+    )
+  );
 
 create policy categories_all on public.shared_categories for all
   using (public.is_member(budget_id))
@@ -1160,6 +1171,7 @@ git commit -m "feat: supabase data-access layer for shared budgets"
     updateActiveBudget(patch: { name?: string; monthlyLimit?: number | null }): Promise<void>
     regenerateCode(): Promise<void>
     removeMember(userId: string): Promise<void>
+    leaveActiveBudget(): Promise<void>   // non-owner leaves: removeMember(own id) + close + drop from list
     deleteActiveBudget(): Promise<void>
     signOut(): Promise<void>
   }
@@ -1310,6 +1322,21 @@ describe('SharedBudgetsProvider', () => {
     expect(ctx.active).toBeNull()
   })
 
+  it('leaveActiveBudget removes own membership, closes, and drops the budget from the list', async () => {
+    api.removeMember.mockResolvedValue(undefined)
+    render(
+      <SharedBudgetsProvider>
+        <Probe />
+      </SharedBudgetsProvider>,
+    )
+    await waitFor(() => expect(ctx.authReady).toBe(true))
+    await act(() => ctx.openBudget('b1'))
+    await act(() => ctx.leaveActiveBudget())
+    expect(api.removeMember).toHaveBeenCalledWith('b1', 'u1')
+    expect(ctx.active).toBeNull()
+    expect(ctx.budgets).toEqual([])
+  })
+
   it('addEntry applies the created entry to active state', async () => {
     api.createSharedEntry.mockResolvedValue({
       id: 'e9',
@@ -1400,6 +1427,7 @@ export interface SharedBudgetsContextValue {
   updateActiveBudget: (patch: { name?: string; monthlyLimit?: number | null }) => Promise<void>
   regenerateCode: () => Promise<void>
   removeMember: (userId: string) => Promise<void>
+  leaveActiveBudget: () => Promise<void>
   deleteActiveBudget: () => Promise<void>
   signOut: () => Promise<void>
 }
@@ -1618,6 +1646,21 @@ export function SharedBudgetsProvider({ children }: { children: ReactNode }) {
     [run, active],
   )
 
+  const leaveActiveBudget = useCallback(
+    async () =>
+      run(async () => {
+        if (!active) throw new Error('No open budget')
+        if (!session) throw new Error('Not signed in')
+        const id = active.budget.id
+        // Leaving = deleting your own membership row; RLS permits self-delete
+        // for non-owners.
+        await sharedApi.removeMember(id, session.user.id)
+        closeBudget()
+        setBudgets(prev => prev.filter(b => b.id !== id))
+      }),
+    [run, active, session, closeBudget],
+  )
+
   const deleteActiveBudget = useCallback(
     async () =>
       run(async () => {
@@ -1657,6 +1700,7 @@ export function SharedBudgetsProvider({ children }: { children: ReactNode }) {
         updateActiveBudget,
         regenerateCode,
         removeMember,
+        leaveActiveBudget,
         deleteActiveBudget,
         signOut,
       }}
@@ -1676,7 +1720,7 @@ export function useSharedBudgets(): SharedBudgetsContextValue {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/sharedBudgets/SharedBudgetsContext.test.tsx`
-Expected: PASS (5 tests).
+Expected: PASS (6 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -2170,7 +2214,7 @@ git commit -m "feat: shared budget list with create/join"
 - Create: `src/sharedBudgets/BudgetDetail.test.tsx`
 
 **Interfaces:**
-- Consumes: `useSharedBudgets` — `active`, `session`, `closeBudget`, `addEntry`, `removeEntry`, `error`; `computeMemberTotals`, `currentSgtMonth`, `entriesForMonth`, `totalSpent` from `./memberTotals`; `BudgetIcon` from `../components/BudgetIcon`; `toLocalDateString` from `../dates`.
+- Consumes: `useSharedBudgets` — `active`, `session`, `closeBudget`, `addEntry`, `removeEntry`, `leaveActiveBudget`, `error`; `computeMemberTotals`, `currentSgtMonth`, `entriesForMonth`, `totalSpent` from `./memberTotals`; `BudgetIcon` from `../components/BudgetIcon`; `toLocalDateString` from `../dates`.
 - Produces: default export `BudgetDetail()` — no props. Renders `<OwnerTools />` (Task 10) when the signed-in user is the owner; until Task 10 exists, Step 3 ships a placeholder `OwnerTools` in a separate file that renders nothing.
 
 - [ ] **Step 1: Write the failing test**
@@ -2225,6 +2269,7 @@ const ctx = {
   closeBudget: vi.fn(),
   addEntry: vi.fn().mockResolvedValue(undefined),
   removeEntry: vi.fn().mockResolvedValue(undefined),
+  leaveActiveBudget: vi.fn().mockResolvedValue(undefined),
 } as unknown as SharedBudgetsContextValue
 
 function renderDetail(value: SharedBudgetsContextValue = ctx) {
@@ -2280,6 +2325,19 @@ describe('BudgetDetail', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(ctx.closeBudget).toHaveBeenCalled()
   })
+
+  it('non-owner can leave the budget after confirm', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    renderDetail()
+    fireEvent.click(screen.getByRole('button', { name: 'Leave budget' }))
+    await waitFor(() => expect(ctx.leaveActiveBudget).toHaveBeenCalled())
+    confirmSpy.mockRestore()
+  })
+
+  it('owner does not see the Leave budget button', () => {
+    renderDetail({ ...ctx, session: { user: { id: 'u1' } } as Session })
+    expect(screen.queryByRole('button', { name: 'Leave budget' })).toBeNull()
+  })
 })
 ```
 
@@ -2311,7 +2369,8 @@ import OwnerTools from './OwnerTools'
 import { useSharedBudgets } from './SharedBudgetsContext'
 
 export default function BudgetDetail() {
-  const { active, session, error, closeBudget, addEntry, removeEntry } = useSharedBudgets()
+  const { active, session, error, closeBudget, addEntry, removeEntry, leaveActiveBudget } =
+    useSharedBudgets()
   const [amount, setAmount] = useState('')
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [note, setNote] = useState('')
@@ -2450,6 +2509,19 @@ export default function BudgetDetail() {
       </div>
 
       {isOwner && <OwnerTools />}
+      {!isOwner && (
+        <button
+          type="button"
+          className="danger-btn"
+          onClick={() => {
+            if (window.confirm(`Leave "${budget.name}"? You can rejoin later with an invite code.`)) {
+              void leaveActiveBudget()
+            }
+          }}
+        >
+          Leave budget
+        </button>
+      )}
 
       {error && <p className="form-error">{error}</p>}
     </div>
@@ -2460,7 +2532,7 @@ export default function BudgetDetail() {
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/sharedBudgets/BudgetDetail.test.tsx`
-Expected: PASS (5 tests).
+Expected: PASS (7 tests).
 
 - [ ] **Step 5: Commit**
 
@@ -2758,7 +2830,7 @@ export default function OwnerTools() {
 - [ ] **Step 4: Run tests to verify they pass (including Task 9's, which now renders the real OwnerTools)**
 
 Run: `npx vitest run src/sharedBudgets/OwnerTools.test.tsx src/sharedBudgets/BudgetDetail.test.tsx`
-Expected: PASS (6 + 5 tests).
+Expected: PASS (6 + 7 tests).
 
 - [ ] **Step 5: Commit**
 

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import type { Session } from '@supabase/supabase-js'
 import {
   createContext,
@@ -43,7 +44,7 @@ export const SharedBudgetsContext = createContext<SharedBudgetsContextValue | nu
 export function SharedBudgetsProvider({ children }: { children: ReactNode }) {
   const configured = isSupabaseConfigured()
   const [session, setSession] = useState<Session | null>(null)
-  const [authReady, setAuthReady] = useState(false)
+  const [authReady, setAuthReady] = useState(!configured)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [budgets, setBudgets] = useState<SharedBudget[]>([])
   const [active, setActive] = useState<ActiveBudgetData | null>(null)
@@ -69,7 +70,6 @@ export function SharedBudgetsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!configured) {
-      setAuthReady(true)
       return
     }
     let cancelled = false
@@ -88,9 +88,11 @@ export function SharedBudgetsProvider({ children }: { children: ReactNode }) {
   const userId = session?.user.id ?? null
   useEffect(() => {
     if (!userId) {
-      setProfile(null)
-      setBudgets([])
-      closeBudget()
+      queueMicrotask(() => {
+        setProfile(null)
+        setBudgets([])
+        closeBudget()
+      })
       return
     }
     let cancelled = false

@@ -1,7 +1,7 @@
 // src/components/TabBar.tsx
-import { ChartColumn, CirclePlus, House, Spade } from 'lucide-react'
+import { ChartColumn, CirclePlus, House, Spade, Users } from 'lucide-react'
 
-export type Tab = 'home' | 'add' | 'history' | 'poker'
+export type Tab = 'home' | 'add' | 'history' | 'poker' | 'shared'
 
 interface Props {
   active: Tab
@@ -50,6 +50,16 @@ export default function TabBar({ active, onChange }: Props) {
       >
         <Spade className="tab-icon" aria-hidden="true" strokeWidth={2.3} />
         <span>Poker</span>
+      </button>
+      <button
+        type="button"
+        aria-label="Shared budgets"
+        aria-pressed={active === 'shared'}
+        className={active === 'shared' ? 'active' : ''}
+        onClick={() => onChange('shared')}
+      >
+        <Users className="tab-icon" aria-hidden="true" strokeWidth={2.3} />
+        <span>Shared</span>
       </button>
     </nav>
   )

@@ -1491,3 +1491,134 @@ input:focus-visible {
 .custom-stakes-add:active {
   opacity: 0.7;
 }
+
+/* ---------- shared budgets ---------- */
+.shared-auth,
+.shared-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.shared-budget-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.shared-budget-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.shared-budget-name {
+  flex: 1;
+  font-weight: 600;
+}
+
+.shared-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.shared-actions .save-btn {
+  flex: 1;
+}
+
+.shared-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shared-progress {
+  margin: 10px 0;
+}
+
+.shared-progress .progress-track {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(128, 128, 128, 0.2);
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.shared-progress .progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: currentColor;
+}
+
+.member-total-row,
+.member-row,
+.shared-entry-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+.shared-entry-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.invite-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.invite-code {
+  font-family: ui-monospace, monospace;
+  font-size: 1.2rem;
+  letter-spacing: 2px;
+  flex: 1;
+}
+
+.owner-tools {
+  margin-top: 20px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  padding: 4px 0;
+}
+
+.shared-signout {
+  margin-top: 24px;
+  opacity: 0.7;
+}
+
+.form-error {
+  color: #e5484d;
+  margin-top: 8px;
+}
+
+.offline-banner {
+  text-align: center;
+  padding: 8px 12px;
+  background: rgba(229, 72, 77, 0.12);
+  color: #e5484d;
+  border-radius: 10px;
+  margin: 8px 16px 0;
+}

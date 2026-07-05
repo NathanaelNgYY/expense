@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import type { Session } from '@supabase/supabase-js'
+import { useEffect } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ActiveBudgetData, SharedBudget } from './types'
 
@@ -59,8 +60,11 @@ const activeData: ActiveBudgetData = {
 
 let ctx: ReturnType<typeof useSharedBudgets>
 function Probe() {
-  ctx = useSharedBudgets()
-  return <div data-testid="budget-count">{ctx.budgets.length}</div>
+  const value = useSharedBudgets()
+  useEffect(() => {
+    ctx = value
+  }, [value])
+  return <div data-testid="budget-count">{value.budgets.length}</div>
 }
 
 let realtimeHandlers: BudgetRealtimeHandlers | null = null
@@ -88,7 +92,7 @@ describe('SharedBudgetsProvider', () => {
       </SharedBudgetsProvider>,
     )
     await waitFor(() => expect(screen.getByTestId('budget-count')).toHaveTextContent('1'))
-    expect(ctx.profile?.displayName).toBe('Nat')
+    await waitFor(() => expect(ctx.profile?.displayName).toBe('Nat'))
     expect(ctx.authReady).toBe(true)
   })
 

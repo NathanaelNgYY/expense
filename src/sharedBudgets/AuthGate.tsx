@@ -18,14 +18,12 @@ async function submitWithState(
   }
 }
 
-// Email OTP sign-in keeps the session inside the installed PWA; tapping a
-// magic-link email would open a separate browser context.
 export default function AuthGate() {
-  const [step, setStep] = useState<'email' | 'code'>('email')
+  const [step, setStep] = useState<'email' | 'sent'>('email')
   const [email, setEmail] = useState('')
-  const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const trimmedEmail = email.trim()
 
   return (
     <div className="shared-auth">
@@ -48,42 +46,34 @@ export default function AuthGate() {
             onClick={() =>
               void submitWithState(
                 async () => {
-                  await sharedApi.requestOtp(email.trim())
-                  setStep('code')
+                  await sharedApi.requestOtp(trimmedEmail)
+                  setStep('sent')
                 },
                 setBusy,
                 setError,
               )
             }
           >
-            Send code
+            Send sign-in link
           </button>
         </>
       ) : (
         <>
-          <p className="muted">Enter the 6-digit code sent to {email.trim()}.</p>
-          <input
-            type="text"
-            inputMode="numeric"
-            className="note-input"
-            placeholder="6-digit code"
-            autoComplete="one-time-code"
-            value={code}
-            onChange={e => setCode(e.target.value)}
-          />
+          <p className="muted">We sent a sign-in link to {trimmedEmail}.</p>
+          <p className="muted">Open that email on this device and tap the link to continue.</p>
           <button
             type="button"
             className="save-btn"
-            disabled={busy || code.trim().length < 6}
+            disabled={busy}
             onClick={() =>
               void submitWithState(
-                () => sharedApi.verifyOtpCode(email.trim(), code),
+                () => sharedApi.requestOtp(trimmedEmail),
                 setBusy,
                 setError,
               )
             }
           >
-            Verify
+            Send another link
           </button>
           <button type="button" className="link-btn" onClick={() => setStep('email')}>
             Use a different email

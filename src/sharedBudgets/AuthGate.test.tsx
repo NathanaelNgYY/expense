@@ -6,7 +6,6 @@ import { SharedBudgetsContext } from './SharedBudgetsContext'
 
 const api = vi.hoisted(() => ({
   requestOtp: vi.fn(),
-  verifyOtpCode: vi.fn(),
   saveDisplayName: vi.fn(),
 }))
 vi.mock('./sharedApi', () => api)
@@ -24,29 +23,28 @@ function renderWithCtx(ui: ReactElement) {
 beforeEach(() => vi.clearAllMocks())
 
 describe('AuthGate', () => {
-  it('requests a code then shows the code step', async () => {
+  it('requests a sign-in link then shows the sent step', async () => {
     api.requestOtp.mockResolvedValue(undefined)
     renderWithCtx(<AuthGate />)
     fireEvent.change(screen.getByPlaceholderText('you@email.com'), {
       target: { value: 'nat@example.com' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send code' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send sign-in link' }))
     await waitFor(() => expect(api.requestOtp).toHaveBeenCalledWith('nat@example.com'))
-    expect(screen.getByPlaceholderText('6-digit code')).toBeInTheDocument()
+    expect(screen.getByText('We sent a sign-in link to nat@example.com.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Send another link' })).toBeInTheDocument()
   })
 
-  it('verifies the entered code', async () => {
+  it('resends the sign-in link', async () => {
     api.requestOtp.mockResolvedValue(undefined)
-    api.verifyOtpCode.mockResolvedValue(undefined)
     renderWithCtx(<AuthGate />)
     fireEvent.change(screen.getByPlaceholderText('you@email.com'), {
       target: { value: 'nat@example.com' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send code' }))
-    await screen.findByPlaceholderText('6-digit code')
-    fireEvent.change(screen.getByPlaceholderText('6-digit code'), { target: { value: '123456' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Verify' }))
-    await waitFor(() => expect(api.verifyOtpCode).toHaveBeenCalledWith('nat@example.com', '123456'))
+    fireEvent.click(screen.getByRole('button', { name: 'Send sign-in link' }))
+    await screen.findByRole('button', { name: 'Send another link' })
+    fireEvent.click(screen.getByRole('button', { name: 'Send another link' }))
+    await waitFor(() => expect(api.requestOtp).toHaveBeenCalledTimes(2))
   })
 
   it('shows the error message when sending fails', async () => {
@@ -55,7 +53,7 @@ describe('AuthGate', () => {
     fireEvent.change(screen.getByPlaceholderText('you@email.com'), {
       target: { value: 'nat@example.com' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send code' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send sign-in link' }))
     expect(await screen.findByText('rate limited')).toBeInTheDocument()
   })
 })

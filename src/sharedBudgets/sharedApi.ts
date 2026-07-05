@@ -131,7 +131,10 @@ export function onAuthChange(cb: (session: Session | null) => void): () => void 
 export async function requestOtp(email: string): Promise<void> {
   const { error } = await getSupabase().auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: true },
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: window.location.origin,
+    },
   })
   if (error) throw friendly(error.message)
 }

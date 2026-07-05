@@ -24,6 +24,13 @@ export default function AddEntry({ onSave }: Props) {
   const { addEntry: addPersonalEntry } = useEntries()
   const shared = useSharedBudgets()
 
+  // If the chosen shared budget disappears (e.g. the user left or deleted it), snap back to
+  // Personal. Adjusting state during render is React's recommended alternative to a syncing effect.
+  if (selectedBudgetId !== null && !shared.budgets.some(b => b.id === selectedBudgetId)) {
+    setSelectedBudgetId(null)
+    setCategory(null)
+  }
+
   const customCategories = getCustomCategories()
   const selectedSharedBudget = shared.budgets.find(b => b.id === selectedBudgetId) ?? null
   const isSharedDestination = selectedBudgetId !== null
@@ -43,12 +50,6 @@ export default function AddEntry({ onSave }: Props) {
   const activeGlyphIndex = getActiveGlyphIndex(digits, amountText, animationCue.key)
   const sharedSaveDisabled =
     isSharedDestination && (!selectedSharedBudget || !activeSharedReady || busy)
-
-  useEffect(() => {
-    if (!selectedBudgetId || shared.budgets.some(b => b.id === selectedBudgetId)) return
-    setSelectedBudgetId(null)
-    setCategory(null)
-  }, [selectedBudgetId, shared.budgets])
 
   useEffect(() => {
     if (!isSharedDestination || !selectedBudgetId || activeSharedReady) return

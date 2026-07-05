@@ -74,8 +74,12 @@ export default function Settings({ onBack }: Props) {
     void shared.openBudget(selectedSharedBudgetId).catch(() => {})
   }, [activeSharedReady, selectedSharedBudgetId, settingsScope, shared.openBudget])
 
-  useEffect(() => {
-    if (!shared.active) return
+  // Re-seed the editable limit/category-budget fields whenever a different budget snapshot
+  // loads. Adjusting state during render (guarded on the previous snapshot) is React's
+  // recommended alternative to a syncing effect and avoids a flash of stale field values.
+  const [syncedActive, setSyncedActive] = useState<typeof shared.active>(null)
+  if (shared.active && shared.active !== syncedActive) {
+    setSyncedActive(shared.active)
     setSharedLimit(
       shared.active.budget.monthlyLimit === null ? '' : String(shared.active.budget.monthlyLimit),
     )
@@ -87,7 +91,7 @@ export default function Settings({ onBack }: Props) {
         ]),
       ),
     )
-  }, [shared.active])
+  }
 
   function handleChange(key: keyof BudgetConfig, value: string) {
     const nextValue = Math.max(0, parseFloat(value) || 0)

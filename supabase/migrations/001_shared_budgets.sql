@@ -8,6 +8,9 @@
 --   5. As B: join_budget('XXXXXX') (bad code) -> error 'invalid_code'.
 --   6. As A: regenerate_invite_code -> old code no longer joins.
 --   7. As A: remove B from members -> B's budget list no longer shows it.
+--   8. As B (re-joined): leave the budget yourself -> your list no longer
+--      shows it. As A: try to delete your own member row -> 0 rows (the
+--      owner can never leave their own budget).
 --
 -- SUPABASE DASHBOARD SETUP (one-time, not SQL):
 --   Auth > Email Templates > Magic Link: body must contain {{ .Token }} so the
@@ -177,8 +180,16 @@ create policy members_select on public.budget_members for select
   using (public.is_member(budget_id));
 -- No INSERT policy: memberships are created only by the security-definer
 -- functions handle_new_budget() and join_budget().
+-- Delete: the owner removes members, or a member leaves voluntarily. The
+-- owner's own row is never deletable, so a budget can't be left ownerless.
 create policy members_delete on public.budget_members for delete
-  using (exists (select 1 from public.budgets b where b.id = budget_id and b.owner_id = auth.uid()));
+  using (
+    user_id <> (select b.owner_id from public.budgets b where b.id = budget_id)
+    and (
+      user_id = auth.uid()
+      or exists (select 1 from public.budgets b where b.id = budget_id and b.owner_id = auth.uid())
+    )
+  );
 
 create policy categories_all on public.shared_categories for all
   using (public.is_member(budget_id))

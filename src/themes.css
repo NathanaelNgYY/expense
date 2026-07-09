@@ -269,3 +269,448 @@ body,
     transition: none;
   }
 }
+
+/* Shared screen composition hooks */
+
+.theme-screen {
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.home-budget-overview {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--separator);
+  border-radius: var(--theme-card-radius);
+  background: var(--bg-elev);
+  padding: 14px;
+}
+
+.home-budget-overview__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.home-safe-amount {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-usage-ring {
+  --budget-progress: 0%;
+  position: relative;
+  width: 132px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--primary) 0 var(--budget-progress),
+    var(--separator) var(--budget-progress) 100%
+  );
+}
+
+.budget-usage-ring::after {
+  content: "";
+  position: absolute;
+  inset: 13px;
+  border-radius: inherit;
+  background: var(--bg);
+}
+
+.budget-usage-ring__inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.budget-usage-ring__inner strong {
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.budget-usage-ring__inner small {
+  max-width: 86px;
+  color: var(--text-secondary);
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.add-entry__categories,
+.add-entry__details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.add-entry__details .save-btn {
+  margin-top: 0;
+}
+
+/* Deep Sea Revised: radial overview, soft grouping, calm spacing */
+
+[data-theme='deep-sea'] .home-budget-overview {
+  background:
+    radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--primary) 13%, transparent), transparent 40%),
+    var(--bg-elev);
+}
+
+[data-theme='deep-sea'] .category-row-card,
+[data-theme='deep-sea'] .week-strip,
+[data-theme='deep-sea'] .poker-stats-card,
+[data-theme='deep-sea'] .bankroll-card {
+  border-radius: 14px;
+}
+
+[data-theme='deep-sea'] .add-entry__amount {
+  border: 1px solid var(--separator);
+  border-radius: 18px 18px 8px 8px;
+  background: var(--bg-elev);
+  padding: 22px 14px;
+}
+
+[data-theme='deep-sea'] .cal-cell {
+  border-radius: 50%;
+}
+
+/* Copper Current: split metrics, hard ledger geometry, calculator rail */
+
+[data-theme='copper-current'] .screen-title,
+[data-theme='copper-current'] .section-title,
+[data-theme='copper-current'] .month-label,
+[data-theme='copper-current'] .summary-label {
+  text-transform: uppercase;
+  letter-spacing: 0.075em;
+}
+
+[data-theme='copper-current'] .home-budget-overview {
+  grid-template-columns: minmax(0, 1fr) 88px;
+  border-top: 3px solid var(--primary);
+  border-radius: 3px;
+  padding: 12px;
+}
+
+[data-theme='copper-current'] .home-budget-overview__copy {
+  order: -1;
+}
+
+[data-theme='copper-current'] .budget-usage-ring {
+  width: 76px;
+  height: 142px;
+  aspect-ratio: auto;
+  border: 1px solid var(--separator);
+  border-radius: 2px;
+  background:
+    linear-gradient(
+      to top,
+      var(--primary) 0 var(--budget-progress),
+      var(--separator) var(--budget-progress) 100%
+    );
+}
+
+[data-theme='copper-current'] .budget-usage-ring::after {
+  inset: 0 12px 0 0;
+  border-radius: 0;
+  background: var(--bg-elev);
+}
+
+[data-theme='copper-current'] .budget-usage-ring__inner {
+  align-items: flex-start;
+  padding-right: 13px;
+}
+
+[data-theme='copper-current'] .budget-usage-ring__inner small {
+  max-width: 54px;
+}
+
+[data-theme='copper-current'] .card,
+[data-theme='copper-current'] .ios-list,
+[data-theme='copper-current'] .entry-row,
+[data-theme='copper-current'] .chip,
+[data-theme='copper-current'] .numpad-key,
+[data-theme='copper-current'] .note-input,
+[data-theme='copper-current'] .amount-input,
+[data-theme='copper-current'] .date-input-shell,
+[data-theme='copper-current'] .scope-switch,
+[data-theme='copper-current'] .save-btn,
+[data-theme='copper-current'] .export-btn {
+  border-radius: 3px;
+}
+
+[data-theme='copper-current'] .category-row-card {
+  border-width: 0 0 1px;
+  background: transparent;
+  padding-inline: 2px;
+}
+
+[data-theme='copper-current'] .theme-screen--add {
+  display: grid;
+  grid-template-columns: minmax(112px, .78fr) minmax(0, 1.22fr);
+  grid-template-areas:
+    "title title"
+    "scope scope"
+    "amount amount"
+    "categories keypad"
+    "details details";
+  align-content: start;
+  gap: 12px;
+}
+
+[data-theme='copper-current'] .theme-screen--add > .screen-title {
+  grid-area: title;
+}
+
+[data-theme='copper-current'] .theme-screen--add > .scope-switch {
+  grid-area: scope;
+}
+
+[data-theme='copper-current'] .add-entry__amount {
+  grid-area: amount;
+  border: 1px solid var(--separator);
+  border-top: 3px solid var(--primary);
+  background: var(--bg-elev);
+  padding: 18px 12px;
+}
+
+[data-theme='copper-current'] .add-entry__categories {
+  grid-area: categories;
+}
+
+[data-theme='copper-current'] .add-entry__categories .chips {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+[data-theme='copper-current'] .add-entry__categories .chip {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+[data-theme='copper-current'] .add-entry__keypad {
+  grid-area: keypad;
+  margin-top: 0;
+}
+
+[data-theme='copper-current'] .add-entry__details {
+  grid-area: details;
+}
+
+[data-theme='copper-current'] .theme-screen--history {
+  display: flex;
+}
+
+[data-theme='copper-current'] .history__summary {
+  order: -4;
+  border-top: 3px solid var(--primary);
+}
+
+[data-theme='copper-current'] .month-nav {
+  order: -5;
+}
+
+[data-theme='copper-current'] .history__calendar,
+[data-theme='copper-current'] .cal-caption {
+  order: -3;
+}
+
+[data-theme='copper-current'] .history__backfill {
+  order: 5;
+}
+
+[data-theme='copper-current'] .cal-cell {
+  border-radius: 2px;
+}
+
+[data-theme='copper-current'] .poker__hero {
+  border: 1px solid var(--primary);
+  border-radius: 3px;
+  background: #17100b;
+}
+
+[data-theme='copper-current'] .poker-pnl {
+  font-family: var(--font-display);
+  font-size: 32px;
+}
+
+[data-theme='copper-current'] .bankroll-trend-point {
+  border-radius: 2px 2px 0 0;
+}
+
+/* Berry Circuit: signal ribbons, category tiles, and chart-led poker */
+
+[data-theme='berry-circuit'] .home-budget-overview {
+  grid-template-columns: 1fr;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg-elev) 82%, var(--primary) 18%);
+}
+
+[data-theme='berry-circuit'] .budget-usage-ring {
+  width: 100%;
+  aspect-ratio: auto;
+  min-height: 58px;
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      to right,
+      var(--primary) 0 var(--budget-progress),
+      var(--separator) var(--budget-progress) 100%
+    );
+}
+
+[data-theme='berry-circuit'] .budget-usage-ring::after {
+  inset: 5px;
+  border-radius: 10px;
+  background: var(--bg-elev);
+}
+
+[data-theme='berry-circuit'] .budget-usage-ring__inner {
+  width: 100%;
+  flex-direction: row;
+  justify-content: space-between;
+  padding-inline: 17px;
+}
+
+[data-theme='berry-circuit'] .budget-usage-ring__inner small {
+  max-width: none;
+}
+
+[data-theme='berry-circuit'] .home-budget-overview__copy {
+  margin-top: -2px;
+  border: 1px solid var(--separator);
+  border-radius: 14px;
+  background: var(--bg-elev);
+  padding: 12px;
+}
+
+[data-theme='berry-circuit'] .category-row-card {
+  border-radius: 15px;
+}
+
+[data-theme='berry-circuit'] .theme-screen--add {
+  display: flex;
+  flex-direction: column;
+}
+
+[data-theme='berry-circuit'] .theme-screen--add > .screen-title {
+  order: -5;
+}
+
+[data-theme='berry-circuit'] .theme-screen--add > .scope-switch {
+  order: -4;
+}
+
+[data-theme='berry-circuit'] .add-entry__categories {
+  order: -3;
+}
+
+[data-theme='berry-circuit'] .add-entry__categories .chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+[data-theme='berry-circuit'] .add-entry__categories .chip {
+  min-height: 54px;
+  justify-content: flex-start;
+  border-radius: 14px;
+}
+
+[data-theme='berry-circuit'] .add-entry__amount {
+  order: -2;
+  margin-inline: -2px;
+  border-block: 1px solid var(--separator);
+  background: var(--bg-elev);
+  padding: 22px 10px;
+}
+
+[data-theme='berry-circuit'] .add-entry__keypad {
+  order: -1;
+}
+
+[data-theme='berry-circuit'] .add-entry__details {
+  order: 1;
+}
+
+[data-theme='berry-circuit'] .history__summary {
+  order: -4;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg-elev) 82%, var(--primary) 18%);
+}
+
+[data-theme='berry-circuit'] .month-nav {
+  order: -5;
+}
+
+[data-theme='berry-circuit'] .history__calendar,
+[data-theme='berry-circuit'] .cal-caption {
+  order: -3;
+}
+
+[data-theme='berry-circuit'] .cal-cell {
+  border-radius: 8px;
+}
+
+[data-theme='berry-circuit'] .history__backfill {
+  order: 6;
+}
+
+[data-theme='berry-circuit'] .week-bar,
+[data-theme='berry-circuit'] .entry-row,
+[data-theme='berry-circuit'] .poker-stats-card,
+[data-theme='berry-circuit'] .bankroll-card {
+  border-radius: 16px;
+}
+
+[data-theme='berry-circuit'] .theme-screen--poker {
+  display: flex;
+}
+
+[data-theme='berry-circuit'] .poker__trend {
+  order: -3;
+}
+
+[data-theme='berry-circuit'] .poker__hero {
+  order: -4;
+  background: color-mix(in srgb, var(--bg-elev) 82%, var(--primary) 18%);
+}
+
+[data-theme='berry-circuit'] .poker__insights {
+  border-radius: 16px;
+}
+
+[data-theme='berry-circuit'] .poker-log-btn {
+  border-radius: 999px;
+}
+
+@media (max-width: 360px) {
+  .home-budget-overview {
+    grid-template-columns: 118px minmax(0, 1fr);
+  }
+
+  .budget-usage-ring {
+    width: 108px;
+  }
+
+  [data-theme='copper-current'] .theme-screen--add {
+    grid-template-columns: 100px minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-screen {
+    transition: none;
+  }
+}

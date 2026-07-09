@@ -58,10 +58,10 @@ export default function Poker() {
   )
 
   return (
-    <div className="screen poker">
+    <div className="screen poker theme-screen theme-screen--poker">
       <p className="screen-title">Poker</p>
 
-      <div className="card poker-stats-card">
+      <div className="card poker-stats-card poker__hero">
         <div className="poker-stats-row">
           <div className="poker-stat">
             <span className="summary-label">Total P&amp;L</span>
@@ -85,7 +85,7 @@ export default function Poker() {
       {sessions.length > 0 && (
         <>
           <h3 className="section-title">Bankroll Insights</h3>
-          <div className="ios-list">
+          <div className="ios-list poker__insights">
             <div className="breakdown-row insight-row">
               <span className="icon-label">
                 <TrendingUp size={16} strokeWidth={2} aria-hidden="true" />
@@ -136,7 +136,7 @@ export default function Poker() {
               </div>
             )}
           </div>
-          <div className="card bankroll-card" aria-label="Bankroll trend">
+          <div className="card bankroll-card poker__trend" aria-label="Bankroll trend">
             <div className="bankroll-trend">
               {trend.map((value, index) => (
                 <span

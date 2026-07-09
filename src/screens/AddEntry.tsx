@@ -98,7 +98,7 @@ export default function AddEntry({ onSave }: Props) {
   }
 
   return (
-    <div className="screen add-entry">
+    <div className="screen add-entry theme-screen theme-screen--add">
       <p className="screen-title">ADD ENTRY</p>
 
       {shared.budgets.length > 0 && (
@@ -133,7 +133,7 @@ export default function AddEntry({ onSave }: Props) {
         </div>
       )}
 
-      <div className="amount-display" aria-label="Entered amount" aria-live="polite">
+      <div className="amount-display add-entry__amount" aria-label="Entered amount" aria-live="polite">
         <span className="amount-glyph-set" aria-hidden="true">
           {Array.from(amountText).map((char, index) => {
             const isActive = index === activeGlyphIndex
@@ -162,7 +162,7 @@ export default function AddEntry({ onSave }: Props) {
         <span className="amount-screenreader">{amountText}</span>
       </div>
 
-      <div className="numpad">
+      <div className="numpad add-entry__keypad">
         {NUMPAD_KEYS.map(key => (
           <button
             key={key}
@@ -176,48 +176,52 @@ export default function AddEntry({ onSave }: Props) {
         ))}
       </div>
 
-      <p className="category-label">
-        Category <span className="muted">(optional)</span>
-      </p>
-      {isSharedDestination && !activeSharedReady ? (
-        <p className="muted">Loading {selectedSharedBudget?.name ?? 'shared budget'} categories...</p>
-      ) : categoryOptions.length === 0 ? (
-        <p className="muted">
-          {isSharedDestination ? 'No categories yet. Add shared categories in Settings.' : 'No categories yet.'}
+      <section className="add-entry__categories" aria-labelledby="expense-category-label">
+        <p id="expense-category-label" className="category-label">
+          Category <span className="muted">(optional)</span>
         </p>
-      ) : (
-        <div className="chips">
-          {categoryOptions.map(opt => (
-            <button
-              key={opt.id}
-              type="button"
-              className={`chip ${category === opt.id ? 'chip--selected' : ''}`}
-              onClick={() => setCategory(prev => (prev === opt.id ? null : opt.id))}
-            >
-              <BudgetIcon name={opt.icon} />
-              <span>{opt.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
+        {isSharedDestination && !activeSharedReady ? (
+          <p className="muted">Loading {selectedSharedBudget?.name ?? 'shared budget'} categories...</p>
+        ) : categoryOptions.length === 0 ? (
+          <p className="muted">
+            {isSharedDestination ? 'No categories yet. Add shared categories in Settings.' : 'No categories yet.'}
+          </p>
+        ) : (
+          <div className="chips">
+            {categoryOptions.map(opt => (
+              <button
+                key={opt.id}
+                type="button"
+                className={`chip ${category === opt.id ? 'chip--selected' : ''}`}
+                onClick={() => setCategory(prev => (prev === opt.id ? null : opt.id))}
+              >
+                <BudgetIcon name={opt.icon} />
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
 
-      <input
-        type="text"
-        className="note-input"
-        placeholder="Note (optional)"
-        value={note}
-        onChange={e => setNote(e.target.value)}
-      />
+      <div className="add-entry__details">
+        <input
+          type="text"
+          className="note-input"
+          placeholder="Note (optional)"
+          value={note}
+          onChange={e => setNote(e.target.value)}
+        />
 
-      <button
-        className="save-btn"
-        type="button"
-        onClick={() => void handleSave()}
-        disabled={amount <= 0 || sharedSaveDisabled}
-      >
-        Save
-      </button>
-      {isSharedDestination && shared.error && <p className="form-error">{shared.error}</p>}
+        <button
+          className="save-btn"
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={amount <= 0 || sharedSaveDisabled}
+        >
+          Save
+        </button>
+        {isSharedDestination && shared.error && <p className="form-error">{shared.error}</p>}
+      </div>
     </div>
   )
 }

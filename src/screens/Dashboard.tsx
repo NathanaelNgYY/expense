@@ -2,6 +2,7 @@ import { useEffect, useState, type KeyboardEvent } from 'react'
 import { Check, ChevronDown, ChevronUp, Minus, Settings as SettingsIcon, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
+import BudgetUsageRing from '../components/BudgetUsageRing'
 import { getBudgetConfig, getCustomCategories, getCategoryOverrides } from '../storage'
 import { categoryIcon, categoryLabel } from '../categoryDisplay'
 import {
@@ -12,6 +13,7 @@ import {
   weeklyTotal,
   allCategoryIds,
   categoryBudgets,
+  safeToSpendPerDay,
 } from '../compute'
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
 import type { Category, Entry } from '../types'
@@ -81,6 +83,13 @@ export default function Dashboard({ onSettings }: Props) {
   const thisWeek = weeklyTotal(entries, now)
   const monthlyIncome = config.monthlyIncome
   const budgetUsedPct = monthlyIncome > 0 ? Math.min(100, (monthTotal / monthlyIncome) * 100) : monthTotal > 0 ? 100 : 0
+  const safePerDay = safeToSpendPerDay(
+    entries,
+    now.getFullYear(),
+    now.getMonth(),
+    monthlyIncome,
+    now,
+  ).amountPerDay
 
   const monthLabel = now.toLocaleString('default', { month: 'long', year: 'numeric' })
   const totalOverage = config.buffer - buffer
@@ -209,7 +218,7 @@ export default function Dashboard({ onSettings }: Props) {
   }
 
   return (
-    <div className="screen dashboard">
+    <div className="screen dashboard theme-screen theme-screen--home">
       <header className="dashboard-header">
         <div>
           <div className="month-label">{monthLabel}</div>
@@ -266,6 +275,17 @@ export default function Dashboard({ onSettings }: Props) {
 
       {viewScope === 'personal' && (
         <>
+
+      <section className="home-budget-overview" aria-label="Monthly budget overview">
+        <BudgetUsageRing spent={monthTotal} total={monthlyIncome} />
+        <div className="home-budget-overview__copy">
+          <span className="summary-label">Safe to spend today</span>
+          <strong className="home-safe-amount">
+            S${Math.max(0, safePerDay).toFixed(2)}
+          </strong>
+          <span className="muted">S${buffer.toFixed(2)} remains in your monthly buffer</span>
+        </div>
+      </section>
 
       <div className={`card buffer-card ${buffer <= 0 ? 'buffer-card--danger' : ''}`}>
         <div className="buffer-row">

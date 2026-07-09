@@ -260,7 +260,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
   const todayStr = toLocalDateString(now)
 
   return (
-    <div className="screen history">
+    <div className="screen history theme-screen theme-screen--history">
       <div className="month-nav">
         <button className="month-nav-btn" type="button" onClick={prevMonth} aria-label="Previous month">
           <ChevronLeft aria-hidden="true" size={22} strokeWidth={2.4} />
@@ -277,7 +277,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
         </button>
       </div>
 
-      <div className="cal-grid" role="grid" aria-label="Daily spending">
+      <div className="cal-grid history__calendar" role="grid" aria-label="Daily spending">
         {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
           const dateStr = toLocalDateString(new Date(year, month, day))
           const spend = spendByDay.get(day) ?? 0
@@ -290,7 +290,9 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
               key={day}
               type="button"
               className={`cal-cell${isToday ? ' cal-cell--today' : ''}${isSelected ? ' cal-cell--selected' : ''}`}
-              style={{ background: `rgba(212, 175, 106, ${alpha})` }}
+              style={{
+                background: `color-mix(in srgb, var(--primary) ${Math.round(alpha * 100)}%, transparent)`,
+              }}
               onClick={() => handleDateChange(dateStr)}
               aria-label={`${format(new Date(year, month, day), 'MMM d')}, S$${spend.toFixed(2)} spent`}
               aria-pressed={isSelected}
@@ -302,7 +304,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
       </div>
       <p className="cal-caption muted">lighter = heavier spend day &middot; ring = today &middot; tap a day to backfill it</p>
 
-      <section className="card history-backfill" aria-labelledby="backfill-title">
+      <section className="card history-backfill history__backfill" aria-labelledby="backfill-title">
         <div className="card-heading-row">
           <div>
             <h2 id="backfill-title" className="card-title">
@@ -395,7 +397,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
         )}
       </section>
 
-      <div className="card history-summary">
+      <div className="card history-summary history__summary">
         <div>
           <span className="summary-label">Month total</span>
           <strong className="summary-amount">S${monthTotal.toFixed(2)}</strong>

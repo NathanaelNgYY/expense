@@ -10,6 +10,7 @@ import Poker from './screens/Poker'
 import { EntriesProvider } from './EntriesContext'
 import SharedScreen from './sharedBudgets/SharedScreen'
 import { SharedBudgetsProvider } from './sharedBudgets/SharedBudgetsContext'
+import { ThemeProvider } from './theme/ThemeContext'
 
 function initialTab(): Tab {
   const params = new URLSearchParams(window.location.search)
@@ -53,10 +54,12 @@ function AppShell() {
 
 export default function App() {
   return (
-    <EntriesProvider>
-      <SharedBudgetsProvider>
-        <AppShell />
-      </SharedBudgetsProvider>
-    </EntriesProvider>
+    <ThemeProvider>
+      <EntriesProvider>
+        <SharedBudgetsProvider>
+          <AppShell />
+        </SharedBudgetsProvider>
+      </EntriesProvider>
+    </ThemeProvider>
   )
 }

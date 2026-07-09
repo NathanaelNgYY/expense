@@ -34,4 +34,14 @@ describe('App', () => {
     // AddEntry screen renders the title ADD ENTRY
     expect(screen.getByText('ADD ENTRY')).toBeInTheDocument()
   })
+
+  it('restores the selected theme on app startup', async () => {
+    localStorage.setItem('budget-tracker-theme-v1', 'copper-current')
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(document.documentElement).toHaveAttribute('data-theme', 'copper-current')
+  })
 })

@@ -1,0 +1,271 @@
+:root,
+[data-theme='deep-sea'] {
+  color-scheme: dark;
+  --carbon-canvas: #061012;
+  --carbon-surface: #0d1d20;
+  --carbon-surface-raised: #12282c;
+  --carbon-text: #eafaf9;
+  --carbon-text-secondary: #9ab8b9;
+  --carbon-text-tertiary: #789597;
+  --carbon-separator: #214044;
+  --carbon-copper: #52d8d0;
+  --carbon-copper-pressed: #39bdb6;
+  --carbon-sage: #72dfa5;
+  --carbon-amber: #f1c66a;
+  --carbon-brick: #ff7b79;
+  --carbon-display: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --bg: var(--carbon-canvas);
+  --bg-elev: var(--carbon-surface);
+  --bg-elev-2: var(--carbon-surface-raised);
+  --text: var(--carbon-text);
+  --text-secondary: var(--carbon-text-secondary);
+  --text-tertiary: var(--carbon-text-tertiary);
+  --primary: var(--carbon-copper);
+  --blue: #6aaef7;
+  --green: var(--carbon-sage);
+  --warning: var(--carbon-amber);
+  --yellow: var(--carbon-amber);
+  --red: var(--carbon-brick);
+  --separator: var(--carbon-separator);
+  --fill: #102528;
+  --theme-primary-contrast: #031413;
+  --theme-card-radius: 14px;
+  --theme-control-radius: 12px;
+  --theme-preview-bg: #061012;
+  --theme-preview-surface: #0d1d20;
+  --theme-preview-line: #214044;
+  --theme-preview-accent: #52d8d0;
+}
+
+[data-theme='copper-current'] {
+  --carbon-canvas: #100d09;
+  --carbon-surface: #1b1711;
+  --carbon-surface-raised: #262016;
+  --carbon-text: #fff5e9;
+  --carbon-text-secondary: #c2af97;
+  --carbon-text-tertiary: #9b876f;
+  --carbon-separator: #413629;
+  --carbon-copper: #ff9147;
+  --carbon-copper-pressed: #e77830;
+  --carbon-sage: #9cdda4;
+  --carbon-amber: #ffc05e;
+  --carbon-brick: #ff7269;
+  --carbon-display: "Arial Narrow", "Aptos Narrow", "Segoe UI", sans-serif;
+  --bg: var(--carbon-canvas);
+  --bg-elev: var(--carbon-surface);
+  --bg-elev-2: var(--carbon-surface-raised);
+  --text: var(--carbon-text);
+  --text-secondary: var(--carbon-text-secondary);
+  --text-tertiary: var(--carbon-text-tertiary);
+  --primary: var(--carbon-copper);
+  --blue: #ffb267;
+  --green: var(--carbon-sage);
+  --warning: var(--carbon-amber);
+  --yellow: var(--carbon-amber);
+  --red: var(--carbon-brick);
+  --separator: var(--carbon-separator);
+  --fill: #211a12;
+  --theme-primary-contrast: #1b0900;
+  --theme-card-radius: 4px;
+  --theme-control-radius: 3px;
+}
+
+[data-theme='berry-circuit'] {
+  --carbon-canvas: #170a18;
+  --carbon-surface: #261329;
+  --carbon-surface-raised: #321937;
+  --carbon-text: #fff2ff;
+  --carbon-text-secondary: #cfb3d0;
+  --carbon-text-tertiary: #a78aaa;
+  --carbon-separator: #4c2b50;
+  --carbon-copper: #d7ff6f;
+  --carbon-copper-pressed: #bfe754;
+  --carbon-sage: #d7ff6f;
+  --carbon-amber: #ffd56f;
+  --carbon-brick: #ff7d9b;
+  --carbon-display: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --bg: var(--carbon-canvas);
+  --bg-elev: var(--carbon-surface);
+  --bg-elev-2: var(--carbon-surface-raised);
+  --text: var(--carbon-text);
+  --text-secondary: var(--carbon-text-secondary);
+  --text-tertiary: var(--carbon-text-tertiary);
+  --primary: var(--carbon-copper);
+  --blue: #d7ff6f;
+  --green: var(--carbon-sage);
+  --warning: var(--carbon-amber);
+  --yellow: var(--carbon-amber);
+  --red: var(--carbon-brick);
+  --separator: var(--carbon-separator);
+  --fill: #2c1730;
+  --theme-primary-contrast: #111800;
+  --theme-card-radius: 15px;
+  --theme-control-radius: 14px;
+}
+
+html,
+body,
+#root,
+.app {
+  background: var(--bg);
+}
+
+.theme-picker {
+  flex: 0 0 auto;
+}
+
+.theme-picker .section-title {
+  margin-top: 10px;
+}
+
+.theme-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.theme-option {
+  position: relative;
+  min-height: 94px;
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--separator);
+  border-radius: 14px;
+  background: var(--bg-elev);
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease;
+}
+
+.theme-option:hover {
+  border-color: color-mix(in srgb, var(--primary) 54%, var(--separator));
+}
+
+.theme-option:has(input:focus-visible) {
+  outline: 3px solid color-mix(in srgb, var(--primary) 40%, transparent);
+  outline-offset: 2px;
+}
+
+.theme-option--selected {
+  border: 2px solid var(--primary);
+  padding: 9px;
+}
+
+.theme-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.theme-preview {
+  --preview-bg: #061012;
+  --preview-surface: #0d1d20;
+  --preview-line: #214044;
+  --preview-accent: #52d8d0;
+  height: 70px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-radius: 9px;
+  background: var(--preview-bg);
+  padding: 8px;
+}
+
+[data-theme-preview='copper-current'] .theme-preview {
+  --preview-bg: #100d09;
+  --preview-surface: #1b1711;
+  --preview-line: #413629;
+  --preview-accent: #ff9147;
+  border-radius: 3px;
+}
+
+[data-theme-preview='berry-circuit'] .theme-preview {
+  --preview-bg: #170a18;
+  --preview-surface: #261329;
+  --preview-line: #4c2b50;
+  --preview-accent: #d7ff6f;
+  border-radius: 12px;
+}
+
+.theme-preview__hero {
+  height: 25px;
+  border: 1px solid var(--preview-line);
+  border-radius: inherit;
+  background: var(--preview-surface);
+}
+
+.theme-preview__bar {
+  width: 78%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--preview-accent);
+}
+
+.theme-preview__bar--short {
+  width: 54%;
+  background: var(--preview-line);
+}
+
+.theme-option__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.theme-option__copy strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.theme-option__copy small {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.theme-swatches {
+  display: flex;
+  gap: 4px;
+}
+
+.theme-swatches i {
+  width: 11px;
+  height: 11px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: 50%;
+}
+
+.theme-option__check {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--separator);
+  border-radius: 50%;
+  color: var(--theme-primary-contrast);
+}
+
+.theme-option--selected .theme-option__check {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.theme-status {
+  min-height: 18px;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 2px 0;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-option {
+    transition: none;
+  }
+}

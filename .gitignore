@@ -31,3 +31,6 @@ graphify-out/
 
 # understand-anything output
 .understand-anything/
+
+# Playwright CLI browser-verification evidence (screenshots, snapshots, logs)
+.playwright-cli/

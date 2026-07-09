@@ -31,3 +31,6 @@ graphify-out/
 
 # understand-anything output
 .understand-anything/
+
+# Local isolated feature worktrees
+.worktrees/

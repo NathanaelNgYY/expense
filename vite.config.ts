@@ -38,5 +38,12 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
     pool: 'threads',
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/.git/**',
+      '**/.worktrees/**',
+      '**/.claude/worktrees/**',
+    ],
   },
 })

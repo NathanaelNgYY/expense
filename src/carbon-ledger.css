@@ -189,6 +189,7 @@ input:focus-visible,
 .numpad-key {
   background: var(--carbon-surface-raised);
   color: var(--carbon-text);
+  border-radius: 16px;
 }
 
 .numpad-key:active {
@@ -227,8 +228,8 @@ input:focus-visible,
 }
 
 .icon-picker-btn--selected {
-  border-color: var(--carbon-sage);
-  background: color-mix(in srgb, var(--carbon-sage) 16%, transparent);
+  border-color: var(--carbon-copper);
+  background: color-mix(in srgb, var(--carbon-copper) 16%, transparent);
 }
 
 /* ─── Empty / error / offline states ──────────────────────── */
@@ -272,6 +273,13 @@ input:focus-visible,
 .buffer-card {
   background: var(--carbon-surface);
   border-color: var(--carbon-separator);
+  border-radius: 16px;
+}
+
+/* Plan's Visual Direction caps corner radius at 8-16px; index.css still ships
+   these hero cards (and the poker stats card below) at the pre-restyle 22px. */
+.poker-stats-card {
+  border-radius: 16px;
 }
 
 .forecast-card--danger {

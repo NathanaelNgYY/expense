@@ -28,3 +28,492 @@
   --separator: var(--carbon-separator);
   --fill: #303233;
 }
+
+/* ============================================================
+   Step 1 — Global chrome, navigation, typography, controls
+   ============================================================ */
+
+html,
+body,
+#root,
+.app {
+  background: var(--carbon-canvas);
+}
+
+body {
+  color: var(--carbon-text);
+}
+
+.screen {
+  background: var(--carbon-canvas);
+}
+
+.screen-title,
+.section-title {
+  color: var(--carbon-text-secondary);
+  letter-spacing: 0.035em;
+}
+
+.muted {
+  color: var(--carbon-text-tertiary);
+}
+
+/* ─── Tab bar ─────────────────────────────────────────────── */
+
+.tab-bar {
+  background: #181a1b;
+  border-top: 1px solid var(--carbon-separator);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.tab-bar button {
+  color: var(--carbon-text-tertiary);
+}
+
+.tab-bar button.active {
+  color: var(--carbon-copper);
+}
+
+/* ─── Focus ───────────────────────────────────────────────── */
+
+button:focus-visible,
+input:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--carbon-copper);
+  outline-offset: 2px;
+  border-color: var(--carbon-copper);
+  box-shadow: none;
+}
+
+.date-input-shell:focus-within {
+  border-color: var(--carbon-copper);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--carbon-copper) 15%, transparent);
+  outline: none;
+}
+
+.settings-input:focus-visible {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--carbon-copper) 15%, transparent);
+}
+
+/* ─── Cards and grouped lists ─────────────────────────────── */
+
+.card {
+  background: var(--carbon-surface);
+  border-color: var(--carbon-separator);
+}
+
+.ios-list {
+  background: var(--carbon-surface);
+  border-color: var(--carbon-separator);
+}
+
+.ios-list > * + * {
+  border-top-color: var(--carbon-separator);
+}
+
+.empty-state {
+  background: var(--carbon-surface);
+  border-color: var(--carbon-separator);
+  color: var(--carbon-text-secondary);
+}
+
+/* ─── Scope switch ────────────────────────────────────────── */
+
+.scope-switch {
+  background: var(--carbon-surface);
+  border-color: var(--carbon-separator);
+}
+
+.scope-switch-btn {
+  color: var(--carbon-text-secondary);
+}
+
+.scope-switch-btn--active {
+  background: var(--carbon-surface-raised);
+  color: var(--carbon-text);
+}
+
+/* ─── Progress bars ───────────────────────────────────────── */
+
+.progress-bar {
+  background: var(--carbon-surface-raised);
+}
+
+/* ─── Buttons ─────────────────────────────────────────────── */
+
+.save-btn {
+  background: var(--carbon-copper);
+  color: var(--carbon-canvas);
+}
+
+.save-btn:active {
+  background: var(--carbon-copper-pressed);
+}
+
+.export-btn,
+.danger-btn {
+  background: var(--carbon-surface);
+  border-color: var(--carbon-separator);
+}
+
+.export-btn {
+  color: var(--carbon-copper);
+}
+
+.danger-btn {
+  color: var(--carbon-brick);
+}
+
+/* ─── Text inputs and date input shell ────────────────────── */
+
+.note-input,
+.amount-input,
+.date-input,
+.date-input-shell {
+  background: var(--carbon-surface-raised);
+  color: var(--carbon-text);
+}
+
+.note-input::placeholder,
+.amount-input::placeholder {
+  color: var(--carbon-text-tertiary);
+}
+
+.date-input-value {
+  color: var(--carbon-text);
+}
+
+/* ─── Numpad ──────────────────────────────────────────────── */
+
+.numpad-key {
+  background: var(--carbon-surface-raised);
+  color: var(--carbon-text);
+}
+
+.numpad-key:active {
+  background: var(--carbon-surface);
+}
+
+/* ─── Category chips ──────────────────────────────────────── */
+
+.category-label {
+  color: var(--carbon-text-secondary);
+}
+
+.chip {
+  background: var(--carbon-surface-raised);
+  color: var(--carbon-text);
+}
+
+.chip .ui-icon {
+  color: var(--carbon-text-secondary);
+}
+
+.chip--selected {
+  background: var(--carbon-copper);
+  color: var(--carbon-canvas);
+}
+
+.chip--selected .ui-icon {
+  color: var(--carbon-canvas);
+}
+
+/* ─── Icon picker ─────────────────────────────────────────── */
+
+.icon-picker-btn {
+  border-color: var(--carbon-separator);
+  color: var(--carbon-text);
+}
+
+.icon-picker-btn--selected {
+  border-color: var(--carbon-sage);
+  background: color-mix(in srgb, var(--carbon-sage) 16%, transparent);
+}
+
+/* ─── Empty / error / offline states ──────────────────────── */
+
+.form-error {
+  color: var(--carbon-brick);
+}
+
+.offline-banner {
+  background: color-mix(in srgb, var(--carbon-brick) 14%, transparent);
+  color: var(--carbon-brick);
+}
+
+.save-feedback--error {
+  color: var(--carbon-brick);
+}
+
+/* ============================================================
+   Step 2 — Home hierarchy
+   ============================================================ */
+
+.dashboard-header {
+  color: var(--carbon-text);
+}
+
+.month-label {
+  color: var(--carbon-text);
+}
+
+.income-label {
+  color: var(--carbon-text-secondary);
+}
+
+.settings-icon-btn {
+  background: var(--carbon-surface-raised);
+  color: var(--carbon-copper);
+}
+
+.summary-card,
+.forecast-card,
+.buffer-card {
+  background: var(--carbon-surface);
+  border-color: var(--carbon-separator);
+}
+
+.forecast-card--danger {
+  border-color: color-mix(in srgb, var(--carbon-brick) 35%, transparent);
+}
+
+.buffer-card {
+  border-color: color-mix(in srgb, var(--carbon-amber) 30%, transparent);
+}
+
+.buffer-card--danger {
+  border-color: color-mix(in srgb, var(--carbon-brick) 35%, transparent);
+}
+
+.buffer-card .ui-icon,
+.buffer-amount {
+  color: var(--carbon-amber);
+}
+
+.summary-label {
+  color: var(--carbon-text-secondary);
+}
+
+.summary-amount,
+.summary-amount--large,
+.forecast-value,
+.buffer-title,
+.cat-name,
+.month-nav-label,
+.week-amount,
+.month-review-card,
+.month-change-total,
+.settings-title {
+  color: var(--carbon-text);
+}
+
+.summary-amount--large,
+.forecast-value,
+.amount-display {
+  font-family: var(--carbon-display);
+  letter-spacing: -0.025em;
+}
+
+.summary-amount--large {
+  font-size: 44px;
+  line-height: 1;
+}
+
+.summary-pill {
+  background: color-mix(in srgb, var(--carbon-copper) 18%, transparent);
+  color: var(--carbon-copper);
+}
+
+.buffer-sub,
+.over-note {
+  color: var(--carbon-text-secondary);
+}
+
+.over-note {
+  color: var(--carbon-brick);
+}
+
+.cat-chevron {
+  color: var(--carbon-text-secondary);
+}
+
+.category-row--committed {
+  border-color: color-mix(in srgb, var(--carbon-copper) 30%, transparent);
+}
+
+/* Flatten category rows into a ledger-style list, per Carbon Ledger hierarchy */
+.category-row-card {
+  border-radius: 0;
+  border-width: 0 0 1px;
+  border-color: var(--carbon-separator);
+  background: transparent;
+  padding-inline: 0;
+}
+
+.category-row-toggle {
+  color: var(--carbon-text);
+  padding-inline: 4px;
+}
+
+.category-expense-list {
+  border-top-color: var(--carbon-separator);
+}
+
+.category-expense-header {
+  color: var(--carbon-text-secondary);
+}
+
+.category-expense-date,
+.category-expense-amount {
+  color: var(--carbon-text);
+}
+
+.category-expense-note,
+.category-expense-empty {
+  color: var(--carbon-text-secondary);
+}
+
+.week-strip {
+  background: var(--carbon-surface);
+  border-color: var(--carbon-separator);
+}
+
+/* ============================================================
+   Step 3 — Add Expense, History, Settings
+   ============================================================ */
+
+.amount-display {
+  color: var(--carbon-text);
+}
+
+.amount-glyph--minor {
+  color: var(--carbon-text-secondary);
+}
+
+.month-nav {
+  color: var(--carbon-text);
+}
+
+.month-nav-btn {
+  background: var(--carbon-surface-raised);
+  color: var(--carbon-copper);
+}
+
+.month-nav-btn:disabled {
+  color: var(--carbon-text-tertiary);
+}
+
+.history-summary,
+.week-bar {
+  color: var(--carbon-text);
+}
+
+.week-bar-label {
+  color: var(--carbon-text-secondary);
+}
+
+.week-bar-total {
+  color: var(--carbon-text);
+}
+
+.week-bar-lunch .progress-fill {
+  background: var(--carbon-amber);
+}
+
+.month-review-card,
+.month-change-card {
+  color: var(--carbon-text);
+}
+
+.breakdown-row .ui-icon,
+.entry-category .ui-icon,
+.settings-label .ui-icon {
+  color: var(--carbon-copper);
+}
+
+.entry-list .entry-row,
+.entry-row,
+.entry-row-button {
+  background: var(--carbon-surface);
+  border-color: var(--carbon-separator);
+}
+
+.entry-category {
+  color: var(--carbon-text);
+}
+
+.entry-date,
+.entry-note {
+  color: var(--carbon-text-secondary);
+}
+
+.entry-amount {
+  color: var(--carbon-text);
+}
+
+.entry-edit-panel {
+  background: var(--carbon-surface);
+  border-color: color-mix(in srgb, var(--carbon-copper) 30%, transparent);
+}
+
+.entry-edit-title {
+  color: var(--carbon-text);
+}
+
+/* ─── Settings ────────────────────────────────────────────── */
+
+.settings-header {
+  color: var(--carbon-text);
+}
+
+.back-btn {
+  color: var(--carbon-copper);
+}
+
+.settings-row {
+  color: var(--carbon-text);
+}
+
+.settings-label {
+  color: var(--carbon-text);
+}
+
+.settings-input {
+  background: var(--carbon-surface-raised);
+  color: var(--carbon-text);
+}
+
+.settings-total {
+  color: var(--carbon-text-secondary);
+}
+
+.settings-total-warning {
+  color: var(--carbon-amber);
+}
+
+.category-add-form {
+  background: var(--carbon-surface);
+}
+
+.category-edit-btn {
+  color: var(--carbon-text-secondary);
+}
+
+.category-remove-btn {
+  color: var(--carbon-brick);
+}
+
+.settings-divider {
+  background: var(--carbon-separator);
+}
+
+/* ============================================================
+   Step 4 — Contract selectors (explicit, non-empty overrides
+   folded into the blocks above; listed here for traceability)
+   ============================================================
+   .summary-card    -> see "Home hierarchy" block above
+   .amount-display  -> see "Home hierarchy" + "Add Expense" blocks above
+   .entry-list      -> see "entry-list .entry-row" rule above
+   .settings-input  -> see "Settings" block above
+   ============================================================ */

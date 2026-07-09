@@ -34,3 +34,6 @@ graphify-out/
 
 # Local isolated feature worktrees
 .worktrees/
+
+# Playwright CLI browser-verification evidence (screenshots, snapshots, logs)
+.playwright-cli/

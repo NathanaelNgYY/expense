@@ -20,6 +20,7 @@ import { useEntries } from '../EntriesContext'
 import { CATEGORY_LABELS } from '../types'
 import type { BudgetConfig, Category, CategoryOverride, CustomCategory } from '../types'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
+import ThemePicker from '../theme/ThemePicker'
 
 interface Props {
   onBack: () => void
@@ -328,6 +329,8 @@ export default function Settings({ onBack }: Props) {
         <h2 className="settings-title">Settings</h2>
         <div className="settings-header-spacer" />
       </div>
+
+      <ThemePicker />
 
       {shared.budgets.length > 0 && (
         <div className="scope-switch" role="group" aria-label="Settings scope">

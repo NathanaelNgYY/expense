@@ -3,6 +3,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import Settings from './Settings'
 import { EntriesProvider } from '../EntriesContext'
+import { ThemeProvider } from '../theme/ThemeContext'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
 
 const sharedCtx = vi.hoisted(() => ({
@@ -65,9 +66,11 @@ function renderWithEntries(entries: unknown[] = []) {
 
   act(() => {
     root.render(
-      <EntriesProvider>
-        <Settings onBack={() => undefined} />
-      </EntriesProvider>,
+      <ThemeProvider>
+        <EntriesProvider>
+          <Settings onBack={() => undefined} />
+        </EntriesProvider>
+      </ThemeProvider>,
     )
   })
 

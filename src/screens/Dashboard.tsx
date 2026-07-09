@@ -1,5 +1,5 @@
 import { useEffect, useState, type KeyboardEvent } from 'react'
-import { CalendarDays, Check, ChevronDown, ChevronUp, Minus, Settings as SettingsIcon, TrendingDown, TrendingUp, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Minus, Settings as SettingsIcon, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
 import { getBudgetConfig, getCustomCategories, getCategoryOverrides } from '../storage'
@@ -8,13 +8,10 @@ import {
   bufferRemaining,
   categoryDeficits,
   entriesForMonth,
-  monthlySpendForecast,
   monthlySpendByCategory,
-  safeToSpendPerDay,
   weeklyTotal,
   allCategoryIds,
   categoryBudgets,
-  customBudgetTotal,
 } from '../compute'
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
 import type { Category, Entry } from '../types'
@@ -39,11 +36,6 @@ const COMMITTED_CATEGORY_SET = new Set<Category>(COMMITTED_CATEGORIES)
 // (often auto-imported) that have no category yet — they have no budget line of their own.
 // A key is any category id (built-in or custom) or the 'uncategorized' bucket.
 type ExpandKey = string
-
-function formatSignedCurrency(value: number): string {
-  const sign = value < 0 ? '-' : ''
-  return `${sign}S$${Math.abs(value).toFixed(2)}`
-}
 
 function formatWholeCurrency(value: number): string {
   return `S$${value.toLocaleString('en-SG', { maximumFractionDigits: 0 })}`
@@ -89,22 +81,9 @@ export default function Dashboard({ onSettings }: Props) {
   const thisWeek = weeklyTotal(entries, now)
   const monthlyIncome = config.monthlyIncome
   const budgetUsedPct = monthlyIncome > 0 ? Math.min(100, (monthTotal / monthlyIncome) * 100) : monthTotal > 0 ? 100 : 0
-  const spendableBudget = config.lunch + config.transport + config.buffer + customBudgetTotal(customCategories)
-  const spendFilter = { excludedCategories: COMMITTED_CATEGORIES }
-  const forecast = monthlySpendForecast(entries, now.getFullYear(), now.getMonth(), now, spendFilter)
-  const safeToSpend = safeToSpendPerDay(
-    entries,
-    now.getFullYear(),
-    now.getMonth(),
-    spendableBudget,
-    now,
-    spendFilter,
-  )
-  const projectedDelta = forecast.projectedTotal - spendableBudget
 
   const monthLabel = now.toLocaleString('default', { month: 'long', year: 'numeric' })
   const totalOverage = config.buffer - buffer
-  const forecastOver = projectedDelta > 0
   const selectedSharedBudgetId =
     selectedBudgetId ?? shared.active?.budget.id ?? shared.budgets[0]?.id ?? null
   const selectedSharedBudget = shared.budgets.find(b => b.id === selectedSharedBudgetId) ?? null
@@ -287,41 +266,6 @@ export default function Dashboard({ onSettings }: Props) {
 
       {viewScope === 'personal' && (
         <>
-
-      <div className={`card forecast-card ${forecastOver ? 'forecast-card--danger' : ''}`}>
-        <div className="forecast-grid">
-          <div className="forecast-metric">
-            <span className="summary-label icon-label">
-              {forecastOver ? (
-                <TrendingUp size={16} strokeWidth={2} aria-hidden="true" />
-              ) : (
-                <TrendingDown size={16} strokeWidth={2} aria-hidden="true" />
-              )}
-              Spend forecast
-            </span>
-            <strong className="forecast-value">S${forecast.projectedTotal.toFixed(2)}</strong>
-          </div>
-          <div className="forecast-metric forecast-metric--right">
-            <span className="summary-label icon-label">
-              <CalendarDays size={16} strokeWidth={2} aria-hidden="true" />
-              Safe today
-            </span>
-            <strong
-              className="forecast-value"
-              style={{ color: safeToSpend.amountPerDay < 0 ? 'var(--red)' : 'var(--green)' }}
-            >
-              {formatSignedCurrency(safeToSpend.amountPerDay)}
-            </strong>
-          </div>
-        </div>
-        <p className="forecast-note muted">
-          {forecastOver
-            ? `${formatSignedCurrency(projectedDelta)} over spend budget at this pace`
-            : `${formatSignedCurrency(Math.abs(projectedDelta))} under spend budget at this pace`}
-          {' | '}
-          {safeToSpend.daysRemaining} day{safeToSpend.daysRemaining === 1 ? '' : 's'} left
-        </p>
-      </div>
 
       <div className={`card buffer-card ${buffer <= 0 ? 'buffer-card--danger' : ''}`}>
         <div className="buffer-row">

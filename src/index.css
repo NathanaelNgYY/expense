@@ -6,24 +6,27 @@
 
 :root {
   color-scheme: dark;
-  /* System backgrounds */
-  --bg: #000000;
-  --bg-elev: #1c1c1e;
-  --bg-elev-2: #2c2c2e;
+  /* Wallet backgrounds — deep green-black, like leather/felt */
+  --bg: #0a120f;
+  --bg-elev: #0f1b16;
+  --bg-elev-2: #15251e;
   /* Text */
-  --text: #ffffff;
-  --text-secondary: rgba(235, 235, 245, 0.6);
-  --text-tertiary: rgba(235, 235, 245, 0.3);
-  /* System colors (dark variants) */
-  --primary: #0a84ff;
-  --blue: #0a84ff;
-  --green: #30d158;
-  --warning: #ff9f0a;
-  --yellow: #ffd60a;
-  --red: #ff453a;
+  --text: #f1ece0;
+  --text-secondary: rgba(241, 236, 224, 0.58);
+  --text-tertiary: rgba(241, 236, 224, 0.34);
+  /* Accent (gold) replaces iOS blue as the primary/interactive color */
+  --primary: #d4af6a;
+  --blue: #7fb3c9;
+  --green: #6fae7a;
+  --warning: #d9a441;
+  --yellow: #d9a441;
+  --red: #c96a5a;
   /* Structural */
-  --separator: rgba(84, 84, 88, 0.6);
-  --fill: rgba(118, 118, 128, 0.24);
+  --separator: rgba(212, 175, 106, 0.18);
+  --fill: rgba(212, 175, 106, 0.08);
+  /* Fonts: serif display for hero numbers/titles, system sans for body */
+  --font-display: Georgia, "Palatino Linotype", "Iowan Old Style", serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 }
 
 html,
@@ -34,8 +37,7 @@ body,
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
-    "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -109,10 +111,11 @@ button {
 /* ─── Cards ─────────────────────────────────────────────── */
 
 .card {
-  background: var(--bg-elev);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
+  background: linear-gradient(155deg, #163b2c, #0a1611);
+  border: 1px solid rgba(212, 175, 106, 0.25);
+  border-radius: 18px;
   padding: 16px;
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.6);
 }
 
 .ui-icon {
@@ -133,8 +136,8 @@ button {
 .tab-bar {
   display: flex;
   gap: 0;
-  border-top: 0.5px solid var(--separator);
-  background: rgba(28, 28, 30, 0.82);
+  border-top: 1px solid rgba(212, 175, 106, 0.15);
+  background: rgba(15, 27, 22, 0.9);
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -202,7 +205,7 @@ button {
   gap: 6px;
   padding: 4px;
   margin: 10px 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(212, 175, 106, 0.22);
   border-radius: 14px;
   background: var(--fill);
 }
@@ -250,20 +253,23 @@ button {
 
 .save-btn {
   margin-top: auto;
-  background: var(--primary);
-  color: #ffffff;
+  background: linear-gradient(90deg, #b6924f, #e8cd8f, #b6924f);
+  color: #16110a;
+  border-radius: 999px;
 }
 
 .export-btn {
-  background: var(--bg-elev);
+  background: none;
   color: var(--primary);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px dashed rgba(212, 175, 106, 0.4);
+  border-radius: 999px;
 }
 
 .danger-btn {
-  background: var(--bg-elev);
+  background: none;
   color: var(--red);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(201, 106, 90, 0.4);
+  border-radius: 999px;
 }
 
 .save-btn:active,
@@ -354,13 +360,13 @@ button {
 button:focus-visible,
 input:focus-visible {
   outline: none;
-  border-color: rgba(10, 132, 255, 0.55);
-  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.12);
+  border-color: rgba(212, 175, 106, 0.55);
+  box-shadow: 0 0 0 4px rgba(212, 175, 106, 0.12);
 }
 
 .date-input-shell:focus-within {
-  border-color: rgba(10, 132, 255, 0.55);
-  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.12);
+  border-color: rgba(212, 175, 106, 0.55);
+  box-shadow: 0 0 0 4px rgba(212, 175, 106, 0.12);
 }
 
 /* ─── Amount display ─────────────────────────────────────── */
@@ -373,6 +379,7 @@ input:focus-visible {
   min-height: 82px;
   padding: 14px 0 4px;
   color: var(--text);
+  font-family: var(--font-display);
   font-size: 64px;
   font-weight: 700;
   letter-spacing: 0;
@@ -500,9 +507,9 @@ input:focus-visible {
 
 .numpad-key {
   min-height: 62px;
-  border: none;
-  border-radius: 22px;
-  background: var(--bg-elev-2);
+  border: 1px solid rgba(212, 175, 106, 0.18);
+  border-radius: 14px;
+  background: rgba(212, 175, 106, 0.08);
   color: var(--text);
   cursor: pointer;
   font-size: 26px;
@@ -513,7 +520,7 @@ input:focus-visible {
 }
 
 .numpad-key:active {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(212, 175, 106, 0.2);
   transform: scale(0.92);
   /* Press-in: near-instant so the tap feels tactile and immediate. */
   transition: transform 45ms ease-out, background 45ms ease-out;
@@ -544,10 +551,10 @@ input:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: none;
+  border: 1px solid rgba(212, 175, 106, 0.3);
   border-radius: 999px;
-  background: var(--bg-elev-2);
-  color: var(--text);
+  background: none;
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
@@ -567,11 +574,13 @@ input:focus-visible {
 
 .chip--selected {
   background: var(--primary);
-  color: #ffffff;
+  color: #16110a;
+  border-color: var(--primary);
+  font-weight: 700;
 }
 
 .chip--selected .ui-icon {
-  color: #ffffff;
+  color: #16110a;
 }
 
 /* ─── Dashboard header ───────────────────────────────────── */
@@ -586,6 +595,7 @@ input:focus-visible {
 
 .month-label {
   color: var(--text);
+  font-family: var(--font-display);
   font-size: 34px;
   font-weight: 700;
   line-height: 1.05;
@@ -621,8 +631,7 @@ input:focus-visible {
   flex-direction: column;
   gap: 14px;
   border-radius: 22px;
-  border: 1px solid rgba(10, 132, 255, 0.15);
-  background: linear-gradient(140deg, #1c1c1e 0%, #1a2640 100%);
+  border-color: rgba(212, 175, 106, 0.3);
 }
 
 .summary-card-top,
@@ -661,13 +670,14 @@ input:focus-visible {
 }
 
 .summary-amount--large {
+  font-family: var(--font-display);
   font-size: 34px;
 }
 
 .summary-pill {
   flex: 0 0 auto;
   border-radius: 999px;
-  background: rgba(10, 132, 255, 0.18);
+  background: rgba(212, 175, 106, 0.18);
   color: var(--primary);
   font-size: 13px;
   font-weight: 600;
@@ -678,11 +688,11 @@ input:focus-visible {
 
 .forecast-card {
   border-radius: 22px;
-  border-color: rgba(48, 209, 88, 0.18);
+  border-color: rgba(111, 174, 122, 0.18);
 }
 
 .forecast-card--danger {
-  border-color: rgba(255, 69, 58, 0.22);
+  border-color: rgba(201, 106, 90, 0.22);
 }
 
 .forecast-grid {
@@ -721,11 +731,80 @@ input:focus-visible {
   line-height: 1.35;
 }
 
+/* ─── Pass stack (Dashboard: Personal + shared budgets) ──── */
+
+.pass-stack {
+  position: relative;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+.pass {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  padding: 16px 18px;
+  background: linear-gradient(155deg, #163b2c, #0a1611);
+  border: 1px solid rgba(212, 175, 106, 0.25);
+  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.6);
+  transition: transform 220ms ease, opacity 220ms ease;
+}
+
+.pass-tap-veil {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+  cursor: pointer;
+}
+
+.pass-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.pass-subtitle {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 1px;
+}
+
+.pass-amt {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 26px;
+  color: var(--primary);
+  margin-top: 4px;
+}
+
+.pass-bar {
+  margin-top: 12px;
+  background: rgba(212, 175, 106, 0.16);
+}
+
+.pass-bar .progress-fill {
+  background: var(--primary);
+  min-width: 3px;
+}
+
+.stack-hint {
+  font-size: 10.5px;
+  text-align: center;
+  margin: 0 0 4px;
+}
+
 /* ─── Buffer card ────────────────────────────────────────── */
 
 .buffer-card {
   border-radius: 22px;
-  border-color: rgba(255, 159, 10, 0.2);
+  border-color: rgba(217, 164, 65, 0.2);
 }
 
 .buffer-card .ui-icon,
@@ -734,7 +813,7 @@ input:focus-visible {
 }
 
 .buffer-card--danger {
-  border-color: rgba(255, 69, 58, 0.25);
+  border-color: rgba(201, 106, 90, 0.25);
 }
 
 .buffer-card--danger .ui-icon {
@@ -843,7 +922,7 @@ input:focus-visible {
 }
 
 .category-row--committed {
-  border-color: rgba(10, 132, 255, 0.18);
+  border-color: rgba(212, 175, 106, 0.18);
 }
 
 .cat-row-bottom {
@@ -1004,6 +1083,46 @@ input:focus-visible {
   font-feature-settings: "tnum";
 }
 
+/* ─── Calendar heatmap (History) ─────────────────────────── */
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.cal-cell {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.cal-cell--today {
+  box-shadow: inset 0 0 0 1.5px var(--primary);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.cal-cell--selected {
+  box-shadow: inset 0 0 0 2px var(--text);
+}
+
+.cal-cell--today.cal-cell--selected {
+  box-shadow: inset 0 0 0 1.5px var(--primary), inset 0 0 0 3px var(--text);
+}
+
+.cal-caption {
+  font-size: 11px;
+  text-align: right;
+  margin-top: -4px;
+}
+
 /* ─── Month nav (History) ────────────────────────────────── */
 
 .month-nav {
@@ -1154,7 +1273,7 @@ input:focus-visible {
   flex-shrink: 0;
   background: var(--bg-elev);
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(212, 175, 106, 0.16);
   overflow: hidden;
 }
 
@@ -1223,7 +1342,7 @@ input:focus-visible {
   min-height: 64px;
   border-radius: 14px;
   background: var(--bg-elev);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(212, 175, 106, 0.16);
   padding: 14px 16px;
 }
 
@@ -1267,7 +1386,7 @@ input:focus-visible {
 
 .entry-row-button {
   width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(212, 175, 106, 0.16);
   text-align: left;
   cursor: pointer;
 }
@@ -1282,7 +1401,7 @@ input:focus-visible {
   gap: 10px;
   border-radius: 14px;
   background: var(--bg-elev);
-  border: 1px solid rgba(10, 132, 255, 0.18);
+  border: 1px solid rgba(212, 175, 106, 0.18);
   padding: 14px;
 }
 
@@ -1310,7 +1429,7 @@ input:focus-visible {
 .empty-state {
   border-radius: 14px;
   background: var(--bg-elev);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(212, 175, 106, 0.16);
   color: var(--text-secondary);
   font-size: 15px;
   padding: 18px;
@@ -1377,7 +1496,7 @@ input:focus-visible {
 }
 
 .settings-input:focus-visible {
-  box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.12);
+  box-shadow: 0 0 0 4px rgba(212, 175, 106, 0.12);
 }
 
 .settings-total {
@@ -1467,7 +1586,7 @@ input:focus-visible {
 
 .poker-stats-card {
   border-radius: 22px;
-  border-color: rgba(48, 209, 88, 0.2);
+  border-color: rgba(111, 174, 122, 0.2);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1496,6 +1615,7 @@ input:focus-visible {
 
 .poker-pnl {
   max-width: 100%;
+  font-family: var(--font-display);
   font-size: 24px;
   font-weight: 700;
   line-height: 1.05;
@@ -1599,7 +1719,7 @@ input:focus-visible {
 .result-toggle-btn {
   flex: 1;
   min-height: 44px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(212, 175, 106, 0.22);
   border-radius: 12px;
   background: var(--bg-elev-2);
   color: var(--text-secondary);
@@ -1610,15 +1730,15 @@ input:focus-visible {
 }
 
 .result-toggle-btn--win {
-  background: rgba(48, 209, 88, 0.15);
+  background: rgba(111, 174, 122, 0.15);
   color: var(--green);
-  border-color: rgba(48, 209, 88, 0.35);
+  border-color: rgba(111, 174, 122, 0.35);
 }
 
 .result-toggle-btn--loss {
-  background: rgba(255, 69, 58, 0.15);
+  background: rgba(201, 106, 90, 0.15);
   color: var(--red);
-  border-color: rgba(255, 69, 58, 0.35);
+  border-color: rgba(201, 106, 90, 0.35);
 }
 
 /* Custom stakes input */

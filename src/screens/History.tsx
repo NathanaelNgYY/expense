@@ -248,6 +248,17 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     onEditHandled?.()
   }, [initialEditingEntryId, onEditHandled])
 
+  // Per-day spend for the calendar heatmap — keyed by day-of-month, derived from
+  // the same monthEntries used everywhere else in this screen (single source of truth).
+  const spendByDay = new Map<number, number>()
+  for (const entry of monthEntries) {
+    const day = fromLocalDateString(entry.date).getDate()
+    spendByDay.set(day, (spendByDay.get(day) ?? 0) + entry.amount)
+  }
+  const maxDaySpend = Math.max(1, ...spendByDay.values())
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const todayStr = toLocalDateString(now)
+
   return (
     <div className="screen history">
       <div className="month-nav">
@@ -265,6 +276,31 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
           <ChevronRight aria-hidden="true" size={22} strokeWidth={2.4} />
         </button>
       </div>
+
+      <div className="cal-grid" role="grid" aria-label="Daily spending">
+        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+          const dateStr = toLocalDateString(new Date(year, month, day))
+          const spend = spendByDay.get(day) ?? 0
+          const alpha = spend > 0 ? 0.15 + Math.min(1, spend / maxDaySpend) * 0.65 : 0.06
+          const isToday = dateStr === todayStr
+          const isSelected = dateStr === selectedDate
+
+          return (
+            <button
+              key={day}
+              type="button"
+              className={`cal-cell${isToday ? ' cal-cell--today' : ''}${isSelected ? ' cal-cell--selected' : ''}`}
+              style={{ background: `rgba(212, 175, 106, ${alpha})` }}
+              onClick={() => handleDateChange(dateStr)}
+              aria-label={`${format(new Date(year, month, day), 'MMM d')}, S$${spend.toFixed(2)} spent`}
+              aria-pressed={isSelected}
+            >
+              {day}
+            </button>
+          )
+        })}
+      </div>
+      <p className="cal-caption muted">lighter = heavier spend day &middot; ring = today &middot; tap a day to backfill it</p>
 
       <section className="card history-backfill" aria-labelledby="backfill-title">
         <div className="card-heading-row">

@@ -116,6 +116,52 @@ export default function Dashboard({ onSettings }: Props) {
     void shared.openBudget(selectedSharedBudgetId).catch(() => {})
   }, [activeSharedReady, selectedSharedBudgetId, shared.openBudget, viewScope])
 
+  // The pass stack replaces the old Personal/Shared toggle: Personal plus every joined
+  // shared budget are shown as a stack of cards, front-most first. Tapping a card behind
+  // brings it forward (and, for a shared budget, triggers the openBudget load above).
+  type PassItem = { kind: 'personal' } | { kind: 'shared'; id: string; name: string }
+
+  const passItems: PassItem[] =
+    shared.budgets.length === 0
+      ? [{ kind: 'personal' }]
+      : viewScope === 'personal'
+        ? [{ kind: 'personal' }, ...shared.budgets.map(b => ({ kind: 'shared' as const, id: b.id, name: b.name }))]
+        : [
+            ...(selectedSharedBudget
+              ? [{ kind: 'shared' as const, id: selectedSharedBudget.id, name: selectedSharedBudget.name }]
+              : []),
+            { kind: 'personal' as const },
+            ...shared.budgets
+              .filter(b => b.id !== selectedSharedBudgetId)
+              .map(b => ({ kind: 'shared' as const, id: b.id, name: b.name })),
+          ]
+
+  function selectPass(item: PassItem) {
+    setExpandedCategory(null)
+    setConfirmingDeleteId(null)
+    if (item.kind === 'personal') {
+      setViewScope('personal')
+    } else {
+      setViewScope('shared')
+      setSelectedBudgetId(item.id)
+    }
+  }
+
+  function passInfo(item: PassItem): { title: string; subtitle: string; amount: number | null; pct: number } {
+    if (item.kind === 'personal') {
+      return { title: 'Personal', subtitle: monthLabel, amount: monthTotal, pct: budgetUsedPct }
+    }
+    if (shared.active?.budget.id === item.id) {
+      const month = currentSgtMonth()
+      const monthEntries = sharedEntriesForMonth(shared.active.entries, month)
+      const spent = sharedTotalSpent(monthEntries)
+      const limit = shared.active.budget.monthlyLimit
+      const pct = limit !== null && limit > 0 ? Math.min(100, (spent / limit) * 100) : spent > 0 ? 100 : 0
+      return { title: item.name, subtitle: 'Shared', amount: spent, pct }
+    }
+    return { title: item.name, subtitle: 'Shared', amount: null, pct: 0 }
+  }
+
   function toggleCategory(category: ExpandKey) {
     setConfirmingDeleteId(null)
     setExpandedCategory(current => (current === category ? null : category))
@@ -195,62 +241,52 @@ export default function Dashboard({ onSettings }: Props) {
         </button>
       </header>
 
-      {shared.budgets.length > 0 && (
-        <div className="scope-switch" role="group" aria-label="Dashboard scope">
-          <button
-            type="button"
-            className={viewScope === 'personal' ? 'scope-switch-btn scope-switch-btn--active' : 'scope-switch-btn'}
-            onClick={() => setViewScope('personal')}
-          >
-            Personal
-          </button>
-          <button
-            type="button"
-            className={viewScope === 'shared' ? 'scope-switch-btn scope-switch-btn--active' : 'scope-switch-btn'}
-            onClick={() => setViewScope('shared')}
-          >
-            Shared
-          </button>
-        </div>
-      )}
+      <div className="pass-stack" style={{ height: `${132 + (passItems.length - 1) * 22}px` }}>
+        {passItems.map((item, depth) => {
+          const info = passInfo(item)
+          const key = item.kind === 'personal' ? 'personal' : item.id
+
+          return (
+            <div
+              key={key}
+              className="pass"
+              style={{
+                transform: `translateY(${depth * 22}px) scale(${1 - depth * 0.04})`,
+                opacity: depth === 0 ? 1 : 1 - depth * 0.25,
+                zIndex: passItems.length - depth,
+              }}
+            >
+              <div className="pass-title">{info.title}</div>
+              <div className="pass-subtitle">{info.subtitle}</div>
+              <div className="pass-amt">
+                {info.amount !== null ? formatWholeCurrency(info.amount) : 'Tap to open'}
+              </div>
+              <div className="progress-bar pass-bar">
+                <div className="progress-fill" style={{ width: `${info.pct}%` }} />
+              </div>
+              {depth !== 0 && (
+                <button
+                  type="button"
+                  className="pass-tap-veil"
+                  onClick={() => selectPass(item)}
+                  aria-label={`Switch to ${info.title}`}
+                />
+              )}
+            </div>
+          )
+        })}
+      </div>
+      {passItems.length > 1 && <p className="stack-hint muted">tap a card behind to bring it forward</p>}
 
       {viewScope === 'shared' && (
         <SharedBudgetDashboard
           selectedBudgetId={selectedSharedBudgetId}
           selectedBudgetName={selectedSharedBudget?.name ?? null}
-          onSelectBudget={id => {
-            setSelectedBudgetId(id)
-            setExpandedCategory(null)
-            setConfirmingDeleteId(null)
-          }}
         />
       )}
 
       {viewScope === 'personal' && (
         <>
-
-      <div className="card summary-card">
-        <div className="summary-card-top">
-          <div>
-            <span className="summary-label">Spent this month</span>
-            <strong className="summary-amount summary-amount--large">S${monthTotal.toFixed(2)}</strong>
-          </div>
-          <div className="summary-pill">{currentMonthEntries.length} entries</div>
-        </div>
-        <div className="progress-bar" aria-hidden="true">
-          <div
-            className="progress-fill"
-            style={{
-              width: `${budgetUsedPct}%`,
-              background: monthTotal > monthlyIncome ? 'var(--red)' : 'var(--green)',
-            }}
-          />
-        </div>
-        <div className="summary-card-bottom">
-          <span className="muted">Monthly income</span>
-          <strong>{formatWholeCurrency(monthlyIncome)}</strong>
-        </div>
-      </div>
 
       <div className={`card forecast-card ${forecastOver ? 'forecast-card--danger' : ''}`}>
         <div className="forecast-grid">
@@ -491,11 +527,9 @@ export default function Dashboard({ onSettings }: Props) {
 function SharedBudgetDashboard({
   selectedBudgetId,
   selectedBudgetName,
-  onSelectBudget,
 }: {
   selectedBudgetId: string | null
   selectedBudgetName: string | null
-  onSelectBudget: (id: string) => void
 }) {
   const { budgets, active, error } = useSharedBudgets()
 
@@ -522,25 +556,6 @@ function SharedBudgetDashboard({
 
   return (
     <div className="shared-dashboard">
-      {budgets.length > 1 && (
-        <div className="scope-switch scope-switch--compact" role="group" aria-label="Shared budget">
-          {budgets.map(option => (
-            <button
-              key={option.id}
-              type="button"
-              className={
-                option.id === budget.id
-                  ? 'scope-switch-btn scope-switch-btn--active'
-                  : 'scope-switch-btn'
-              }
-              onClick={() => onSelectBudget(option.id)}
-            >
-              {option.name}
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="card summary-card">
         <div className="summary-card-top">
           <div>

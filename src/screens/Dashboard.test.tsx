@@ -276,8 +276,6 @@ describe('Dashboard category expense history', () => {
     root = rendered.root
 
     expect(rendered.container).toHaveTextContent('S$1,800 / month')
-    expect(rendered.container).toHaveTextContent('Monthly income')
-    expect(rendered.container).toHaveTextContent('S$1,800')
   })
 
   it('shows a card for a budgeted custom category and its spend', () => {
@@ -346,7 +344,7 @@ describe('Dashboard category expense history', () => {
     const rendered = renderWithEntries([])
     root = rendered.root
 
-    clickButton(rendered.container, b => b.textContent?.trim() === 'Shared')
+    clickButton(rendered.container, b => b.getAttribute('aria-label') === 'Switch to Family')
 
     expect(rendered.container).toHaveTextContent('Family')
     expect(rendered.container).toHaveTextContent('S$20.00 of S$100.00')

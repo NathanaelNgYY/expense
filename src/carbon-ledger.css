@@ -517,3 +517,145 @@ input:focus-visible,
    .entry-list      -> see "entry-list .entry-row" rule above
    .settings-input  -> see "Settings" block above
    ============================================================ */
+
+/* ============================================================
+   Step 5 — Poker (Task 3)
+   ============================================================ */
+
+.poker-stats-card {
+  border-color: var(--carbon-separator);
+}
+
+/* Editorial serif is reserved for P&L / hourly-rate values only. */
+.poker-pnl,
+.bankroll-card-footer strong {
+  font-family: var(--carbon-display);
+  letter-spacing: -0.02em;
+}
+
+.bankroll-card {
+  border-color: var(--carbon-separator);
+}
+
+.bankroll-trend-point {
+  box-shadow: none;
+}
+
+.bankroll-card-footer {
+  color: var(--carbon-text);
+}
+
+.log-session {
+  background: var(--carbon-canvas);
+}
+
+.time-row .time-sep {
+  color: var(--carbon-text-tertiary);
+}
+
+.custom-stakes-row .amount-input {
+  background: var(--carbon-surface-raised);
+  color: var(--carbon-text);
+}
+
+.custom-stakes-add {
+  background: var(--carbon-copper);
+  color: var(--carbon-canvas);
+}
+
+.custom-stakes-add:active {
+  background: var(--carbon-copper-pressed);
+}
+
+.result-toggle-btn {
+  background: var(--carbon-surface-raised);
+  color: var(--carbon-text-secondary);
+  border-color: var(--carbon-separator);
+}
+
+/* Wins/losses keep the Win/Loss text label — color is a supplement, not the
+   only signal — per the preservation contract's semantic-status rule. */
+.result-toggle-btn--win {
+  background: color-mix(in srgb, var(--carbon-sage) 16%, transparent);
+  color: var(--carbon-sage);
+  border-color: color-mix(in srgb, var(--carbon-sage) 35%, transparent);
+}
+
+.result-toggle-btn--loss {
+  background: color-mix(in srgb, var(--carbon-brick) 16%, transparent);
+  color: var(--carbon-brick);
+  border-color: color-mix(in srgb, var(--carbon-brick) 35%, transparent);
+}
+
+/* .poker-stats-row, .poker-stat, .bankroll-trend, .custom-stakes-row are
+   layout-only containers; they inherit Carbon Ledger tokens through the
+   ancestor/child rules above (no override needed). */
+
+/* ============================================================
+   Step 6 — Shared Budgets (Task 3)
+   ============================================================ */
+
+.shared-dashboard {
+  background: var(--carbon-canvas);
+}
+
+.shared-auth,
+.shared-form {
+  color: var(--carbon-text);
+}
+
+.shared-budget-card {
+  background: var(--carbon-surface);
+  border-color: var(--carbon-separator);
+  color: var(--carbon-text);
+}
+
+.shared-budget-card .ui-icon {
+  color: var(--carbon-copper);
+}
+
+.shared-budget-name {
+  color: var(--carbon-text);
+}
+
+.shared-detail-header {
+  color: var(--carbon-text);
+}
+
+.shared-progress .progress-track {
+  background: var(--carbon-surface-raised);
+}
+
+.shared-progress .progress-fill {
+  background: var(--carbon-copper);
+}
+
+.member-total-row,
+.member-row,
+.shared-entry-row {
+  border-bottom-color: var(--carbon-separator);
+  color: var(--carbon-text);
+}
+
+.invite-row {
+  background: var(--carbon-surface-raised);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.invite-code {
+  color: var(--carbon-text);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+.owner-tools .category-label {
+  color: var(--carbon-text-secondary);
+}
+
+.shared-signout {
+  color: var(--carbon-text-tertiary);
+}
+
+/* .shared-budget-cards, .shared-actions are layout-only containers; children
+   (.shared-budget-card, .save-btn) carry the Carbon Ledger surface/button
+   tokens already defined above. */

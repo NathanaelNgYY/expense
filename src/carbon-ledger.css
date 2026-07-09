@@ -1,0 +1,30 @@
+:root {
+  --carbon-canvas: #1a1b1c;
+  --carbon-surface: #202223;
+  --carbon-surface-raised: #292b2c;
+  --carbon-text: #ece9e4;
+  --carbon-text-secondary: #aaa59e;
+  --carbon-text-tertiary: #7f7c77;
+  --carbon-separator: #3a3b3c;
+  --carbon-copper: #c98d68;
+  --carbon-copper-pressed: #ad7352;
+  --carbon-sage: #79a58a;
+  --carbon-amber: #c7a66a;
+  --carbon-brick: #ca766b;
+  --carbon-display: Georgia, "Times New Roman", serif;
+
+  --bg: var(--carbon-canvas);
+  --bg-elev: var(--carbon-surface);
+  --bg-elev-2: var(--carbon-surface-raised);
+  --text: var(--carbon-text);
+  --text-secondary: var(--carbon-text-secondary);
+  --text-tertiary: var(--carbon-text-tertiary);
+  --primary: var(--carbon-copper);
+  --blue: var(--carbon-copper);
+  --green: var(--carbon-sage);
+  --warning: var(--carbon-amber);
+  --yellow: var(--carbon-amber);
+  --red: var(--carbon-brick);
+  --separator: var(--carbon-separator);
+  --fill: #303233;
+}

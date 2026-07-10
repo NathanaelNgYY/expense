@@ -73,6 +73,29 @@ function changeInput(input: HTMLInputElement, value: string): void {
   })
 }
 
+function changeSelect(select: HTMLSelectElement, value: string): void {
+  act(() => {
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      Object.getPrototypeOf(select),
+      'value',
+    )?.set
+
+    valueSetter?.call(select, value)
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+}
+
+function clickButton(container: HTMLElement, label: string): void {
+  const button = [...container.querySelectorAll('button')].find(candidate =>
+    candidate.textContent?.includes(label) || candidate.getAttribute('aria-label') === label,
+  )
+  if (!button) throw new Error(`${label} button was not found`)
+
+  act(() => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  })
+}
+
 describe('History entry editing', () => {
   let root: Root | null = null
 
@@ -173,5 +196,123 @@ describe('History entry editing', () => {
     expect(rendered.container).toHaveTextContent('Edit Expense')
     expect(rendered.container).toHaveTextContent('FairPrice')
     expect(onEditHandled).toHaveBeenCalled()
+  })
+
+  it('searches notes and merchants, then filters by category, source, and date', async () => {
+    const rendered = renderWithEntries([
+      entry({ id: 'lunch', amount: 8.5, note: 'Campus lunch', date: '2026-05-19', source: 'manual' }),
+      entry({
+        id: 'train',
+        amount: 2.2,
+        category: 'transport',
+        note: 'Morning commute',
+        merchant: 'SMRT',
+        date: '2026-05-18',
+        source: 'apple-pay',
+      }),
+      entry({
+        id: 'groceries',
+        amount: 24.6,
+        category: null,
+        note: 'Weekly groceries',
+        merchant: 'NTUC FairPrice',
+        date: '2026-05-17',
+        source: 'dbs-email',
+      }),
+    ])
+    root = rendered.root
+    await act(async () => {})
+
+    const search = rendered.container.querySelector<HTMLInputElement>('[aria-label="Search transactions"]')
+    if (!search) throw new Error('Search input was not found')
+    changeInput(search, 'fairprice')
+
+    expect(rendered.container.querySelectorAll('.entry-row-button')).toHaveLength(1)
+    expect(rendered.container.querySelector('.entry-list')).toHaveTextContent('S$24.60')
+    expect(rendered.container).toHaveTextContent('1 of 3 transactions')
+
+    changeInput(search, '')
+    clickButton(rendered.container, 'Show transaction filters')
+
+    const source = rendered.container.querySelector<HTMLSelectElement>('#history-source-filter')
+    const category = rendered.container.querySelector<HTMLSelectElement>('#history-category-filter')
+    const from = rendered.container.querySelector<HTMLInputElement>('#history-date-from')
+    const to = rendered.container.querySelector<HTMLInputElement>('#history-date-to')
+    if (!source || !category || !from || !to) throw new Error('Filter controls were not found')
+
+    changeSelect(source, 'apple-pay')
+    expect(rendered.container.querySelectorAll('.entry-row-button')).toHaveLength(1)
+    expect(rendered.container.querySelector('.entry-list')).toHaveTextContent('SMRT')
+
+    changeSelect(source, 'all')
+    changeSelect(category, 'uncategorized')
+    expect(rendered.container.querySelectorAll('.entry-row-button')).toHaveLength(1)
+    expect(rendered.container.querySelector('.entry-list')).toHaveTextContent('Weekly groceries')
+
+    changeSelect(category, 'all')
+    changeInput(from, '2026-05-18')
+    changeInput(to, '2026-05-19')
+    expect(rendered.container.querySelectorAll('.entry-row-button')).toHaveLength(2)
+
+    clickButton(rendered.container, 'Clear filters')
+    expect(rendered.container.querySelectorAll('.entry-row-button')).toHaveLength(3)
+  })
+
+  it('duplicates, deletes, and restores an imported transaction with undo', async () => {
+    const imported = entry({
+      id: 'apple-pay-entry',
+      amount: 12.5,
+      category: 'others',
+      note: 'Groceries',
+      merchant: 'FairPrice',
+      source: 'apple-pay',
+      occurredAt: '2026-05-19T04:00:00.000Z',
+      currency: 'SGD',
+      dedupeKey: 'apple_pay:original',
+    })
+    const rendered = renderWithEntries([imported])
+    root = rendered.root
+    await act(async () => {})
+
+    clickButton(rendered.container, 'Apple Pay')
+    const detail = rendered.container.querySelector<HTMLElement>('[aria-label="Transaction details"]')
+    if (!detail) throw new Error('Transaction detail was not found')
+    expect(detail).toHaveTextContent('FairPrice')
+    expect(detail).toHaveTextContent('Apple Pay')
+
+    clickButton(detail, 'Duplicate')
+    await act(async () => {})
+
+    const afterDuplicate = getEntries()
+    expect(afterDuplicate).toHaveLength(2)
+    expect(afterDuplicate.find(candidate => candidate.id !== imported.id)).toMatchObject({
+      amount: 12.5,
+      category: 'others',
+      note: 'Groceries',
+      date: '2026-05-19',
+      source: 'manual',
+    })
+
+    clickButton(rendered.container, 'Apple Pay')
+    const reopenedDetail = rendered.container.querySelector<HTMLElement>('[aria-label="Transaction details"]')
+    if (!reopenedDetail) throw new Error('Reopened transaction detail was not found')
+    clickButton(reopenedDetail, 'Delete')
+    clickButton(reopenedDetail, 'Delete transaction')
+    await act(async () => {})
+
+    expect(getEntries().some(candidate => candidate.id === imported.id)).toBe(false)
+    expect(rendered.container).toHaveTextContent('Transaction deleted')
+
+    clickButton(rendered.container, 'Undo')
+    await act(async () => {})
+
+    expect(getEntries().find(candidate => candidate.id === imported.id)).toMatchObject({
+      id: imported.id,
+      source: 'apple-pay',
+      merchant: 'FairPrice',
+      occurredAt: imported.occurredAt,
+      currency: 'SGD',
+      dedupeKey: 'apple_pay:original',
+    })
   })
 })

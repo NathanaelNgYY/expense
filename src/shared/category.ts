@@ -15,8 +15,19 @@ const CATEGORY_RULES: Array<{ category: Category; keywords: string[] }> = [
   },
 ]
 
-function normalizeText(value: string): string {
-  return value.trim().toLowerCase().replace(/\s+/g, ' ')
+// Normalize noisy PayNow/card payee labels before applying rules or learning
+// from corrections. DBS may append a legal suffix, outlet number, or account
+// identifier to the same merchant on different transactions.
+export function normalizeCategoryMerchant(value: string): string {
+  return value
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/\((?:uen|mobile|account|a\/c)[^)]*\)/gi, ' ')
+    .replace(/\b(?:private limited|pte\.?\s*ltd\.?|limited|ltd\.?|llp)\b/gi, ' ')
+    .replace(/(?:#|outlet\s*)\d+\b/gi, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 // Keyword guess from the merchant/payee text. Returns null when nothing
@@ -24,7 +35,7 @@ function normalizeText(value: string): string {
 // 'others' here: 'others' is a real budget line, so guessing it silently
 // pollutes that category and undercounts the true one (e.g. a PayNow lunch).
 export function guessCategory(merchantText: string): Category | null {
-  const normalized = normalizeText(merchantText)
+  const normalized = normalizeCategoryMerchant(merchantText)
   for (const rule of CATEGORY_RULES) {
     if (rule.keywords.some(keyword => normalized.includes(keyword))) {
       return rule.category
@@ -38,13 +49,13 @@ export function guessCategory(merchantText: string): Category | null {
 // (so a fresh correction takes effect). Entries with no category or a different
 // merchant are ignored. Returns null when there's nothing to learn from.
 export function categoryFromHistory(entries: Entry[], merchant: string): string | null {
-  const target = normalizeText(merchant)
+  const target = normalizeCategoryMerchant(merchant)
   if (!target) return null
 
   const stats = new Map<string, { count: number; recent: string }>()
   for (const entry of entries) {
     if (entry.category == null || !entry.merchant) continue
-    if (normalizeText(entry.merchant) !== target) continue
+    if (normalizeCategoryMerchant(entry.merchant) !== target) continue
     const recent = entry.occurredAt ?? entry.date
     const current = stats.get(entry.category)
     if (current) {

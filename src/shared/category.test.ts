@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { guessCategory, categoryFromHistory } from './category'
+import { guessCategory, categoryFromHistory, normalizeCategoryMerchant } from './category'
 import type { Entry } from '../types'
 
 describe('guessCategory', () => {
@@ -17,6 +17,14 @@ describe('guessCategory', () => {
   it('returns null for unknown merchants (no silent "others")', () => {
     expect(guessCategory('Some Random Shop')).toBeNull()
     expect(guessCategory('')).toBeNull()
+  })
+})
+
+describe('normalizeCategoryMerchant', () => {
+  it('collapses common DBS PayNow merchant variations', () => {
+    expect(normalizeCategoryMerchant('LFH SEAFOOD PTE. LTD.')).toBe('lfh seafood')
+    expect(normalizeCategoryMerchant('LFH SEAFOOD (UEN ending 006C)')).toBe('lfh seafood')
+    expect(normalizeCategoryMerchant('LFH SEAFOOD #234')).toBe('lfh seafood')
   })
 })
 
@@ -43,6 +51,11 @@ describe('categoryFromHistory', () => {
   it('matches merchants case- and whitespace-insensitively', () => {
     const history = [entry({ merchant: 'Ah Huat   Trading', category: 'lunch' })]
     expect(categoryFromHistory(history, '  ah huat trading ')).toBe('lunch')
+  })
+
+  it('reuses a correction across legal suffix and outlet variations', () => {
+    const history = [entry({ merchant: 'LFH SEAFOOD PTE. LTD.', category: 'lunch' })]
+    expect(categoryFromHistory(history, 'LFH SEAFOOD #234')).toBe('lunch')
   })
 
   it('ignores entries with no category and unrelated merchants', () => {

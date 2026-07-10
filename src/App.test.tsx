@@ -36,7 +36,7 @@ describe('App', () => {
   })
 
   it('restores the selected theme on app startup', async () => {
-    localStorage.setItem('budget-tracker-theme-v1', 'copper-current')
+    localStorage.setItem('budget-tracker-theme-v2', 'copper-current')
 
     await act(async () => {
       render(<App />)

@@ -1,6 +1,12 @@
-export const THEME_STORAGE_KEY = 'budget-tracker-theme-v1'
+export const THEME_STORAGE_KEY = 'budget-tracker-theme-v2'
 
 export const THEMES = [
+  {
+    id: 'original-dark',
+    name: 'Original Dark',
+    description: 'The app’s original dark wallet design and screen flow.',
+    swatches: ['#1a1b1c', '#c98d68', '#ece9e4'],
+  },
   {
     id: 'deep-sea',
     name: 'Deep Sea Revised',
@@ -23,7 +29,7 @@ export const THEMES = [
 
 export type ThemeId = (typeof THEMES)[number]['id']
 
-export const DEFAULT_THEME: ThemeId = 'deep-sea'
+export const DEFAULT_THEME: ThemeId = 'original-dark'
 
 export function isThemeId(value: unknown): value is ThemeId {
   return typeof value === 'string' && THEMES.some(theme => theme.id === value)

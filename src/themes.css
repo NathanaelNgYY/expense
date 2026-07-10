@@ -1,4 +1,3 @@
-:root,
 [data-theme='deep-sea'] {
   color-scheme: dark;
   --carbon-canvas: #061012;
@@ -164,10 +163,10 @@ body,
 }
 
 .theme-preview {
-  --preview-bg: #061012;
-  --preview-surface: #0d1d20;
-  --preview-line: #214044;
-  --preview-accent: #52d8d0;
+  --preview-bg: #1a1b1c;
+  --preview-surface: #202223;
+  --preview-line: #3a3b3c;
+  --preview-accent: #c98d68;
   height: 70px;
   overflow: hidden;
   display: flex;
@@ -176,6 +175,13 @@ body,
   border-radius: 9px;
   background: var(--preview-bg);
   padding: 8px;
+}
+
+[data-theme-preview='deep-sea'] .theme-preview {
+  --preview-bg: #061012;
+  --preview-surface: #0d1d20;
+  --preview-line: #214044;
+  --preview-accent: #52d8d0;
 }
 
 [data-theme-preview='copper-current'] .theme-preview {
@@ -250,7 +256,7 @@ body,
   place-items: center;
   border: 1px solid var(--separator);
   border-radius: 50%;
-  color: var(--theme-primary-contrast);
+  color: var(--theme-primary-contrast, var(--bg));
 }
 
 .theme-option--selected .theme-option__check {
@@ -352,15 +358,25 @@ body,
   line-height: 1.25;
 }
 
-.add-entry__categories,
-.add-entry__details {
+[data-theme='deep-sea'] .add-entry__categories,
+[data-theme='deep-sea'] .add-entry__details,
+[data-theme='copper-current'] .add-entry__categories,
+[data-theme='copper-current'] .add-entry__details,
+[data-theme='berry-circuit'] .add-entry__categories,
+[data-theme='berry-circuit'] .add-entry__details {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.add-entry__details .save-btn {
+[data-theme='deep-sea'] .add-entry__details .save-btn,
+[data-theme='copper-current'] .add-entry__details .save-btn,
+[data-theme='berry-circuit'] .add-entry__details .save-btn {
   margin-top: 0;
+}
+
+[data-theme='original-dark'] .home-budget-overview {
+  display: none;
 }
 
 /* Deep Sea Revised: radial overview, soft grouping, calm spacing */

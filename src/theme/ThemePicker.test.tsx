@@ -16,8 +16,8 @@ describe('ThemePicker', () => {
       </ThemeProvider>,
     )
 
-    expect(screen.getAllByRole('radio')).toHaveLength(3)
-    expect(screen.getByRole('radio', { name: /Deep Sea Revised/i })).toBeChecked()
+    expect(screen.getAllByRole('radio')).toHaveLength(4)
+    expect(screen.getByRole('radio', { name: /Original Dark/i })).toBeChecked()
   })
 
   it('selects a theme and announces persistence', () => {

@@ -25,19 +25,19 @@ describe('ThemeProvider', () => {
     document.documentElement.removeAttribute('data-theme')
   })
 
-  it('defaults to Deep Sea and applies it to the document', () => {
+  it('defaults to Original Dark and applies it to the document', () => {
     render(
       <ThemeProvider>
         <Probe />
       </ThemeProvider>,
     )
 
-    expect(screen.getByLabelText('theme')).toHaveTextContent('deep-sea')
-    expect(document.documentElement).toHaveAttribute('data-theme', 'deep-sea')
+    expect(screen.getByLabelText('theme')).toHaveTextContent('original-dark')
+    expect(document.documentElement).toHaveAttribute('data-theme', 'original-dark')
   })
 
   it('restores a valid stored theme', () => {
-    localStorage.setItem('budget-tracker-theme-v1', 'berry-circuit')
+    localStorage.setItem('budget-tracker-theme-v2', 'berry-circuit')
 
     render(
       <ThemeProvider>
@@ -49,7 +49,7 @@ describe('ThemeProvider', () => {
   })
 
   it('rejects an invalid stored theme', () => {
-    localStorage.setItem('budget-tracker-theme-v1', 'unknown')
+    localStorage.setItem('budget-tracker-theme-v2', 'unknown')
 
     render(
       <ThemeProvider>
@@ -57,7 +57,7 @@ describe('ThemeProvider', () => {
       </ThemeProvider>,
     )
 
-    expect(screen.getByLabelText('theme')).toHaveTextContent('deep-sea')
+    expect(screen.getByLabelText('theme')).toHaveTextContent('original-dark')
   })
 
   it('updates the root and storage after selection', () => {
@@ -70,7 +70,7 @@ describe('ThemeProvider', () => {
     act(() => screen.getByRole('button', { name: 'Copper' }).click())
 
     expect(document.documentElement).toHaveAttribute('data-theme', 'copper-current')
-    expect(localStorage.getItem('budget-tracker-theme-v1')).toBe('copper-current')
+    expect(localStorage.getItem('budget-tracker-theme-v2')).toBe('copper-current')
   })
 
   it('keeps switching when storage throws', () => {

@@ -20,7 +20,7 @@ export function parseDbsEmail(rawBody: string): DbsEmailParse {
   // Merchant: the recipient/merchant on a "To:" line (PayNow & card alerts both use it),
   // falling back to "At"/"Merchant". Use [ \t] so the line is matched, not spanned across
   // newlines, and ignore the "From:" line. Strip a trailing "(UEN ending ...)" parenthetical.
-  const merchantMatch = /(?:^|\n)[ \t]*(?:To|At|Merchant)[ \t]*[:\-][ \t]*(.+)/i.exec(body)
+  const merchantMatch = /(?:^|\n)[ \t]*(?:To|At|Merchant)[ \t]*[:-][ \t]*(.+)/i.exec(body)
   const merchant = (merchantMatch ? merchantMatch[1] : '')
     .trim()
     .replace(/\s*\([^)]*\)\s*$/, '')

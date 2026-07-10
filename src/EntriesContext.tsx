@@ -179,6 +179,7 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useEntries(): EntriesContextValue {
   const ctx = useContext(EntriesContext)
   if (!ctx) throw new Error('useEntries must be used within EntriesProvider')

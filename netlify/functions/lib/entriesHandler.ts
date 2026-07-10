@@ -8,6 +8,12 @@ export interface NewManualEntry {
   note: string
   date: string
   id?: string // optional; preserves a caller-supplied id (import/migration) for idempotent writes
+  source?: Entry['source']
+  importKey?: string
+  merchant?: string
+  occurredAt?: string
+  currency?: string
+  dedupeKey?: string
 }
 
 export async function listEntries(store: EntryStore): Promise<Entry[]> {
@@ -27,8 +33,12 @@ export async function createEntry(
     category: input.category,
     note: input.note,
     date: input.date,
-    source: 'manual',
-    dedupeKey: buildDedupeKey('manual', input.date, input.amount, input.note, id),
+    source: input.source ?? 'manual',
+    ...(input.importKey ? { importKey: input.importKey } : {}),
+    ...(input.merchant ? { merchant: input.merchant } : {}),
+    ...(input.occurredAt ? { occurredAt: input.occurredAt } : {}),
+    ...(input.currency ? { currency: input.currency } : {}),
+    dedupeKey: input.dedupeKey ?? buildDedupeKey('manual', input.date, input.amount, input.note, id),
   }
   await store.put(entry)
   return entry

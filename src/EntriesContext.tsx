@@ -20,6 +20,7 @@ import {
 interface EntriesContextValue {
   entries: Entry[]
   addEntry: (input: NewManualEntry) => Promise<void>
+  restoreEntry: (entry: Entry) => Promise<void>
   editEntry: (id: string, patch: Partial<Entry>) => Promise<void>
   removeEntry: (id: string) => Promise<void>
   refresh: () => Promise<void>
@@ -42,13 +43,7 @@ async function drainQueue(): Promise<boolean> {
     const mutation = queue[0]
     try {
       if (mutation.op === 'create') {
-        await createEntryApi({
-          id: mutation.entry.id,
-          amount: mutation.entry.amount,
-          category: mutation.entry.category,
-          note: mutation.entry.note,
-          date: mutation.entry.date,
-        })
+        await createEntryApi(mutation.entry)
       } else if (mutation.op === 'update') {
         await updateEntryApi(mutation.id, mutation.patch)
       } else {
@@ -135,8 +130,20 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
     didInit.current = true
     void refresh()
     const onOnline = () => void refresh()
+    const onFocus = () => void refresh()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void refresh()
+    }
     window.addEventListener('online', onOnline)
-    return () => window.removeEventListener('online', onOnline)
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('pageshow', onFocus)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('pageshow', onFocus)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [refresh])
 
   const addEntry = useCallback(async (input: NewManualEntry) => {
@@ -164,6 +171,13 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
     void refresh() // background flush + reconcile; the edit is already locally durable
   }, [commit, refresh])
 
+  const restoreEntry = useCallback(async (entry: Entry) => {
+    commit([...entriesRef.current.filter(candidate => candidate.id !== entry.id), entry])
+    setPendingCreates([...new Set([...getPendingCreates(), entry.id])])
+    setQueue([...getQueue(), { op: 'create', entry }])
+    void refresh()
+  }, [commit, refresh])
+
   const removeEntry = useCallback(async (id: string) => {
     commit(entriesRef.current.filter(e => e.id !== id))
     // Tombstone the id so an eventually-consistent server refresh can't resurrect it.
@@ -173,7 +187,7 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
   }, [commit, refresh])
 
   return (
-    <EntriesContext.Provider value={{ entries, addEntry, editEntry, removeEntry, refresh }}>
+    <EntriesContext.Provider value={{ entries, addEntry, restoreEntry, editEntry, removeEntry, refresh }}>
       {children}
     </EntriesContext.Provider>
   )

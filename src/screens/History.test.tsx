@@ -193,7 +193,7 @@ describe('History entry editing', () => {
     })
     root = rendered.root
 
-    expect(rendered.container).toHaveTextContent('Edit Expense')
+    expect(rendered.container).toHaveTextContent('Transaction details')
     expect(rendered.container).toHaveTextContent('FairPrice')
     expect(onEditHandled).toHaveBeenCalled()
   })

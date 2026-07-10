@@ -60,6 +60,23 @@ describe('EntriesContext', () => {
     await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('2'))
   })
 
+  it('refreshes entries when the PWA returns to the foreground', async () => {
+    localStorage.setItem('api_token', 'tok')
+    const ingested = { id: 'paynow-1', amount: 5.7, category: 'lunch', note: 'PayNow', date: '2026-06-09' }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValue(jsonResponse([ingested]))
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<EntriesProvider><Probe /></EntriesProvider>)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+
+    window.dispatchEvent(new Event('focus'))
+
+    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('1'))
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('optimistically adds and persists to cache when offline', async () => {
     localStorage.setItem('api_token', 'tok')
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))

@@ -47,7 +47,7 @@ export function fetchEntries(): Promise<Entry[]> {
   return request<Entry[]>('/api/entries')
 }
 
-export function createEntryApi(entry: NewManualEntry): Promise<Entry> {
+export function createEntryApi(entry: NewManualEntry | Entry): Promise<Entry> {
   return request<Entry>('/api/entries', { method: 'POST', body: JSON.stringify(entry) })
 }
 

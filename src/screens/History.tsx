@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { endOfWeek, format } from 'date-fns'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Copy, Search, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import InsightsSection from '../components/InsightsSection'
 import {
@@ -39,6 +39,20 @@ interface InitialHistoryState {
   selectedDate: string
   editingEntryId: string | null
   editDraft: EditDraft | null
+}
+
+type CategoryFilter = 'all' | 'uncategorized' | string
+type SourceFilter = 'all' | 'manual' | 'apple-pay' | 'dbs-email'
+
+function sourceLabel(entry: Entry): string {
+  switch (entry.source) {
+    case 'apple-pay':
+      return 'Apple Pay'
+    case 'dbs-email':
+      return 'DBS email'
+    default:
+      return 'Manual'
+  }
 }
 
 function progressPercent(amount: number, budget: number): number {
@@ -114,7 +128,7 @@ function initialHistoryState(
 
 export default function History({ initialEditingEntryId = null, onEditHandled }: Props) {
   const now = new Date()
-  const { entries, addEntry, editEntry } = useEntries()
+  const { entries, addEntry, restoreEntry, editEntry, removeEntry } = useEntries()
   const [initialState] = useState(() => initialHistoryState(initialEditingEntryId, now, entries))
   const [year, setYear] = useState(initialState.year)
   const [month, setMonth] = useState(initialState.month)
@@ -125,6 +139,15 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
   const [savedMessage, setSavedMessage] = useState('')
   const [editingEntryId, setEditingEntryId] = useState<string | null>(initialState.editingEntryId)
   const [editDraft, setEditDraft] = useState<EditDraft | null>(initialState.editDraft)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
+  const [deletedEntry, setDeletedEntry] = useState<Entry | null>(null)
+  const [ledgerMessage, setLedgerMessage] = useState('')
 
   const config = getBudgetConfig()
   const customCategories = getCustomCategories()
@@ -134,6 +157,32 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
   const iconForCategory = (id: string): string => categoryIcon(id, overrides, customCategories)
   const weeks = weeksInMonth(year, month)
   const monthEntries = entriesForMonth(entries, year, month).sort(entrySort)
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase()
+  const filteredEntries = monthEntries.filter(entry => {
+    const matchesQuery =
+      normalizedQuery.length === 0 ||
+      [
+        entry.note,
+        entry.merchant ?? '',
+        entry.amount.toFixed(2),
+        entry.category ? labelForCategory(entry.category) : 'Uncategorized',
+        sourceLabel(entry),
+      ].some(value => value.toLocaleLowerCase().includes(normalizedQuery))
+    const matchesCategory =
+      categoryFilter === 'all' ||
+      (categoryFilter === 'uncategorized' ? entry.category === null : entry.category === categoryFilter)
+    const matchesSource =
+      sourceFilter === 'all' || (entry.source ?? 'manual') === sourceFilter
+    const matchesFrom = !dateFrom || entry.date >= dateFrom
+    const matchesTo = !dateTo || entry.date <= dateTo
+
+    return matchesQuery && matchesCategory && matchesSource && matchesFrom && matchesTo
+  })
+  const activeFilterCount =
+    Number(categoryFilter !== 'all') +
+    Number(sourceFilter !== 'all') +
+    Number(Boolean(dateFrom)) +
+    Number(Boolean(dateTo))
   const monthTotal = monthEntries.reduce((sum, entry) => sum + entry.amount, 0)
   const weeklyBudget = config.monthlyIncome / 4
   const lunchWeeklyAvg = config.lunch / 4
@@ -160,6 +209,8 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     setYear(nextYear)
     setMonth(nextMonth)
     setSelectedDate(defaultBackfillDate(nextYear, nextMonth))
+    setDateFrom('')
+    setDateTo('')
     setSavedMessage('')
   }
 
@@ -172,6 +223,8 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     setYear(nextYear)
     setMonth(nextMonth)
     setSelectedDate(defaultBackfillDate(nextYear, nextMonth))
+    setDateFrom('')
+    setDateTo('')
     setSavedMessage('')
   }
 
@@ -202,6 +255,8 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     setEditingEntryId(entry.id)
     setEditDraft(editDraftForEntry(entry))
     setSavedMessage('')
+    setConfirmingDeleteId(null)
+    setLedgerMessage('')
   }
 
   function cancelEditingEntry() {
@@ -240,6 +295,42 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     setSavedMessage(`Updated S$${amount.toFixed(2)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
     setEditingEntryId(null)
     setEditDraft(null)
+  }
+
+  async function handleDuplicateEntry(entry: Entry) {
+    await addEntry({
+      amount: entry.amount,
+      category: entry.category,
+      note: entry.note,
+      date: entry.date,
+    })
+    setEditingEntryId(null)
+    setEditDraft(null)
+    setLedgerMessage(`Duplicated S$${entry.amount.toFixed(2)} transaction`)
+  }
+
+  async function handleDeleteEntry(entry: Entry) {
+    await removeEntry(entry.id)
+    setDeletedEntry(entry)
+    setConfirmingDeleteId(null)
+    setEditingEntryId(null)
+    setEditDraft(null)
+    setLedgerMessage('Transaction deleted')
+  }
+
+  async function handleUndoDelete() {
+    if (!deletedEntry) return
+    await restoreEntry(deletedEntry)
+    setDeletedEntry(null)
+    setLedgerMessage('Transaction restored')
+  }
+
+  function clearFilters() {
+    setSearchQuery('')
+    setCategoryFilter('all')
+    setSourceFilter('all')
+    setDateFrom('')
+    setDateTo('')
   }
 
   useEffect(() => {
@@ -454,11 +545,126 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
       <InsightsSection entries={entries} year={year} month={month} />
 
       <h3 className="section-title">Entries</h3>
+      <section className="history-ledger-tools" aria-label="Transaction search and filters">
+        <div className="history-search-row">
+          <label className="history-search">
+            <Search size={18} aria-hidden="true" />
+            <input
+              type="search"
+              value={searchQuery}
+              aria-label="Search transactions"
+              placeholder="Search note or merchant"
+              onChange={event => setSearchQuery(event.target.value)}
+            />
+            {searchQuery && (
+              <button type="button" onClick={() => setSearchQuery('')} aria-label="Clear search">
+                <X size={16} aria-hidden="true" />
+              </button>
+            )}
+          </label>
+          <button
+            type="button"
+            className={`history-filter-toggle${showFilters ? ' history-filter-toggle--active' : ''}`}
+            onClick={() => setShowFilters(current => !current)}
+            aria-label={showFilters ? 'Hide transaction filters' : 'Show transaction filters'}
+            aria-expanded={showFilters}
+          >
+            <SlidersHorizontal size={18} aria-hidden="true" />
+            {activeFilterCount > 0 && <span className="history-filter-count">{activeFilterCount}</span>}
+          </button>
+        </div>
+
+        {showFilters && (
+          <div className="history-filter-panel">
+            <label className="form-field" htmlFor="history-category-filter">
+              <span>Category</span>
+              <select
+                id="history-category-filter"
+                className="history-filter-select"
+                value={categoryFilter}
+                onChange={event => setCategoryFilter(event.target.value)}
+              >
+                <option value="all">All categories</option>
+                <option value="uncategorized">Uncategorized</option>
+                {categoryOptions.map(option => (
+                  <option key={option.id} value={option.id}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="form-field" htmlFor="history-source-filter">
+              <span>Source</span>
+              <select
+                id="history-source-filter"
+                className="history-filter-select"
+                value={sourceFilter}
+                onChange={event => setSourceFilter(event.target.value as SourceFilter)}
+              >
+                <option value="all">All sources</option>
+                <option value="manual">Manual</option>
+                <option value="apple-pay">Apple Pay</option>
+                <option value="dbs-email">DBS email</option>
+              </select>
+            </label>
+            <div className="history-date-filters">
+              <label className="form-field" htmlFor="history-date-from">
+                <span>From</span>
+                <input
+                  id="history-date-from"
+                  type="date"
+                  className="history-filter-date"
+                  value={dateFrom}
+                  min={dateMin}
+                  max={dateTo || dateMax}
+                  onChange={event => setDateFrom(event.target.value)}
+                />
+              </label>
+              <label className="form-field" htmlFor="history-date-to">
+                <span>To</span>
+                <input
+                  id="history-date-to"
+                  type="date"
+                  className="history-filter-date"
+                  value={dateTo}
+                  min={dateFrom || dateMin}
+                  max={dateMax}
+                  onChange={event => setDateTo(event.target.value)}
+                />
+              </label>
+            </div>
+            <button type="button" className="history-clear-filters" onClick={clearFilters}>
+              Clear filters
+            </button>
+          </div>
+        )}
+
+        <p className="history-result-count" role="status">
+          {filteredEntries.length === monthEntries.length
+            ? `${monthEntries.length} ${monthEntries.length === 1 ? 'transaction' : 'transactions'}`
+            : `${filteredEntries.length} of ${monthEntries.length} transactions`}
+        </p>
+      </section>
+
+      {ledgerMessage && (
+        <div className="entry-ledger-feedback" role="status">
+          <span>{ledgerMessage}</span>
+          {deletedEntry && (
+            <button type="button" onClick={() => void handleUndoDelete()}>
+              <Undo2 size={16} aria-hidden="true" />
+              Undo
+            </button>
+          )}
+        </div>
+      )}
+
       {monthEntries.length === 0 ? (
         <div className="empty-state">No entries for {monthLabel} yet.</div>
+      ) : filteredEntries.length === 0 ? (
+        <div className="empty-state">
+          No matching transactions. Try clearing a filter or using a different search.
+        </div>
       ) : (
         <div className="entry-list">
-          {monthEntries.map(entry => {
+          {filteredEntries.map(entry => {
             const isEditing = editingEntryId === entry.id && editDraft
             const editAmount = editDraft ? Number(editDraft.amountText) : Number.NaN
             const canSaveEdit =
@@ -482,15 +688,28 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
                       <BudgetIcon name={entry.category ? iconForCategory(entry.category) : 'uncategorized'} />
                       {entry.category ? labelForCategory(entry.category) : 'Uncategorized'}
                     </span>
-                    <span className="entry-date">{format(fromLocalDateString(entry.date), 'EEE, MMM d')}</span>
+                    <span className="entry-date">
+                      {format(fromLocalDateString(entry.date), 'EEE, MMM d')} &middot; {sourceLabel(entry)}
+                    </span>
+                    {entry.merchant && <span className="entry-merchant">{entry.merchant}</span>}
                     {entry.note && <span className="entry-note">{entry.note}</span>}
                   </span>
                   <strong className="entry-amount">S${entry.amount.toFixed(2)}</strong>
                 </button>
 
                 {isEditing && (
-                  <div className="entry-edit-panel" aria-label="Edit expense">
-                    <h4 className="entry-edit-title">Edit Expense</h4>
+                  <div className="entry-detail-panel" aria-label="Transaction details">
+                    <div className="entry-detail-heading">
+                      <div>
+                        <h4 className="entry-edit-title">Transaction details</h4>
+                        <p className="entry-detail-source">
+                          {sourceLabel(entry)}{entry.merchant ? ` · ${entry.merchant}` : ''}
+                        </p>
+                      </div>
+                      <strong className="entry-detail-amount">S${entry.amount.toFixed(2)}</strong>
+                    </div>
+
+                    <div className="entry-edit-panel" aria-label="Edit expense">
                     <div className="field-grid">
                       <label className="form-field" htmlFor="edit-entry-date">
                         <span>Date</span>
@@ -567,6 +786,32 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
                         Save Changes
                       </button>
                     </div>
+                    </div>
+
+                    <div className="entry-detail-actions">
+                      <button type="button" className="export-btn" onClick={() => void handleDuplicateEntry(entry)}>
+                        <Copy size={16} aria-hidden="true" />
+                        Duplicate
+                      </button>
+                      <button
+                        type="button"
+                        className="entry-delete-btn"
+                        onClick={() => setConfirmingDeleteId(entry.id)}
+                      >
+                        <Trash2 size={16} aria-hidden="true" />
+                        Delete
+                      </button>
+                    </div>
+
+                    {confirmingDeleteId === entry.id && (
+                      <div className="entry-delete-confirm" role="alert">
+                        <span>Delete this transaction?</span>
+                        <div>
+                          <button type="button" onClick={() => setConfirmingDeleteId(null)}>Keep it</button>
+                          <button type="button" onClick={() => void handleDeleteEntry(entry)}>Delete transaction</button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

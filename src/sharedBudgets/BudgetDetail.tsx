@@ -5,6 +5,7 @@ import { toLocalDateString } from '../dates'
 import { computeMemberTotals, currentSgtMonth, entriesForMonth, totalSpent } from './memberTotals'
 import OwnerTools from './OwnerTools'
 import { useSharedBudgets } from './SharedBudgetsContext'
+import { formatSGD } from '../format'
 
 export default function BudgetDetail() {
   const { active, session, error, closeBudget, addEntry, removeEntry, leaveActiveBudget } =
@@ -55,7 +56,7 @@ export default function BudgetDetail() {
       <div className="shared-progress">
         {budget.monthlyLimit !== null ? (
           <>
-            <p>{`S$${spent.toFixed(2)} of S$${budget.monthlyLimit.toFixed(2)}`}</p>
+            <p>{`${formatSGD(spent)} of ${formatSGD(budget.monthlyLimit)}`}</p>
             <div className="progress-track" aria-hidden="true">
               <div
                 className="progress-fill"
@@ -64,7 +65,7 @@ export default function BudgetDetail() {
             </div>
           </>
         ) : (
-          <p>{`S$${spent.toFixed(2)} spent this month`}</p>
+          <p>{`${formatSGD(spent)} spent this month`}</p>
         )}
       </div>
 
@@ -114,7 +115,7 @@ export default function BudgetDetail() {
         {memberTotals.map(t => (
           <div key={t.userId} className="member-total-row">
             <span>{t.displayName}</span>
-            <span>{`S$${t.total.toFixed(2)}`}</span>
+            <span>{formatSGD(t.total)}</span>
           </div>
         ))}
       </div>
@@ -130,7 +131,7 @@ export default function BudgetDetail() {
                 {nameOf.get(e.userId) ?? 'Former member'} - {e.date}
               </span>
             </div>
-            <span>{`S$${e.amount.toFixed(2)}`}</span>
+            <span>{formatSGD(e.amount)}</span>
             <button
               type="button"
               className="link-btn"

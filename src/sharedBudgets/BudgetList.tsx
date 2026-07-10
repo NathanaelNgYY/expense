@@ -1,6 +1,7 @@
 import { Users } from 'lucide-react'
 import { useState } from 'react'
 import { useSharedBudgets } from './SharedBudgetsContext'
+import { formatSGD } from '../format'
 
 export default function BudgetList() {
   const { budgets, error, createBudget, joinBudget, openBudget, signOut } = useSharedBudgets()
@@ -44,7 +45,7 @@ export default function BudgetList() {
             <Users className="ui-icon" aria-hidden="true" />
             <span className="shared-budget-name">{b.name}</span>
             <span className="muted">
-              {b.monthlyLimit !== null ? `S$${b.monthlyLimit.toFixed(2)}/mo` : 'No limit'}
+              {b.monthlyLimit !== null ? `${formatSGD(b.monthlyLimit)}/mo` : 'No limit'}
             </span>
           </button>
         ))}

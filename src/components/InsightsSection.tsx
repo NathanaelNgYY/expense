@@ -12,6 +12,7 @@ import {
 import { CATEGORIES } from '../types'
 import { categoryLabel } from '../categoryDisplay'
 import { getCategoryOverrides } from '../storage'
+import { formatSGD, formatSignedSGD } from '../format'
 import { fromLocalDateString } from '../dates'
 import type { Entry } from '../types'
 
@@ -21,10 +22,10 @@ interface Props {
   month: number
 }
 
-function formatSignedCurrency(value: number): string {
-  const sign = value > 0 ? '+' : value < 0 ? '-' : ''
-  return `${sign}S$${Math.abs(value).toFixed(2)}`
-}
+// Below this many entries in the month, "Mostly Wednesdays" and "Most expensive category"
+// are describing noise, not a habit. Printing them anyway makes every other number on the
+// screen look equally made up.
+const MIN_ENTRIES_FOR_INSIGHTS = 15
 
 export default function InsightsSection({ entries, year, month }: Props) {
   const overrides = getCategoryOverrides()
@@ -39,13 +40,30 @@ export default function InsightsSection({ entries, year, month }: Props) {
         month: 'short',
       })
     : ''
+  const monthEntryCount = entries.filter(entry => {
+    const [entryYear, entryMonth] = entry.date.split('-').map(Number)
+    return entryYear === year && entryMonth - 1 === month
+  }).length
+  const hasEnoughData = monthEntryCount >= MIN_ENTRIES_FOR_INSIGHTS
+
   const reviewParts = [
-    topCat ? `${categoryLabel(topCat.category, overrides)} led the month` : null,
-    topDay ? `Peak day ${format(fromLocalDateString(topDay.date), 'MMM d')}` : null,
-    delta !== null
-      ? `${delta > 0 ? 'Up' : 'Down'} S$${Math.abs(delta).toFixed(2)} vs last month`
-      : null,
+    topCat ? `You spent most on ${categoryLabel(topCat.category, overrides)}.` : null,
+    topDay ? `Biggest day: ${format(fromLocalDateString(topDay.date), 'EEE, MMM d')}.` : null,
+    delta !== null ? `${delta > 0 ? 'Up' : 'Down'} ${formatSGD(Math.abs(delta))} vs last month.` : null,
   ].filter(Boolean)
+
+  if (!hasEnoughData) {
+    return (
+      <>
+        <h3 className="section-title">Month Review</h3>
+        <div className="card month-review-card month-review-card--pending">
+          {monthEntryCount === 0
+            ? 'No spending logged this month yet.'
+            : `${MIN_ENTRIES_FOR_INSIGHTS - monthEntryCount} more ${MIN_ENTRIES_FOR_INSIGHTS - monthEntryCount === 1 ? 'entry' : 'entries'} and your spending patterns show up here.`}
+        </div>
+      </>
+    )
+  }
 
   if (!topCat && avgLunch === null && !topDay && !topDow && delta === null && !comparison) return null
 
@@ -54,7 +72,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
       <h3 className="section-title">Month Review</h3>
       {reviewParts.length > 0 && (
         <div className="card month-review-card">
-          {reviewParts.join(' | ')}
+          {reviewParts.join(' ')}
         </div>
       )}
       <div className="ios-list">
@@ -65,7 +83,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
               Most expensive
             </span>
             <span className="insight-value">
-              {categoryLabel(topCat.category, overrides)} - S${topCat.amount.toFixed(2)}
+              {categoryLabel(topCat.category, overrides)} — {formatSGD(topCat.amount)}
             </span>
           </div>
         )}
@@ -75,7 +93,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
               <Utensils size={16} strokeWidth={2} aria-hidden="true" />
               Avg lunch
             </span>
-            <span className="insight-value">S${avgLunch.toFixed(2)} per entry</span>
+            <span className="insight-value">{formatSGD(avgLunch)} per entry</span>
           </div>
         )}
         {topDay && (
@@ -85,7 +103,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
               Highest day
             </span>
             <span className="insight-value">
-              {format(fromLocalDateString(topDay.date), 'EEE MMM d')} - S${topDay.amount.toFixed(2)}
+              {format(fromLocalDateString(topDay.date), 'EEE MMM d')} — {formatSGD(topDay.amount)}
             </span>
           </div>
         )}
@@ -109,7 +127,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
               vs last month
             </span>
             <span className="insight-value" style={{ color: delta > 0 ? 'var(--red)' : 'var(--green)' }}>
-              {delta > 0 ? '+' : ''}S${delta.toFixed(2)}
+              {formatSignedSGD(delta)}
             </span>
           </div>
         )}
@@ -124,10 +142,10 @@ export default function InsightsSection({ entries, year, month }: Props) {
               className="month-change-total"
               style={{ color: comparison.totalDelta > 0 ? 'var(--red)' : 'var(--green)' }}
             >
-              {formatSignedCurrency(comparison.totalDelta)}
+              {formatSignedSGD(comparison.totalDelta)}
             </strong>
             <p className="card-subtitle">
-              S${comparison.currentTotal.toFixed(2)} this month | S${comparison.previousTotal.toFixed(2)} last month
+              {formatSGD(comparison.currentTotal)} this month &middot; {formatSGD(comparison.previousTotal)} last month
             </p>
           </div>
           <div className="ios-list">
@@ -139,7 +157,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
                 </span>
                 <span className="insight-value" style={{ color: 'var(--red)' }}>
                   {categoryLabel(comparison.biggestIncrease.category, overrides)}{' '}
-                  {formatSignedCurrency(comparison.biggestIncrease.delta)}
+                  {formatSignedSGD(comparison.biggestIncrease.delta)}
                 </span>
               </div>
             )}
@@ -151,7 +169,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
                 </span>
                 <span className="insight-value" style={{ color: 'var(--green)' }}>
                   {categoryLabel(comparison.biggestDecrease.category, overrides)}{' '}
-                  {formatSignedCurrency(comparison.biggestDecrease.delta)}
+                  {formatSignedSGD(comparison.biggestDecrease.delta)}
                 </span>
               </div>
             )}
@@ -168,7 +186,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
                     className="insight-value"
                     style={{ color: categoryDelta.delta > 0 ? 'var(--red)' : 'var(--green)' }}
                   >
-                    {formatSignedCurrency(categoryDelta.delta)}
+                    {formatSignedSGD(categoryDelta.delta)}
                   </span>
                 </div>
               )

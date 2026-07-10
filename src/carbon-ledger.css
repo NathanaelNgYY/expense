@@ -4,7 +4,10 @@
   --carbon-surface-raised: #292b2c;
   --carbon-text: #ece9e4;
   --carbon-text-secondary: #aaa59e;
-  --carbon-text-tertiary: #7f7c77;
+  /* Was #7f7c77, which is 4.15:1 on the canvas — under WCAG AA for body text, and this
+     token carries `.muted`, placeholders and the tab-bar labels. #94918c clears 4.5:1 on
+     canvas (5.49), surface (5.09) and raised (4.53). */
+  --carbon-text-tertiary: #94918c;
   --carbon-separator: #3a3b3c;
   --carbon-copper: #c98d68;
   --carbon-copper-pressed: #ad7352;

@@ -14,6 +14,7 @@ import {
   makeCustomCategoryId,
 } from '../storage'
 import { categoryIcon, categoryLabel } from '../categoryDisplay'
+import { formatSGD } from '../format'
 import { countEntriesForCategory } from '../compute'
 import { getApiToken, setApiToken } from '../api'
 import { useEntries } from '../EntriesContext'
@@ -115,10 +116,23 @@ export default function Settings({ onBack }: Props) {
     }))
   }
 
-  function handleSave() {
+  // Budget edits live in local state until Save. Without this the user could edit a field,
+  // scroll away to check another, leave the screen, and lose the change with no warning —
+  // so track what's actually persisted and let the UI say when they diverge.
+  const [savedSnapshot, setSavedSnapshot] = useState(() =>
+    JSON.stringify({ config: getBudgetConfig(), customCategories: getCustomCategories(), overrides: getCategoryOverrides() }),
+  )
+  const isDirty = JSON.stringify({ config, customCategories, overrides }) !== savedSnapshot
+
+  function persistBudgets() {
     saveBudgetConfig(config)
     saveCustomCategories(customCategories)
     saveCategoryOverrides(overrides)
+    setSavedSnapshot(JSON.stringify({ config, customCategories, overrides }))
+  }
+
+  function handleBack() {
+    if (isDirty && !confirm('You have unsaved budget changes. Leave without saving?')) return
     onBack()
   }
 
@@ -322,15 +336,13 @@ export default function Settings({ onBack }: Props) {
   return (
     <div className="screen settings">
       <div className="settings-header">
-        <button className="back-btn" type="button" onClick={onBack}>
+        <button className="back-btn" type="button" onClick={handleBack}>
           <ChevronLeft aria-hidden="true" size={21} strokeWidth={2.4} />
           Back
         </button>
         <h2 className="settings-title">Settings</h2>
         <div className="settings-header-spacer" />
       </div>
-
-      <ThemePicker />
 
       {shared.budgets.length > 0 && (
         <div className="scope-switch" role="group" aria-label="Settings scope">
@@ -696,27 +708,13 @@ export default function Settings({ onBack }: Props) {
       )}
 
       <div className="settings-total">
-        Total: S${total.toFixed(2)}
+        Total: {formatSGD(total)}
         {totalMismatch && (
-          <span className="settings-total-warning">!= S${config.monthlyIncome.toFixed(2)}</span>
+          <span className="settings-total-warning">&ne; {formatSGD(config.monthlyIncome)}</span>
         )}
       </div>
 
-      <button className="save-btn" type="button" onClick={handleSave}>
-        <Save aria-hidden="true" size={18} strokeWidth={2.3} />
-        Save Budgets
-      </button>
-
-      <div className="settings-divider" />
-
-      <h3 className="section-title">API</h3>
-
-      <label>API token
-        <input type="password" value={token} onChange={e => setToken(e.target.value)} placeholder="Bearer token" />
-      </label>
-      <button type="button" onClick={() => { setApiToken(token); void refresh() }}>Save token</button>
-
-      <div className="settings-divider" />
+      <h3 className="section-title">Data</h3>
 
       <button className="export-btn" type="button" onClick={handleExport}>
         <Download aria-hidden="true" size={18} strokeWidth={2.3} />
@@ -742,10 +740,64 @@ export default function Settings({ onBack }: Props) {
           {importMessage}
         </p>
       )}
-      <button className="danger-btn" type="button" onClick={handleReset}>
-        <Trash2 aria-hidden="true" size={18} strokeWidth={2.3} />
-        Reset This Month&apos;s Data
-      </button>
+
+      <ThemePicker />
+
+      {/* The token is plumbing for the iOS Shortcut, not a setting a normal user tunes.
+          Collapsed, explained, and kept away from the buttons that change money. */}
+      <details className="settings-advanced">
+        <summary className="settings-advanced__summary">Advanced</summary>
+        <div className="settings-advanced__body">
+          <p className="settings-advanced__help">
+            The API token authorises the iOS Shortcut that logs Apple Pay and DBS transactions
+            automatically. Leave this blank unless you are setting that up.
+          </p>
+          <div className="settings-row settings-row--stacked">
+            <label className="settings-label" htmlFor="api-token">API token</label>
+            <input
+              id="api-token"
+              type="password"
+              className="settings-input settings-input--wide"
+              value={token}
+              onChange={e => setToken(e.target.value)}
+              placeholder="Bearer token"
+              autoComplete="off"
+            />
+          </div>
+          <button
+            type="button"
+            className="export-btn"
+            onClick={() => { setApiToken(token); void refresh() }}
+          >
+            Save token
+          </button>
+        </div>
+      </details>
+
+      {/* Destructive actions were previously three identical pills apart from red text.
+          Colour alone is not a differentiator. */}
+      <section className="danger-zone" aria-labelledby="danger-zone-title">
+        <h3 id="danger-zone-title" className="danger-zone__title">Danger zone</h3>
+        <p className="danger-zone__body">
+          Deletes every entry logged this month. Exported CSVs are unaffected.
+        </p>
+        <button className="danger-btn" type="button" onClick={handleReset}>
+          <Trash2 aria-hidden="true" size={18} strokeWidth={2.3} />
+          Reset This Month&apos;s Data
+        </button>
+      </section>
+
+      {/* Only appears once there is something to save, and stays reachable without scrolling
+          back to find it. */}
+      {isDirty && (
+        <div className="settings-save-bar" role="region" aria-label="Unsaved changes">
+          <span className="settings-save-bar__note">Unsaved changes</span>
+          <button className="save-btn settings-save-bar__btn" type="button" onClick={persistBudgets}>
+            <Save aria-hidden="true" size={18} strokeWidth={2.3} />
+            Save changes
+          </button>
+        </div>
+      )}
         </>
       )}
     </div>

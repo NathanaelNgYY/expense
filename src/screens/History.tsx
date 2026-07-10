@@ -3,6 +3,7 @@ import { endOfWeek, format } from 'date-fns'
 import { ChevronLeft, ChevronRight, Copy, Search, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import InsightsSection from '../components/InsightsSection'
+import { formatSGD, formatSGDWhole } from '../format'
 import {
   entriesForMonth,
   lunchWeeklySpend,
@@ -248,7 +249,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     setAmountText('')
     setCategory(null)
     setNote('')
-    setSavedMessage(`Saved S$${amount.toFixed(2)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
+    setSavedMessage(`Saved ${formatSGD(amount)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
   }
 
   function startEditingEntry(entry: Entry) {
@@ -292,7 +293,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
       date: entryDate,
     })
 
-    setSavedMessage(`Updated S$${amount.toFixed(2)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
+    setSavedMessage(`Updated ${formatSGD(amount)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
     setEditingEntryId(null)
     setEditDraft(null)
   }
@@ -306,7 +307,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     })
     setEditingEntryId(null)
     setEditDraft(null)
-    setLedgerMessage(`Duplicated S$${entry.amount.toFixed(2)} transaction`)
+    setLedgerMessage(`Duplicated ${formatSGD(entry.amount)} transaction`)
   }
 
   async function handleDeleteEntry(entry: Entry) {
@@ -368,181 +369,16 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
         </button>
       </div>
 
-      <div className="cal-grid history__calendar" role="grid" aria-label="Daily spending">
-        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-          const dateStr = toLocalDateString(new Date(year, month, day))
-          const spend = spendByDay.get(day) ?? 0
-          const alpha = spend > 0 ? 0.15 + Math.min(1, spend / maxDaySpend) * 0.65 : 0.06
-          const isToday = dateStr === todayStr
-          const isSelected = dateStr === selectedDate
-
-          return (
-            <button
-              key={day}
-              type="button"
-              className={`cal-cell${isToday ? ' cal-cell--today' : ''}${isSelected ? ' cal-cell--selected' : ''}`}
-              style={{
-                background: `color-mix(in srgb, var(--primary) ${Math.round(alpha * 100)}%, transparent)`,
-              }}
-              onClick={() => handleDateChange(dateStr)}
-              aria-label={`${format(new Date(year, month, day), 'MMM d')}, S$${spend.toFixed(2)} spent`}
-              aria-pressed={isSelected}
-            >
-              {day}
-            </button>
-          )
-        })}
-      </div>
-      <p className="cal-caption muted">lighter = heavier spend day &middot; ring = today &middot; tap a day to backfill it</p>
-
-      <section className="card history-backfill history__backfill" aria-labelledby="backfill-title">
-        <div className="card-heading-row">
-          <div>
-            <h2 id="backfill-title" className="card-title">
-              Add missed expense
-            </h2>
-            <p className="card-subtitle">Backfill a day you forgot to log.</p>
-          </div>
-        </div>
-
-        <div className="field-grid">
-          <label className="form-field" htmlFor="backfill-date">
-            <span>Date</span>
-            <span className="date-input-shell">
-              <span className="date-input-value">
-                {format(fromLocalDateString(selectedDate), 'MMM d, yyyy')}
-              </span>
-              <input
-                id="backfill-date"
-                type="date"
-                className="date-input date-input--native"
-                value={selectedDate}
-                min={dateMin}
-                max={dateMax}
-                onChange={event => handleDateChange(event.target.value)}
-              />
-            </span>
-          </label>
-          <label className="form-field" htmlFor="backfill-amount">
-            <span>Amount</span>
-            <input
-              id="backfill-amount"
-              type="number"
-              className="amount-input"
-              value={amountText}
-              min="0"
-              step="0.01"
-              inputMode="decimal"
-              placeholder="0.00"
-              onChange={event => {
-                setAmountText(event.target.value)
-                setSavedMessage('')
-              }}
-            />
-          </label>
-        </div>
-
-        <p className="category-label">
-          Category <span className="muted">(optional)</span>
-        </p>
-        <div className="chips chips--compact">
-          {categoryOptions.map(opt => (
-            <button
-              key={opt.id}
-              type="button"
-              className={`chip chip--compact ${category === opt.id ? 'chip--selected' : ''}`}
-              onClick={() => {
-                setCategory(currentCategory => (currentCategory === opt.id ? null : opt.id))
-                setSavedMessage('')
-              }}
-            >
-              <BudgetIcon name={opt.icon} />
-              <span>{opt.label}</span>
-            </button>
-          ))}
-        </div>
-
-        <input
-          type="text"
-          className="note-input"
-          placeholder="Note (optional)"
-          value={note}
-          onChange={event => {
-            setNote(event.target.value)
-            setSavedMessage('')
-          }}
-        />
-
-        <button
-          className="save-btn history-save-btn"
-          type="button"
-          onClick={handleSaveBackfill}
-          disabled={!canSaveBackfill}
-        >
-          Add to History
-        </button>
-        {savedMessage && (
-          <p className="save-feedback" role="status">
-            {savedMessage}
-          </p>
-        )}
-      </section>
-
       <div className="card history-summary history__summary">
         <div>
           <span className="summary-label">Month total</span>
-          <strong className="summary-amount">S${monthTotal.toFixed(2)}</strong>
+          <strong className="summary-amount">{formatSGD(monthTotal)}</strong>
         </div>
         <div>
           <span className="summary-label">Entries</span>
           <strong className="summary-amount">{monthEntries.length}</strong>
         </div>
       </div>
-
-      <h3 className="section-title">Weekly Spending</h3>
-
-      {weeks.map(weekStart => {
-        const total = weeklyTotal(entries, weekStart)
-        const lunch = lunchWeeklySpend(entries, weekStart)
-        const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
-        const label = `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`
-        const totalPct = progressPercent(total, weeklyBudget)
-        const lunchPct = progressPercent(lunch, lunchWeeklyAvg)
-
-        return (
-          <div key={weekStart.toISOString()} className="card week-bar">
-            <div className="week-bar-header">
-              <span className="week-bar-label">{label}</span>
-              <span className="week-bar-total">S${total.toFixed(2)}</span>
-            </div>
-            <div className="progress-bar" style={{ marginTop: 6 }}>
-              <div
-                className="progress-fill"
-                style={{
-                  width: `${totalPct}%`,
-                  background: total > weeklyBudget ? 'var(--red)' : 'var(--green)',
-                }}
-              />
-            </div>
-            <div className="week-bar-lunch">
-              <span className="muted">
-                Lunch S${lunch.toFixed(2)} / ~S${lunchWeeklyAvg.toFixed(0)}
-              </span>
-              <div className="progress-bar thin" style={{ marginTop: 4 }}>
-                <div
-                  className="progress-fill"
-                  style={{
-                    width: `${lunchPct}%`,
-                    background: lunch > lunchWeeklyAvg ? 'var(--red)' : 'var(--blue)',
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )
-      })}
-
-      <InsightsSection entries={entries} year={year} month={month} />
 
       <h3 className="section-title">Entries</h3>
       <section className="history-ledger-tools" aria-label="Transaction search and filters">
@@ -694,7 +530,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
                     {entry.merchant && <span className="entry-merchant">{entry.merchant}</span>}
                     {entry.note && <span className="entry-note">{entry.note}</span>}
                   </span>
-                  <strong className="entry-amount">S${entry.amount.toFixed(2)}</strong>
+                  <strong className="entry-amount">{formatSGD(entry.amount)}</strong>
                 </button>
 
                 {isEditing && (
@@ -706,7 +542,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
                           {sourceLabel(entry)}{entry.merchant ? ` · ${entry.merchant}` : ''}
                         </p>
                       </div>
-                      <strong className="entry-detail-amount">S${entry.amount.toFixed(2)}</strong>
+                      <strong className="entry-detail-amount">{formatSGD(entry.amount)}</strong>
                     </div>
 
                     <div className="entry-edit-panel" aria-label="Edit expense">
@@ -768,6 +604,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
                       id="edit-entry-note"
                       type="text"
                       className="note-input"
+                      aria-label="Note (optional)"
                       placeholder="Note (optional)"
                       value={editDraft.note}
                       onChange={event => handleEditDraftChange({ note: event.target.value })}
@@ -819,6 +656,181 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
           })}
         </div>
       )}
+      {/* Analysis and backfill sit beneath the ledger: someone opening "History" wants
+          the transaction list, not a data-entry form. Collapsed by default so the list
+          is what the screen is. */}
+      <details className="history-analysis">
+        <summary className="history-analysis__summary">Calendar, backfill &amp; insights</summary>
+        <div className="history-analysis__body">
+        <div className="cal-grid history__calendar" role="grid" aria-label="Daily spending">
+          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
+            const dateStr = toLocalDateString(new Date(year, month, day))
+            const spend = spendByDay.get(day) ?? 0
+            const alpha = spend > 0 ? 0.15 + Math.min(1, spend / maxDaySpend) * 0.65 : 0.06
+            const isToday = dateStr === todayStr
+            const isSelected = dateStr === selectedDate
+
+            return (
+              <button
+                key={day}
+                type="button"
+                className={`cal-cell${isToday ? ' cal-cell--today' : ''}${isSelected ? ' cal-cell--selected' : ''}`}
+                style={{
+                  background: `color-mix(in srgb, var(--primary) ${Math.round(alpha * 100)}%, transparent)`,
+                }}
+                onClick={() => handleDateChange(dateStr)}
+                aria-label={`${format(new Date(year, month, day), 'MMM d')}, ${formatSGD(spend)} spent`}
+                aria-pressed={isSelected}
+              >
+                {day}
+              </button>
+            )
+          })}
+        </div>
+        <p className="cal-caption muted">lighter = heavier spend day &middot; ring = today &middot; tap a day to backfill it</p>
+
+        <section className="card history-backfill history__backfill" aria-labelledby="backfill-title">
+          <div className="card-heading-row">
+            <div>
+              <h2 id="backfill-title" className="card-title">
+                Add missed expense
+              </h2>
+              <p className="card-subtitle">Backfill a day you forgot to log.</p>
+            </div>
+          </div>
+
+          <div className="field-grid">
+            <label className="form-field" htmlFor="backfill-date">
+              <span>Date</span>
+              <span className="date-input-shell">
+                <span className="date-input-value">
+                  {format(fromLocalDateString(selectedDate), 'MMM d, yyyy')}
+                </span>
+                <input
+                  id="backfill-date"
+                  type="date"
+                  className="date-input date-input--native"
+                  value={selectedDate}
+                  min={dateMin}
+                  max={dateMax}
+                  onChange={event => handleDateChange(event.target.value)}
+                />
+              </span>
+            </label>
+            <label className="form-field" htmlFor="backfill-amount">
+              <span>Amount</span>
+              <input
+                id="backfill-amount"
+                type="number"
+                className="amount-input"
+                value={amountText}
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="0.00"
+                onChange={event => {
+                  setAmountText(event.target.value)
+                  setSavedMessage('')
+                }}
+              />
+            </label>
+          </div>
+
+          <p className="category-label">
+            Category <span className="muted">(optional)</span>
+          </p>
+          <div className="chips chips--compact">
+            {categoryOptions.map(opt => (
+              <button
+                key={opt.id}
+                type="button"
+                className={`chip chip--compact ${category === opt.id ? 'chip--selected' : ''}`}
+                onClick={() => {
+                  setCategory(currentCategory => (currentCategory === opt.id ? null : opt.id))
+                  setSavedMessage('')
+                }}
+              >
+                <BudgetIcon name={opt.icon} />
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <input
+            type="text"
+            className="note-input"
+            aria-label="Note (optional)"
+            placeholder="Note (optional)"
+            value={note}
+            onChange={event => {
+              setNote(event.target.value)
+              setSavedMessage('')
+            }}
+          />
+
+          <button
+            className="save-btn history-save-btn"
+            type="button"
+            onClick={handleSaveBackfill}
+            disabled={!canSaveBackfill}
+          >
+            Add to History
+          </button>
+          {savedMessage && (
+            <p className="save-feedback" role="status">
+              {savedMessage}
+            </p>
+          )}
+        </section>
+
+        <h3 className="section-title">Weekly Spending</h3>
+
+        {weeks.map(weekStart => {
+          const total = weeklyTotal(entries, weekStart)
+          const lunch = lunchWeeklySpend(entries, weekStart)
+          const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
+          const label = `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`
+          const totalPct = progressPercent(total, weeklyBudget)
+          const lunchPct = progressPercent(lunch, lunchWeeklyAvg)
+
+          return (
+            <div key={weekStart.toISOString()} className="card week-bar">
+              <div className="week-bar-header">
+                <span className="week-bar-label">{label}</span>
+                <span className="week-bar-total">{formatSGD(total)}</span>
+              </div>
+              <div className="progress-bar" style={{ marginTop: 6 }}>
+                <div
+                  className="progress-fill"
+                  style={{
+                    width: `${totalPct}%`,
+                    background: total > weeklyBudget ? 'var(--red)' : 'var(--green)',
+                  }}
+                />
+              </div>
+              <div className="week-bar-lunch">
+                <span className="muted">
+                  Lunch {formatSGD(lunch)} / ~{formatSGDWhole(lunchWeeklyAvg)}
+                </span>
+                <div className="progress-bar thin" style={{ marginTop: 4 }}>
+                  <div
+                    className="progress-fill"
+                    style={{
+                      width: `${lunchPct}%`,
+                      background: lunch > lunchWeeklyAvg ? 'var(--red)' : 'var(--blue)',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )
+        })}
+
+        <InsightsSection entries={entries} year={year} month={month} />
+
+        </div>
+      </details>
+
     </div>
   )
 }

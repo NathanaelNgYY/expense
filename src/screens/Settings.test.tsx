@@ -87,12 +87,14 @@ function changeInput(input: HTMLInputElement, value: string): void {
   })
 }
 
+// The save control is now a sticky bar that only exists while the form is dirty, and it
+// persists in place rather than navigating back.
 function clickSave(container: HTMLElement): void {
   const button = [...container.querySelectorAll('button')].find(element =>
-    element.textContent?.includes('Save Budgets'),
+    element.textContent?.includes('Save changes'),
   )
 
-  if (!button) throw new Error('Save Budgets button was not found')
+  if (!button) throw new Error('Save changes button was not found — is the form dirty?')
 
   act(() => {
     button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
@@ -274,11 +276,12 @@ describe('Settings custom categories', () => {
     const { container } = rendered
 
     clickButton(container, b => b.getAttribute('aria-label') === 'Remove Gym')
-    clickSave(container)
 
     // Removal blocked: the category survives and an error is shown.
     expect(readCustom()).toHaveLength(1)
     expect(container).toHaveTextContent(/use "Gym"/)
+    // Nothing changed, so there is nothing to save — the save bar must stay away.
+    expect(container).not.toHaveTextContent('Save changes')
   })
 
   it('renames a basic category and persists the override on save', () => {

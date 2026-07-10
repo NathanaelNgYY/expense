@@ -14,17 +14,13 @@ import {
   winRate,
 } from '../pokerCompute'
 import { formatStakesLabel } from '../pokerDisplay'
+import { formatSignedSGD } from '../format'
 import LogSession from './LogSession'
 
 function formatDuration(hours: number): string {
   const h = Math.floor(hours)
   const m = Math.round((hours - h) * 60)
   return h > 0 ? `${h}h ${m}m` : `${m}m`
-}
-
-function formatSignedCurrency(value: number): string {
-  const sign = value >= 0 ? '+' : '-'
-  return `${sign}S$${Math.abs(value).toFixed(2)}`
 }
 
 function formatPercent(value: number): string {
@@ -66,13 +62,13 @@ export default function Poker() {
           <div className="poker-stat">
             <span className="summary-label">Total P&amp;L</span>
             <strong className="poker-pnl" style={{ color: pnlColor }}>
-              {formatSignedCurrency(pnl)}
+              {formatSignedSGD(pnl)}
             </strong>
           </div>
           <div className="poker-stat poker-stat--right">
             <span className="summary-label">Hourly rate</span>
             <strong className="poker-pnl" style={{ color: rateColor }}>
-              {rate !== null ? `${formatSignedCurrency(rate)}/hr` : '-'}
+              {rate !== null ? `${formatSignedSGD(rate)}/hr` : '-'}
             </strong>
           </div>
         </div>
@@ -95,7 +91,7 @@ export default function Poker() {
                 className="insight-value"
                 style={{ color: thisMonthPnl >= 0 ? 'var(--green)' : 'var(--red)' }}
               >
-                {formatSignedCurrency(thisMonthPnl)}
+                {formatSignedSGD(thisMonthPnl)}
               </span>
             </div>
             {ratePct !== null && (
@@ -131,7 +127,7 @@ export default function Poker() {
                   className="insight-value"
                   style={{ color: biggest.pnl >= 0 ? 'var(--green)' : 'var(--red)' }}
                 >
-                  {formatSignedCurrency(biggest.pnl)}
+                  {formatSignedSGD(biggest.pnl)}
                 </span>
               </div>
             )}
@@ -144,13 +140,13 @@ export default function Poker() {
                   key={`${index}-${value}`}
                   className={`bankroll-trend-point ${value >= 0 ? 'is-positive' : 'is-negative'}`}
                   style={{ height: `${Math.max(16, (Math.abs(value) / trendMax) * 100)}%` }}
-                  title={formatSignedCurrency(value)}
+                  title={formatSignedSGD(value)}
                 />
               ))}
             </div>
             <div className="bankroll-card-footer">
               <span className="muted">Bankroll trend</span>
-              <strong style={{ color: pnlColor }}>{formatSignedCurrency(pnl)}</strong>
+              <strong style={{ color: pnlColor }}>{formatSignedSGD(pnl)}</strong>
             </div>
           </div>
         </>
@@ -182,7 +178,7 @@ export default function Poker() {
                   className="entry-amount"
                   style={{ color: pl >= 0 ? 'var(--green)' : 'var(--red)' }}
                 >
-                  {formatSignedCurrency(pl)}
+                  {formatSignedSGD(pl)}
                 </span>
               </div>
             )

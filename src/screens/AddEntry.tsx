@@ -8,8 +8,15 @@ import { getCustomCategories, getCategoryOverrides } from '../storage'
 import { buildCategoryOptions } from '../categoryDisplay'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
 
+/** What was just logged, so the shell can confirm it and offer an undo. */
+export interface SavedEntrySummary {
+  id: string
+  amount: number
+  categoryLabel: string | null
+}
+
 interface Props {
-  onSave: () => void
+  onSave: (saved?: SavedEntrySummary) => void
 }
 
 const NUMPAD_KEYS = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
@@ -88,13 +95,20 @@ export default function AddEntry({ onSave }: Props) {
     // addEntry commits the optimistic, locally-durable entry synchronously and queues the
     // network POST; don't await it, so we navigate home instantly instead of blocking the
     // UI on the serverless round-trip. The sync queue flushes the create in the background.
+    // Mint the id here so the shell can offer an Undo without waiting for the round-trip.
+    const id = crypto.randomUUID()
     void addPersonalEntry({
+      id,
       amount,
       category,
       note,
       date: toLocalDateString(),
     })
-    onSave()
+    onSave({
+      id,
+      amount,
+      categoryLabel: category ? categoryOptions.find(o => o.id === category)?.label ?? null : null,
+    })
   }
 
   return (
@@ -207,6 +221,7 @@ export default function AddEntry({ onSave }: Props) {
         <input
           type="text"
           className="note-input"
+          aria-label="Note (optional)"
           placeholder="Note (optional)"
           value={note}
           onChange={e => setNote(e.target.value)}

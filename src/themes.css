@@ -358,25 +358,91 @@ body,
   line-height: 1.25;
 }
 
-[data-theme='deep-sea'] .add-entry__categories,
-[data-theme='deep-sea'] .add-entry__details,
-[data-theme='copper-current'] .add-entry__categories,
-[data-theme='copper-current'] .add-entry__details,
-[data-theme='berry-circuit'] .add-entry__categories,
-[data-theme='berry-circuit'] .add-entry__details {
+/* The label/chips and note/save pairs are groups, not loose siblings. Every theme
+   needs them grouped; `.save-btn`'s `margin-top: auto` only pushes to the bottom of
+   the screen column, not of this block. */
+.add-entry__categories,
+.add-entry__details {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-[data-theme='deep-sea'] .add-entry__details .save-btn,
-[data-theme='copper-current'] .add-entry__details .save-btn,
-[data-theme='berry-circuit'] .add-entry__details .save-btn {
+.add-entry__details .save-btn {
   margin-top: 0;
 }
 
 [data-theme='original-dark'] .home-budget-overview {
   display: none;
+}
+
+/* Original Dark: vertical rhythm for Add Entry.
+   The screen has to hold a hero amount, a 4-row keypad, a wrapping chip set and a
+   form in one non-scrolling column, so the spacing is fluid on vh: it opens up on a
+   tall phone and compresses before it ever pushes Save under the fold. The other
+   themes re-lay-out this screen themselves and opt out of this rhythm. */
+[data-theme='original-dark'] .theme-screen--add {
+  --add-space: clamp(10px, 2.3vh, 22px);
+  --add-space-section: clamp(14px, 3.4vh, 30px);
+  gap: 0;
+}
+
+[data-theme='original-dark'] .theme-screen--add > .screen-title {
+  margin-bottom: 6px;
+}
+
+/* The hero soaks up leftover column height (centering the figure in its own zone)
+   rather than letting a single `auto` margin open one lopsided void further down.
+   Capped, so on a very tall phone the remainder still falls to the details block. */
+[data-theme='original-dark'] .add-entry__amount {
+  flex: 1 1 auto;
+  min-height: clamp(58px, 9.4vh, 92px);
+  max-height: clamp(76px, 13.5vh, 126px);
+  padding: 6px 0 4px;
+  margin-bottom: var(--add-space);
+}
+
+[data-theme='original-dark'] .add-entry__keypad {
+  flex: 0 0 auto;
+  gap: clamp(7px, 1.3vh, 12px);
+  margin: 0 0 var(--add-space-section);
+}
+
+[data-theme='original-dark'] .add-entry__keypad .numpad-key {
+  min-height: clamp(46px, 7vh, 64px);
+}
+
+[data-theme='original-dark'] .add-entry__categories .chips {
+  gap: 10px;
+}
+
+[data-theme='original-dark'] .add-entry__details {
+  gap: clamp(10px, 1.7vh, 14px);
+  margin-top: auto;
+  padding-top: var(--add-space-section);
+}
+
+/* Short phones (SE-class): the column can't hold hero + keypad + chips + form at
+   full rhythm, so trim the screen's own padding and the chip height before the
+   rhythm collapses and Save slides under the tab bar. */
+@media (max-height: 720px) {
+  [data-theme='original-dark'] .theme-screen--add {
+    padding-top: calc(12px + env(safe-area-inset-top));
+    padding-bottom: 12px;
+  }
+
+  [data-theme='original-dark'] .theme-screen--add > .screen-title {
+    margin-bottom: 2px;
+  }
+
+  [data-theme='original-dark'] .add-entry__categories .chip {
+    min-height: 34px;
+    padding-block: 5px;
+  }
+
+  [data-theme='original-dark'] .add-entry__details .note-input {
+    min-height: 44px;
+  }
 }
 
 /* Deep Sea Revised: radial overview, soft grouping, calm spacing */

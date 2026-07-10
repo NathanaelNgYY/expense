@@ -1,8 +1,9 @@
-import { useEffect, useState, type KeyboardEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, ChevronDown, ChevronUp, Minus, Settings as SettingsIcon, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
 import BudgetUsageRing from '../components/BudgetUsageRing'
+import SyncStatus from '../components/SyncStatus'
 import { getBudgetConfig, getCustomCategories, getCategoryOverrides } from '../storage'
 import { categoryIcon, categoryLabel } from '../categoryDisplay'
 import {
@@ -16,6 +17,7 @@ import {
   safeToSpendPerDay,
 } from '../compute'
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
+import { formatSGD, formatSGDWhole, formatRemaining } from '../format'
 import type { Category, Entry } from '../types'
 import { useEntries } from '../EntriesContext'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
@@ -29,6 +31,7 @@ import type { SharedEntry } from '../sharedBudgets/types'
 
 interface Props {
   onSettings: () => void
+  onAddEntry: () => void
 }
 
 const COMMITTED_CATEGORIES: Category[] = ['savings', 'investments']
@@ -39,10 +42,6 @@ const COMMITTED_CATEGORY_SET = new Set<Category>(COMMITTED_CATEGORIES)
 // A key is any category id (built-in or custom) or the 'uncategorized' bucket.
 type ExpandKey = string
 
-function formatWholeCurrency(value: number): string {
-  return `S$${value.toLocaleString('en-SG', { maximumFractionDigits: 0 })}`
-}
-
 function entrySort(a: Entry, b: Entry): number {
   return b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
 }
@@ -51,13 +50,13 @@ function sharedEntrySort(a: SharedEntry, b: SharedEntry): number {
   return b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)
 }
 
-export default function Dashboard({ onSettings }: Props) {
+export default function Dashboard({ onSettings, onAddEntry }: Props) {
   const [expandedCategory, setExpandedCategory] = useState<ExpandKey | null>(null)
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
   const [viewScope, setViewScope] = useState<'personal' | 'shared'>('personal')
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
   const now = new Date()
-  const { entries, removeEntry } = useEntries()
+  const { entries, removeEntry, sync, refresh } = useEntries()
   const shared = useSharedBudgets()
   const config = getBudgetConfig()
   const customCategories = getCustomCategories()
@@ -135,9 +134,20 @@ export default function Dashboard({ onSettings }: Props) {
     }
   }
 
-  function passInfo(item: PassItem): { title: string; subtitle: string; amount: number | null; pct: number } {
+  // `amount` is money spent; `limit` is the ceiling it is spent against. The card leads with
+  // what the user actually came to find out — how much is left — and keeps spent as support.
+  // A shared budget with no ceiling has no "left", so it falls back to leading with spent.
+  interface PassInfo {
+    title: string
+    subtitle: string
+    amount: number | null
+    limit: number | null
+    pct: number
+  }
+
+  function passInfo(item: PassItem): PassInfo {
     if (item.kind === 'personal') {
-      return { title: 'Personal', subtitle: monthLabel, amount: monthTotal, pct: budgetUsedPct }
+      return { title: 'Personal', subtitle: monthLabel, amount: monthTotal, limit: monthlyIncome, pct: budgetUsedPct }
     }
     if (shared.active?.budget.id === item.id) {
       const month = currentSgtMonth()
@@ -145,21 +155,14 @@ export default function Dashboard({ onSettings }: Props) {
       const spent = sharedTotalSpent(monthEntries)
       const limit = shared.active.budget.monthlyLimit
       const pct = limit !== null && limit > 0 ? Math.min(100, (spent / limit) * 100) : spent > 0 ? 100 : 0
-      return { title: item.name, subtitle: 'Shared', amount: spent, pct }
+      return { title: item.name, subtitle: 'Shared', amount: spent, limit, pct }
     }
-    return { title: item.name, subtitle: 'Shared', amount: null, pct: 0 }
+    return { title: item.name, subtitle: 'Shared', amount: null, limit: null, pct: 0 }
   }
 
   function toggleCategory(category: ExpandKey) {
     setConfirmingDeleteId(null)
     setExpandedCategory(current => (current === category ? null : category))
-  }
-
-  function handleCategoryKeyDown(event: KeyboardEvent<HTMLDivElement>, category: ExpandKey) {
-    if (event.key !== 'Enter' && event.key !== ' ') return
-
-    event.preventDefault()
-    toggleCategory(category)
   }
 
   // One expense row, shared by the category lists and the Uncategorized list. Shows an
@@ -203,7 +206,7 @@ export default function Dashboard({ onSettings }: Props) {
           {entry.note && <span className="category-expense-note">{entry.note}</span>}
         </span>
         <span className="category-expense-trailing">
-          <strong className="category-expense-amount">S${entry.amount.toFixed(2)}</strong>
+          <strong className="category-expense-amount">{formatSGD(entry.amount)}</strong>
           <button
             type="button"
             className="expense-delete-btn"
@@ -222,17 +225,23 @@ export default function Dashboard({ onSettings }: Props) {
       <header className="dashboard-header">
         <div>
           <div className="month-label">{monthLabel}</div>
-          <div className="income-label">{formatWholeCurrency(monthlyIncome)} / month</div>
+          <div className="income-label">{formatSGDWhole(monthlyIncome)} / month</div>
         </div>
         <button className="settings-icon-btn" type="button" onClick={onSettings} aria-label="Settings">
           <SettingsIcon aria-hidden="true" size={19} strokeWidth={2} />
         </button>
       </header>
 
-      <div className="pass-stack" style={{ height: `${132 + (passItems.length - 1) * 22}px` }}>
+      <SyncStatus sync={sync} onRetry={() => void refresh()} />
+
+      <div className="pass-stack" style={{ height: `${168 + (passItems.length - 1) * 22}px` }}>
         {passItems.map((item, depth) => {
           const info = passInfo(item)
           const key = item.kind === 'personal' ? 'personal' : item.id
+          const loaded = info.amount !== null
+          const capped = loaded && info.limit !== null && info.limit > 0
+          const remaining = capped ? info.limit! - info.amount! : null
+          const overspent = remaining !== null && remaining < 0
 
           return (
             <div
@@ -246,12 +255,32 @@ export default function Dashboard({ onSettings }: Props) {
             >
               <div className="pass-title">{info.title}</div>
               <div className="pass-subtitle">{info.subtitle}</div>
-              <div className="pass-amt">
-                {info.amount !== null ? formatWholeCurrency(info.amount) : 'Tap to open'}
-              </div>
+              {!loaded ? (
+                <div className="pass-amt">Tap to open</div>
+              ) : capped ? (
+                <>
+                  <div className="pass-amt-label">{overspent ? 'Over budget by' : 'Left to spend'}</div>
+                  <div className={`pass-amt ${overspent ? 'pass-amt--over' : ''}`}>
+                    {formatSGDWhole(Math.abs(remaining!))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="pass-amt-label">Spent this month</div>
+                  <div className="pass-amt">{formatSGDWhole(info.amount!)}</div>
+                </>
+              )}
               <div className="progress-bar pass-bar">
-                <div className="progress-fill" style={{ width: `${info.pct}%` }} />
+                <div
+                  className="progress-fill"
+                  style={overspent ? { width: '100%', background: 'var(--red)' } : { width: `${info.pct}%` }}
+                />
               </div>
+              {capped && (
+                <div className="pass-meta">
+                  {formatSGDWhole(info.amount!)} of {formatSGDWhole(info.limit!)} spent
+                </div>
+              )}
               {depth !== 0 && (
                 <button
                   type="button"
@@ -273,7 +302,22 @@ export default function Dashboard({ onSettings }: Props) {
         />
       )}
 
-      {viewScope === 'personal' && (
+      {/* A brand-new user's dashboard is otherwise five rows of S$0.00 and a buffer they
+          have no way to interpret. Give them the one action that makes the rest mean
+          something, and show the budget breakdown once there is spending to break down. */}
+      {viewScope === 'personal' && entries.length === 0 && (
+        <section className="first-run" aria-labelledby="first-run-title">
+          <h3 id="first-run-title" className="first-run__title">Log your first expense</h3>
+          <p className="first-run__body">
+            Your categories fill in as you spend. Nothing to set up first.
+          </p>
+          <button type="button" className="save-btn first-run__cta" onClick={onAddEntry}>
+            Add an expense
+          </button>
+        </section>
+      )}
+
+      {viewScope === 'personal' && entries.length > 0 && (
         <>
 
       <section className="home-budget-overview" aria-label="Monthly budget overview">
@@ -281,9 +325,9 @@ export default function Dashboard({ onSettings }: Props) {
         <div className="home-budget-overview__copy">
           <span className="summary-label">Safe to spend today</span>
           <strong className="home-safe-amount">
-            S${Math.max(0, safePerDay).toFixed(2)}
+            {formatSGD(Math.max(0, safePerDay))}
           </strong>
-          <span className="muted">S${buffer.toFixed(2)} remains in your monthly buffer</span>
+          <span className="muted">{formatRemaining(buffer)} in your monthly buffer</span>
         </div>
       </section>
 
@@ -297,7 +341,7 @@ export default function Dashboard({ onSettings }: Props) {
             className="buffer-amount"
             style={{ color: buffer <= 0 ? 'var(--red)' : 'var(--yellow)' }}
           >
-            S${buffer.toFixed(2)} left
+            {formatRemaining(buffer)}
           </span>
         </div>
         <div className="progress-bar" style={{ marginTop: 8 }}>
@@ -311,7 +355,7 @@ export default function Dashboard({ onSettings }: Props) {
         </div>
         {totalOverage > 0 && (
           <p className="buffer-sub muted">
-            S${totalOverage.toFixed(2)} used by others and overages
+            {formatSGD(totalOverage)} used by others and overages
           </p>
         )}
       </div>
@@ -338,24 +382,20 @@ export default function Dashboard({ onSettings }: Props) {
         const statusLabel = committed
           ? spent >= budget
             ? 'Committed'
-            : `S$${deficit.toFixed(2)} to commit`
+            : `${formatSGD(deficit)} to commit`
           : !hasBudget
             ? ''
-            : over
-              ? `S$${Math.abs(deficit).toFixed(2)} over`
-              : `S$${deficit.toFixed(2)} left`
+            : formatRemaining(deficit)
 
         return (
           <article
             key={cat}
             className={`card category-row-card ${committed ? 'category-row--committed' : ''}`}
           >
-            <div
-              role="button"
-              tabIndex={0}
+            <button
+              type="button"
               className="category-row-toggle"
               onClick={() => toggleCategory(cat)}
-              onKeyDown={event => handleCategoryKeyDown(event, cat)}
               aria-expanded={expanded}
               aria-controls={`category-expenses-${cat}`}
             >
@@ -366,7 +406,7 @@ export default function Dashboard({ onSettings }: Props) {
                 </span>
                 <span className="cat-row-right">
                   <span className="cat-spent-group">
-                    <span className="cat-spent">S${spent.toFixed(2)}</span>
+                    <span className="cat-spent">{formatSGD(spent)}</span>
                     {expanded ? (
                       <ChevronUp className="cat-chevron" aria-hidden="true" strokeWidth={2.4} />
                     ) : (
@@ -397,11 +437,13 @@ export default function Dashboard({ onSettings }: Props) {
               </span>
               <span className="cat-row-bottom">
                 <span className="muted">
-                  {hasBudget ? `${committed ? 'Monthly commitment' : 'Budget'} S$${budget}` : 'No budget set'}
+                  {hasBudget
+                    ? `${committed ? 'Monthly commitment' : 'Budget'} ${formatSGDWhole(budget)}`
+                    : 'No budget set'}
                 </span>
                 {over && <span className="over-note">Taken from buffer</span>}
               </span>
-            </div>
+            </button>
 
             {expanded && (
               <div
@@ -428,12 +470,10 @@ export default function Dashboard({ onSettings }: Props) {
 
       {uncategorizedEntries.length > 0 && (
         <article className="card category-row-card">
-          <div
-            role="button"
-            tabIndex={0}
+          <button
+            type="button"
             className="category-row-toggle"
             onClick={() => toggleCategory('uncategorized')}
-            onKeyDown={event => handleCategoryKeyDown(event, 'uncategorized')}
             aria-expanded={uncategorizedExpanded}
             aria-controls="category-expenses-uncategorized"
           >
@@ -444,7 +484,7 @@ export default function Dashboard({ onSettings }: Props) {
               </span>
               <span className="cat-row-right">
                 <span className="cat-spent-group">
-                  <span className="cat-spent">S${uncategorizedTotal.toFixed(2)}</span>
+                  <span className="cat-spent">{formatSGD(uncategorizedTotal)}</span>
                   {uncategorizedExpanded ? (
                     <ChevronUp className="cat-chevron" aria-hidden="true" strokeWidth={2.4} />
                   ) : (
@@ -458,7 +498,7 @@ export default function Dashboard({ onSettings }: Props) {
                 {uncategorizedEntries.length} entr{uncategorizedEntries.length === 1 ? 'y' : 'ies'} to categorize in History
               </span>
             </span>
-          </div>
+          </button>
 
           {uncategorizedExpanded && (
             <div
@@ -480,7 +520,7 @@ export default function Dashboard({ onSettings }: Props) {
 
       <div className="card week-strip">
         <span className="muted">This week</span>
-        <span className="week-amount">S${thisWeek.toFixed(2)}</span>
+        <span className="week-amount">{formatSGD(thisWeek)}</span>
       </div>
         </>
       )}
@@ -525,7 +565,7 @@ function SharedBudgetDashboard({
           <div>
             <span className="summary-label">{budget.name}</span>
             <strong className="summary-amount summary-amount--large">
-              S${spent.toFixed(2)}
+              {formatSGD(spent)}
             </strong>
           </div>
           <div className="summary-pill">{monthEntries.length} entries</div>
@@ -545,7 +585,7 @@ function SharedBudgetDashboard({
         <div className="summary-card-bottom">
           <span className="muted">
             {budget.monthlyLimit !== null
-              ? `S$${spent.toFixed(2)} of S$${budget.monthlyLimit.toFixed(2)}`
+              ? `${formatSGD(spent)} of ${formatSGD(budget.monthlyLimit)}`
               : 'No monthly limit set'}
           </span>
         </div>
@@ -556,7 +596,7 @@ function SharedBudgetDashboard({
         {memberTotals.map(total => (
           <div key={total.userId} className="settings-row">
             <span className="settings-label">{total.displayName}</span>
-            <strong>S${total.total.toFixed(2)}</strong>
+            <strong>{formatSGD(total.total)}</strong>
           </div>
         ))}
       </div>
@@ -579,8 +619,8 @@ function SharedBudgetDashboard({
                 </span>
                 <span className={over ? 'cat-status cat-status--over' : 'cat-status cat-status--ok'}>
                   {hasBudget
-                    ? `S$${categorySpent.toFixed(2)} / S$${category.budgetAmount!.toFixed(2)}`
-                    : `S$${categorySpent.toFixed(2)}`}
+                    ? `${formatSGD(categorySpent)} / ${formatSGD(category.budgetAmount!)}`
+                    : formatSGD(categorySpent)}
                 </span>
               </div>
             )
@@ -602,7 +642,7 @@ function SharedBudgetDashboard({
                   {format(fromLocalDateString(entry.date), 'EEE, MMM d')}
                 </span>
               </div>
-              <strong>S${entry.amount.toFixed(2)}</strong>
+              <strong>{formatSGD(entry.amount)}</strong>
             </div>
           ))
         )}

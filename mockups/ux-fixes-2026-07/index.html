@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Budget Tracker — UX fixes, July 2026</title>
+<style>
+  :root {
+    --canvas: #131415;
+    --surface: #1c1e1f;
+    --surface-2: #232526;
+    --line: #34363a;
+    --ink: #eceae6;
+    --ink-2: #a9a49c;
+    --copper: #c98d68;
+    --sage: #79a58a;
+    --brick: #ca766b;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: clamp(24px, 5vw, 72px) clamp(16px, 4vw, 48px) 120px;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { border-bottom: 1px solid var(--line); padding-bottom: 34px; margin-bottom: 8px; }
+
+  h1 {
+    font: 700 clamp(30px, 4.4vw, 46px)/1.1 Georgia, "Times New Roman", serif;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  .sub { color: var(--ink-2); margin-top: 12px; max-width: 68ch; }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    margin-top: 22px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink-2);
+  }
+  .meta b { color: var(--sage); font-weight: 600; }
+
+  section { margin-top: 72px; }
+
+  h2 {
+    font: 700 24px/1.25 Georgia, serif;
+    letter-spacing: -0.015em;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .tag {
+    flex: 0 0 auto;
+    font: 600 10.5px/1 var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 8px;
+    border-radius: 5px;
+    border: 1px solid currentColor;
+  }
+  .tag.critical { color: var(--brick); }
+  .tag.high { color: var(--copper); }
+  .tag.a11y { color: var(--sage); }
+
+  .why { color: var(--ink-2); margin-top: 14px; max-width: 74ch; }
+  .why code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--ink);
+  }
+
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 26px;
+    margin-top: 28px;
+  }
+
+  figure {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  figcaption {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    font: 600 12px/1 var(--mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  figcaption::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+  .before figcaption { color: var(--brick); }
+  .before figcaption::before { background: var(--brick); }
+  .after figcaption { color: var(--sage); }
+  .after figcaption::before { background: var(--sage); }
+
+  figcaption span { color: var(--ink-2); font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+  img { display: block; width: 100%; height: auto; }
+
+  .note {
+    display: flex;
+    gap: 12px;
+    border-left: none;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 22px;
+    color: var(--ink-2);
+    font-size: 14.5px;
+  }
+  .note b { color: var(--ink); font-weight: 600; }
+
+  table { border-collapse: collapse; width: 100%; margin-top: 24px; font-size: 14px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 600 11px/1 var(--mono); letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-2); }
+  td.n { font-family: var(--mono); white-space: nowrap; }
+  .ok { color: var(--sage); }
+  .bad { color: var(--brick); }
+
+  .scroller { overflow-x: auto; }
+
+  footer {
+    margin-top: 90px;
+    padding-top: 26px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-2);
+    font-size: 14px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    figure { transition: border-color 180ms ease; }
+    figure:hover { border-color: #4a4d52; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Budget Tracker — UX fixes</h1>
+  <p class="sub">
+    Every image below is a real render of the running app at 390&times;844, captured with Playwright.
+    These are not comps: what you see is what ships. Left is the build before this pass, right is after.
+  </p>
+  <div class="meta">
+    <span><b>321</b> tests passing (43 files)</span>
+    <span><b>0</b> contrast failures (was 32)</span>
+    <span><b>0</b> viewport overflows (was 1)</span>
+    <span>build <b>green</b></span>
+    <span>lint <b>clean</b></span>
+  </div>
+</header>
+
+<section>
+  <h2>Home <span class="tag critical">Critical</span></h2>
+  <p class="why">
+    The hero was a large copper figure with no word saying what it measured. It was <em>total spent</em>,
+    while every row beneath it discussed money <em>remaining</em>, so a user could not tell a good month
+    from a disaster at a glance. It now leads with what people actually open the app to find out, and
+    flips to <code>Over budget by</code> in red when the month has gone wrong. The buffer line no longer
+    renders the malformed <code>S$-999776.89 left</code>.
+  </p>
+  <div class="pair">
+    <figure class="before">
+      <figcaption>Before <span>— unlabeled hero</span></figcaption>
+      <img src="before/home.png" alt="Home screen before: a large copper number with no label saying what it measures">
+    </figure>
+    <figure class="after">
+      <figcaption>After <span>— &ldquo;Left to spend&rdquo;</span></figcaption>
+      <img src="after/home.png" alt="Home screen after: hero reads Left to spend, S$519, with S$681 of S$1,200 spent beneath">
+    </figure>
+    <figure class="after">
+      <figcaption>After <span>— overspent</span></figcaption>
+      <img src="after/home-overspent.png" alt="Home screen when overspent: hero reads Over budget by S$381 in red, buffer reads S$676.90 over">
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2>Failed saves were silent <span class="tag critical">Critical</span></h2>
+  <p class="why">
+    <code>EntriesContext.tsx</code> had three bare <code>catch {}</code> blocks. Entries were never lost (the sync queue is durable), but a failed drain was completely invisible. You tapped Save, the app
+    navigated home confidently, and the server might never have received it. The banner is amber rather
+    than red because the data genuinely <em>is</em> safe; it distinguishes unsynced writes from a plain
+    offline read.
+  </p>
+  <div class="pair">
+    <figure class="after">
+      <figcaption>After <span>— write queued, network down</span></figcaption>
+      <img src="after/home-sync-failed.png" alt="Home screen showing: 1 entry not synced. Saved on this device. We'll retry automatically. With a Retry button.">
+    </figure>
+    <figure class="after">
+      <figcaption>After <span>— save confirmation + undo</span></figcaption>
+      <img src="after/home-toast.png" alt="Toast above the tab bar reading Saved S$12.50 to Lunch with an Undo button">
+    </figure>
+  </div>
+  <div class="note">
+    <div><b>Verified end-to-end.</b> With <code>/api/**</code> blackholed, saving S$9.90 now surfaces
+    &ldquo;1 entry not synced&rdquo; and the entry still counts. Tapping <b>Undo</b> on the toast reverts
+    the entry for real (Lunch went S$18.30 &rarr; S$5.80).</div>
+  </div>
+</section>
+
+<section>
+  <h2>History led with a form, not history <span class="tag critical">Critical</span></h2>
+  <p class="why">
+    Tapping <em>History</em> opened a calendar heatmap followed by an <b>&ldquo;Add missed expense&rdquo;</b>
+    form: a second entry form using a plain text field where Add Entry uses a numpad. The transaction list,
+    the thing the tab's name promises, sat roughly 1,600px down the scroll. The list now leads. The calendar,
+    backfill form and analytics moved into a disclosure beneath it, so nothing was removed.
+  </p>
+  <div class="pair">
+    <figure class="before">
+      <figcaption>Before <span>— calendar, then a form</span></figcaption>
+      <img src="before/history.png" alt="History before: month calendar heatmap followed by an Add missed expense form">
+    </figure>
+    <figure class="after">
+      <figcaption>After <span>— the ledger leads</span></figcaption>
+      <img src="after/history.png" alt="History after: month total, then search and the transaction list above the fold">
+    </figure>
+    <figure class="after">
+      <figcaption>After <span>— analysis, on demand</span></figcaption>
+      <img src="after/history-analysis-open.png" alt="History with the Calendar, backfill and insights disclosure expanded">
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2>Settings could silently lose your budget edits <span class="tag critical">Critical</span></h2>
+  <p class="why">
+    <code>Save Budgets</code> sat mid-scroll, was not sticky, and had no dirty-state indicator: edit a budget,
+    scroll to check another, navigate away, and the change was gone without a word. Meanwhile four large theme
+    cards occupied the entire first viewport, above Income and Monthly Budgets. The API token was a raw,
+    unstyled browser input next to a default grey button.
+  </p>
+  <div class="pair">
+    <figure class="before">
+      <figcaption>Before <span>— themes first</span></figcaption>
+      <img src="before/settings-top.png" alt="Settings before: four large theme cards fill the first screen">
+    </figure>
+    <figure class="after">
+      <figcaption>After <span>— income &amp; budgets first</span></figcaption>
+      <img src="after/settings-top.png" alt="Settings after: Income and Monthly Budgets are the first things on screen">
+    </figure>
+    <figure class="after">
+      <figcaption>After <span>— sticky dirty-state save</span></figcaption>
+      <img src="after/settings-dirty.png" alt="Settings with an unsaved edit: a sticky bar reads Unsaved changes with a Save changes button">
+    </figure>
+  </div>
+  <div class="pair">
+    <figure class="before">
+      <figcaption>Before <span>— unstyled API, loose destructive button</span></figcaption>
+      <img src="before/settings-bottom.png" alt="Settings before: raw API token input and a Reset This Month's Data button identical in shape to Import CSV">
+    </figure>
+    <figure class="after">
+      <figcaption>After <span>— Advanced + Danger zone</span></figcaption>
+      <img src="after/settings-bottom.png" alt="Settings after: collapsed Advanced disclosure and a bounded red Danger zone">
+    </figure>
+  </div>
+  <div class="note">
+    <div><b>Colour alone is not a differentiator.</b> <code>Reset This Month&rsquo;s Data</code> was previously
+    the same pill as <code>Import CSV</code>, distinguished only by red text. It now lives in a bounded region
+    that says what it deletes.</div>
+  </div>
+</section>
+
+<section>
+  <h2>Add Entry &amp; the empty state <span class="tag high">High</span></h2>
+  <p class="why">
+    On <code>original-dark</code> the note input sat flush against Save at a <b>0px</b> gap. The other three
+    themes had spacing rules this one never got, and <code>margin-top: auto</code> was a no-op because the
+    parent was not a flex column. The disabled Save button rendered at roughly 2:1 contrast. A new user's
+    first screen was five rows of <code>S$0.00</code> with no way forward.
+  </p>
+  <div class="pair">
+    <figure class="before">
+      <figcaption>Before <span>— note flush against Save</span></figcaption>
+      <img src="before/add.png" alt="Add Entry before: cramped keypad, chips and a note field touching the Save button">
+    </figure>
+    <figure class="after">
+      <figcaption>After <span>— fluid vertical rhythm</span></figcaption>
+      <img src="after/add.png" alt="Add Entry after: breathing room between the keypad, chips, note and Save">
+    </figure>
+    <figure class="after">
+      <figcaption>After <span>— first run</span></figcaption>
+      <img src="after/home-empty.png" alt="Empty home screen showing Log your first expense with an Add an expense button">
+    </figure>
+  </div>
+  <p class="why">
+    Spacing is driven by <code>clamp()</code> on <code>vh</code>, so the screen opens up on a tall phone and
+    compresses before it would ever push Save under the fold. Measured on four devices:
+  </p>
+  <div class="scroller">
+  <table>
+    <thead>
+      <tr><th>Device</th><th>Note &rarr; Save</th><th>Key height</th><th>Overflow</th><th>Save below fold</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="n">iPhone SE — 375&times;667</td><td class="n"><span class="bad">0px</span> &rarr; <span class="ok">11px</span></td><td class="n">47px</td><td class="n"><span class="bad">51px</span> &rarr; <span class="ok">0</span></td><td class="n"><span class="bad">yes</span> &rarr; <span class="ok">no</span></td></tr>
+      <tr><td class="n">iPhone 13 mini — 375&times;812</td><td class="n"><span class="bad">0px</span> &rarr; <span class="ok">14px</span></td><td class="n">57px</td><td class="n"><span class="ok">0</span></td><td class="n"><span class="ok">no</span></td></tr>
+      <tr><td class="n">iPhone 14 — 390&times;844</td><td class="n"><span class="bad">0px</span> &rarr; <span class="ok">14px</span></td><td class="n">59px</td><td class="n"><span class="ok">0</span></td><td class="n"><span class="ok">no</span></td></tr>
+      <tr><td class="n">iPhone Pro Max — 430&times;932</td><td class="n"><span class="bad">0px</span> &rarr; <span class="ok">14px</span></td><td class="n">64px</td><td class="n"><span class="ok">0</span></td><td class="n"><span class="ok">no</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2>Accessibility <span class="tag a11y">Measured</span></h2>
+  <p class="why">
+    Contrast and touch targets were measured with a computed-style probe over the live DOM, then re-measured
+    after the fixes. Hit areas were confirmed with <code>elementFromPoint</code> rather than bounding boxes,
+    because the small controls grow their tap region with a pseudo-element and keep their visual size.
+  </p>
+  <div class="scroller">
+  <table>
+    <thead>
+      <tr><th>Issue</th><th>Before</th><th>After</th><th>Fix</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>.muted</code> body text</td>
+        <td class="n bad">3.84–4.15:1</td>
+        <td class="n ok">4.53–5.49:1</td>
+        <td><code>--carbon-text-tertiary</code> <code>#7f7c77</code> &rarr; <code>#94918c</code></td>
+      </tr>
+      <tr>
+        <td>Tab-bar labels</td>
+        <td class="n bad">4.2:1</td>
+        <td class="n ok">5.56:1</td>
+        <td>same token</td>
+      </tr>
+      <tr>
+        <td>Disabled Save button</td>
+        <td class="n bad">~2:1</td>
+        <td class="n ok">5.6:1</td>
+        <td>flat surface instead of <code>opacity: 0.28</code></td>
+      </tr>
+      <tr>
+        <td>Settings gear · month nav</td>
+        <td class="n bad">34&times;34</td>
+        <td class="n ok">44&times;44 tap</td>
+        <td><code>::before</code> hit area, visual size kept</td>
+      </tr>
+      <tr>
+        <td>Category edit pencil</td>
+        <td class="n bad">24&times;24</td>
+        <td class="n ok">44&times;44 tap</td>
+        <td><code>::before</code> hit area</td>
+      </tr>
+      <tr>
+        <td>Category chips</td>
+        <td class="n bad">38px / 34px</td>
+        <td class="n ok">44px</td>
+        <td><code>min-height</code></td>
+      </tr>
+      <tr>
+        <td>Calendar cells</td>
+        <td class="n bad">43&times;43</td>
+        <td class="n ok">44&times;44</td>
+        <td><code>min-height</code> floor</td>
+      </tr>
+      <tr>
+        <td>Category rows</td>
+        <td class="n bad"><code>div[role=button]</code></td>
+        <td class="n ok"><code>&lt;button&gt;</code></td>
+        <td>native semantics &amp; keyboard</td>
+      </tr>
+      <tr>
+        <td>Note inputs</td>
+        <td class="n bad">placeholder only</td>
+        <td class="n ok">named</td>
+        <td><code>aria-label</code></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">
+    <div><b>Correction to the audit.</b> It claimed 11 unlabeled inputs in Settings. That was a false positive
+    in my own probe, which checked <code>aria-label</code> and text content but never <code>&lt;label for&gt;</code>.
+    Re-checked properly: every budget input was already correctly labelled. The only genuinely unnamed inputs
+    were the two <code>.note-input</code> fields, now fixed.</div>
+  </div>
+</section>
+
+<section>
+  <h2>Consistency <span class="tag high">High</span></h2>
+  <p class="why">
+    46 call sites wrote <code>S$${'{'}value.toFixed(2){'}'}</code> by hand against 2 that used
+    <code>toLocaleString</code>, which is why the hero printed <code>S$1,000,681</code> while the row beneath
+    printed <code>S$1000012.89</code>. All rendered money now routes through one <code>src/format.ts</code>
+    helper, covered by 11 tests.
+  </p>
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Case</th><th>Before</th><th>After</th></tr></thead>
+    <tbody>
+      <tr><td>Thousands</td><td class="n bad">S$1000012.89</td><td class="n ok">S$1,000,012.89</td></tr>
+      <tr><td>Negative budget</td><td class="n bad">S$-999776.89 left</td><td class="n ok">S$999,776.89 over</td></tr>
+      <tr><td>Poker P&amp;L at zero</td><td class="n bad">+S$0.00 <span style="color:var(--sage)">(green)</span></td><td class="n ok">S$0.00 (unsigned)</td></tr>
+      <tr><td>Month review</td><td class="n bad">Others led the month | Peak day Jul 6</td><td class="n ok">You spent most on Others. Biggest day: Sat, Jul 6.</td></tr>
+      <tr><td>Insights on 7 entries</td><td class="n bad">&ldquo;Mostly Wednesdays&rdquo;</td><td class="n ok">suppressed below 15 entries</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  <p>
+    Scope was deliberately bounded to quick wins and Critical items: the five-tab navigation is unchanged,
+    and the History backfill form was kept rather than folded into Add Entry. The full findings, including the
+    items not taken, live in <code>docs/UX_AUDIT_2026-07-10.md</code>.
+  </p>
+</footer>
+
+</div>
+</body>
+</html>

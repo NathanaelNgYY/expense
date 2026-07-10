@@ -17,6 +17,17 @@ import {
   setPendingCreates,
 } from './syncQueue'
 
+/**
+ * What the user is owed after they tap Save. Mutations are locally durable the instant
+ * they're committed (state + cache + queue), so nothing is ever lost — but until the queue
+ * drains, the server doesn't have them. `pendingCount > 0` with `failed` is the state the
+ * app used to hide behind a bare `catch {}`.
+ */
+export interface SyncState {
+  pendingCount: number
+  failed: boolean
+}
+
 interface EntriesContextValue {
   entries: Entry[]
   addEntry: (input: NewManualEntry) => Promise<void>
@@ -24,6 +35,7 @@ interface EntriesContextValue {
   editEntry: (id: string, patch: Partial<Entry>) => Promise<void>
   removeEntry: (id: string) => Promise<void>
   refresh: () => Promise<void>
+  sync: SyncState
 }
 
 const EntriesContext = createContext<EntriesContextValue | null>(null)
@@ -82,6 +94,7 @@ async function migrateIfNeeded(serverEntries: Entry[]): Promise<boolean> {
 
 export function EntriesProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<Entry[]>(() => getCachedEntries())
+  const [sync, setSync] = useState<SyncState>(() => ({ pendingCount: getQueue().length, failed: false }))
   // Mirrors `entries` synchronously so sequential awaited mutations (clearing a month,
   // importing many rows) compose off the latest value instead of a stale render closure.
   const entriesRef = useRef(entries)
@@ -93,9 +106,26 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
     setCachedEntries(next)
   }, [])
 
+  // Reflects the queue into `sync` so the UI can say what the network is doing. Called after
+  // every mutation and every refresh, including the failing paths.
+  const reportSync = useCallback((failed: boolean) => {
+    setSync({ pendingCount: getQueue().length, failed })
+  }, [])
+
+  // A just-queued mutation should show as pending immediately, without waiting for the
+  // background refresh to come back and tell us what we already know.
+  const bumpPending = useCallback(() => {
+    setSync(current => ({ ...current, pendingCount: getQueue().length }))
+  }, [])
+
   const refresh = useCallback(async () => {
     try {
-      await flushQueue()
+      const flushed = await flushQueue()
+      if (!flushed) {
+        // The queue survived; the network didn't. Say so rather than failing silently.
+        reportSync(true)
+        return
+      }
       const server = await fetchEntries()
       const migrated = await migrateIfNeeded(server)
       const fresh = migrated ? await fetchEntries() : server
@@ -120,10 +150,12 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
       const extras = stillUnseen.map(id => localById.get(id)!)
 
       commit([...fresh.filter(e => !hidden.has(e.id)), ...extras])
+      reportSync(false)
     } catch {
-      // offline: keep showing cache
+      // Offline: the cache is still correct and the queue is still durable. Surface it.
+      reportSync(true)
     }
-  }, [commit])
+  }, [commit, reportSync])
 
   useEffect(() => {
     if (didInit.current) return
@@ -160,34 +192,38 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
     // has propagated the write) keeps showing it instead of dropping it.
     setPendingCreates([...new Set([...getPendingCreates(), optimistic.id])])
     setQueue([...getQueue(), { op: 'create', entry: optimistic }])
+    bumpPending()
     // The entry is already locally durable (state + cache + queue); flush and reconcile in the
     // background instead of awaiting the network so the UI never blocks on the serverless round-trip.
     void refresh()
-  }, [commit, refresh])
+  }, [bumpPending, commit, refresh])
 
   const editEntry = useCallback(async (id: string, patch: Partial<Entry>) => {
     commit(entriesRef.current.map(e => (e.id === id ? { ...e, ...patch } : e)))
     setQueue([...getQueue(), { op: 'update', id, patch }])
+    bumpPending()
     void refresh() // background flush + reconcile; the edit is already locally durable
-  }, [commit, refresh])
+  }, [bumpPending, commit, refresh])
 
   const restoreEntry = useCallback(async (entry: Entry) => {
     commit([...entriesRef.current.filter(candidate => candidate.id !== entry.id), entry])
     setPendingCreates([...new Set([...getPendingCreates(), entry.id])])
     setQueue([...getQueue(), { op: 'create', entry }])
+    bumpPending()
     void refresh()
-  }, [commit, refresh])
+  }, [bumpPending, commit, refresh])
 
   const removeEntry = useCallback(async (id: string) => {
     commit(entriesRef.current.filter(e => e.id !== id))
     // Tombstone the id so an eventually-consistent server refresh can't resurrect it.
     setTombstones([...new Set([...getTombstones(), id])])
     setQueue([...getQueue(), { op: 'delete', id }])
+    bumpPending()
     void refresh() // background flush + reconcile; the delete is already locally durable
-  }, [commit, refresh])
+  }, [bumpPending, commit, refresh])
 
   return (
-    <EntriesContext.Provider value={{ entries, addEntry, restoreEntry, editEntry, removeEntry, refresh }}>
+    <EntriesContext.Provider value={{ entries, addEntry, restoreEntry, editEntry, removeEntry, refresh, sync }}>
       {children}
     </EntriesContext.Provider>
   )

@@ -63,7 +63,7 @@ function renderWithEntries(entries: unknown[] = []) {
   act(() => {
     root.render(
       <EntriesProvider>
-        <Dashboard onSettings={() => undefined} />
+        <Dashboard onSettings={() => undefined} onAddEntry={() => undefined} />
       </EntriesProvider>,
     )
   })
@@ -172,8 +172,11 @@ describe('Dashboard category expense history', () => {
   })
 
   it('deletes an entry after confirming with the red minus button', () => {
+    // A second entry keeps the dashboard populated, so this exercises the delete itself
+    // rather than the empty state (covered below).
     const rendered = renderWithEntries([
       entry({ amount: 12.5, category: 'lunch', date: '2026-05-04' }),
+      entry({ id: 'keeper', amount: 2.4, category: 'transport', date: '2026-05-04' }),
     ])
     root = rendered.root
 
@@ -197,6 +200,30 @@ describe('Dashboard category expense history', () => {
     const after = rendered.container.querySelector('#category-expenses-lunch') as HTMLElement
     expect(after).not.toHaveTextContent('S$12.50')
     expect(after).toHaveTextContent('No lunch entries in the past 2 weeks.')
+  })
+
+  it('falls back to the first-run prompt once the last entry is deleted', () => {
+    const rendered = renderWithEntries([
+      entry({ amount: 12.5, category: 'lunch', date: '2026-05-04' }),
+    ])
+    root = rendered.root
+
+    clickCategory(rendered.container, 'Lunch')
+    const list = rendered.container.querySelector('#category-expenses-lunch') as HTMLElement
+    act(() => {
+      ;(list.querySelector('[aria-label="Delete entry"]') as HTMLElement).dispatchEvent(
+        new MouseEvent('click', { bubbles: true }),
+      )
+    })
+    act(() => {
+      ;(list.querySelector('[aria-label="Confirm delete"]') as HTMLElement).dispatchEvent(
+        new MouseEvent('click', { bubbles: true }),
+      )
+    })
+
+    // No entries left means no budget breakdown to show — offer the one useful action.
+    expect(rendered.container).toHaveTextContent('Log your first expense')
+    expect(rendered.container.querySelector('#category-expenses-lunch')).toBeNull()
   })
 
   it('keeps the entry when the delete confirmation is cancelled', () => {

@@ -22,6 +22,7 @@ describe('App', () => {
     })
     // TabBar renders a nav with aria-label="Main navigation"
     expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument()
+    expect(screen.getByRole('main')).toBeInTheDocument()
     // Home button is present and active
     expect(screen.getByRole('button', { name: 'Home' })).toBeInTheDocument()
   })

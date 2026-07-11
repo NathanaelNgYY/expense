@@ -92,6 +92,20 @@ describe('AddEntry', () => {
     expect(saveButton).not.toBeDisabled()
   })
 
+  it('accepts amount input from a physical keyboard', async () => {
+    await act(async () => {
+      renderWithEntries()
+    })
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '5', bubbles: true }))
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '.', bubbles: true }))
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }))
+    })
+
+    expect(screen.getByText('S$5.20')).toBeInTheDocument()
+  })
+
   it('renders the amount as individually animated glyphs', async () => {
     await act(async () => {
       renderWithEntries()

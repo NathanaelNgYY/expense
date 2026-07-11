@@ -16,7 +16,7 @@ describe('buildEntryFromIngest', () => {
       source: 'apple-pay',
       merchant: 'Ya Kun Kaya Toast',
       currency: 'SGD',
-      dedupeKey: 'apple_pay:2026-06-09:4.50:ya-kun-kaya-toast',
+      dedupeKey: 'apple_pay:2026-06-09T00:15:00.000Z:4.50:ya-kun-kaya-toast',
     })
   })
 
@@ -27,7 +27,7 @@ describe('buildEntryFromIngest', () => {
     )
     expect(entry.source).toBe('dbs-email')
     expect(entry.note).toBe('PayNow · AH HUAT TRADING')
-    expect(entry.dedupeKey).toBe('dbs_email:2026-06-10:7.20:ah-huat-trading')
+    expect(entry.dedupeKey).toBe('dbs_email:2026-06-10T04:00:00.000Z:7.20:ah-huat-trading')
   })
 
   it('labels a card email note', () => {

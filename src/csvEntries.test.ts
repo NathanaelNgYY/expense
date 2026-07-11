@@ -77,4 +77,11 @@ describe('CSV entry import and export', () => {
 
     expect(() => parseEntriesCsv(csv)).toThrow('Row 2 has an invalid date')
   })
+
+  it.each(['=1+1', '+cmd', '-2+3', '@SUM(A1:A2)'])('neutralizes spreadsheet formula note %s on export', note => {
+    const csv = entriesToCsv([{ id: 'entry-1', amount: 1, category: null, note, date: '2026-05-11' }])
+
+    expect(csv).toContain(`"'${note}"`)
+    expect(parseEntriesCsv(csv)[0].note).toBe(`'${note}`)
+  })
 })

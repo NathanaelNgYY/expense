@@ -1,8 +1,10 @@
-import type { Category, Entry, EntrySource } from '../types'
-import type { DbsChannel } from './dbsEmail'
-import { guessCategory } from './category'
-import { buildDedupeKey } from './dedupe'
-import { sgtDateString } from './sgtDate'
+// Explicit .ts extensions: this module is bundled by Deno for the ingest Edge Function,
+// which cannot resolve extensionless specifiers. Vite/tsc accept them (allowImportingTsExtensions).
+import type { Category, Entry, EntrySource } from '../types.ts'
+import type { DbsChannel } from './dbsEmail.ts'
+import { guessCategory } from './category.ts'
+import { buildDedupeKey } from './dedupe.ts'
+import { sgtDateString } from './sgtDate.ts'
 
 export interface IngestInput {
   sourceKind: 'apple_pay' | 'dbs_email'
@@ -32,7 +34,8 @@ export function buildEntryFromIngest(
   now: Date = new Date(),
 ): Entry {
   const occurredAt = input.occurredAt ?? now.toISOString()
-  const date = sgtDateString(occurredAt)
+  const canonicalOccurredAt = new Date(occurredAt).toISOString()
+  const date = sgtDateString(canonicalOccurredAt)
   const merchant = input.merchant.trim()
   const label = sourceLabel(input)
   const note = merchant ? `${label} · ${merchant}` : label
@@ -47,8 +50,8 @@ export function buildEntryFromIngest(
     date,
     source: SOURCE_MAP[input.sourceKind],
     merchant,
-    occurredAt,
+    occurredAt: canonicalOccurredAt,
     currency: input.currency ?? 'SGD',
-    dedupeKey: buildDedupeKey(input.sourceKind, date, input.amount, merchant),
+    dedupeKey: buildDedupeKey(input.sourceKind, canonicalOccurredAt, input.amount, merchant),
   }
 }

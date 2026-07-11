@@ -15,6 +15,10 @@ function csvCell(value: string | number | null): string {
   return `"${text.replace(/"/g, '""')}"`
 }
 
+function spreadsheetSafeCsvCell(value: string): string {
+  return csvCell(/^[=+\-@]/.test(value) ? `'${value}` : value)
+}
+
 function parseCsv(text: string): string[][] {
   const rows: string[][] = []
   let row: string[] = []
@@ -132,7 +136,7 @@ export function entriesToCsv(entries: Entry[]): string {
   return [
     ENTRY_HEADERS.map(csvCell).join(','),
     ...entries.map(entry =>
-      [entry.id, entry.amount, entry.category, entry.note, entry.date].map(csvCell).join(','),
+      [csvCell(entry.id), csvCell(entry.amount), csvCell(entry.category), spreadsheetSafeCsvCell(entry.note), csvCell(entry.date)].join(','),
     ),
   ].join('\n')
 }

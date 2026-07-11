@@ -1,18 +1,19 @@
 // src/App.tsx
-import { useCallback, useState } from 'react'
+import { lazy, Suspense, useCallback, useState } from 'react'
 import TabBar from './components/TabBar'
 import type { Tab } from './components/TabBar'
 import SaveToast, { type ToastEntry } from './components/SaveToast'
 import Dashboard from './screens/Dashboard'
 import AddEntry from './screens/AddEntry'
 import type { SavedEntrySummary } from './screens/AddEntry'
-import History from './screens/History'
-import Settings from './screens/Settings'
-import Poker from './screens/Poker'
 import { EntriesProvider, useEntries } from './EntriesContext'
-import SharedScreen from './sharedBudgets/SharedScreen'
 import { SharedBudgetsProvider } from './sharedBudgets/SharedBudgetsContext'
 import { ThemeProvider } from './theme/ThemeContext'
+
+const History = lazy(() => import('./screens/History'))
+const Settings = lazy(() => import('./screens/Settings'))
+const Poker = lazy(() => import('./screens/Poker'))
+const SharedScreen = lazy(() => import('./sharedBudgets/SharedScreen'))
 
 function initialTab(): Tab {
   const params = new URLSearchParams(window.location.search)
@@ -43,20 +44,24 @@ function AppShell() {
   if (showSettings) {
     return (
       <div className="app">
-        <Settings onBack={() => setShowSettings(false)} />
+        <main><Suspense fallback={null}><Settings onBack={() => setShowSettings(false)} /></Suspense></main>
       </div>
     )
   }
 
   return (
     <div className="app">
-      {tab === 'home' && (
-        <Dashboard onSettings={() => setShowSettings(true)} onAddEntry={() => setTab('add')} />
-      )}
-      {tab === 'add' && <AddEntry onSave={handleSave} />}
-      {tab === 'history' && <History />}
-      {tab === 'poker' && <Poker />}
-      {tab === 'shared' && <SharedScreen />}
+      <main>
+        <Suspense fallback={null}>
+          {tab === 'home' && (
+            <Dashboard onSettings={() => setShowSettings(true)} onAddEntry={() => setTab('add')} />
+          )}
+          {tab === 'add' && <AddEntry onSave={handleSave} />}
+          {tab === 'history' && <History />}
+          {tab === 'poker' && <Poker />}
+          {tab === 'shared' && <SharedScreen />}
+        </Suspense>
+      </main>
       {toast && <SaveToast entry={toast} onUndo={handleUndo} onDismiss={dismissToast} />}
       <TabBar active={tab} onChange={setTab} />
     </div>

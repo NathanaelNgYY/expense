@@ -8,7 +8,7 @@ export type DedupeSource = 'apple_pay' | 'dbs_email' | 'manual'
 
 export function buildDedupeKey(
   source: DedupeSource,
-  date: string,
+  occurrence: string,
   amount: number,
   merchant: string,
   id = '',
@@ -16,5 +16,5 @@ export function buildDedupeKey(
   if (source === 'manual') {
     return `manual:${id}`
   }
-  return `${source}:${date}:${amount.toFixed(2)}:${normalizeMerchant(merchant)}`
+  return `${source}:${occurrence}:${amount.toFixed(2)}:${normalizeMerchant(merchant)}`
 }

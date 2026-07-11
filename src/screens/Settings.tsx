@@ -16,7 +16,6 @@ import {
 import { categoryIcon, categoryLabel } from '../categoryDisplay'
 import { formatSGD } from '../format'
 import { countEntriesForCategory } from '../compute'
-import { getApiToken, setApiToken } from '../api'
 import { useEntries } from '../EntriesContext'
 import { CATEGORY_LABELS } from '../types'
 import type { BudgetConfig, Category, CategoryOverride, CustomCategory } from '../types'
@@ -60,7 +59,6 @@ export default function Settings({ onBack }: Props) {
   const [removeError, setRemoveError] = useState('')
   const [importMessage, setImportMessage] = useState('')
   const [importError, setImportError] = useState(false)
-  const [token, setToken] = useState(getApiToken())
   const [settingsScope, setSettingsScope] = useState<'personal' | 'shared'>('personal')
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
   const [sharedLimit, setSharedLimit] = useState('')
@@ -71,8 +69,9 @@ export default function Settings({ onBack }: Props) {
   const [sharedNewIcon, setSharedNewIcon] = useState<string>(CUSTOM_ICON_NAMES[0])
   const [sharedBusy, setSharedBusy] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
-  const { entries, addEntry, removeEntry, refresh } = useEntries()
+  const { entries, addEntry, removeEntry } = useEntries()
   const shared = useSharedBudgets()
+  const { openBudget } = shared
 
   const customTotal = customCategories.reduce((sum, c) => sum + (c.budget ?? 0), 0)
   const total = BUDGET_FIELDS.reduce((sum, field) => sum + config[field.key], 0) + customTotal
@@ -85,8 +84,8 @@ export default function Settings({ onBack }: Props) {
 
   useEffect(() => {
     if (settingsScope !== 'shared' || !selectedSharedBudgetId || activeSharedReady) return
-    void shared.openBudget(selectedSharedBudgetId).catch(() => {})
-  }, [activeSharedReady, selectedSharedBudgetId, settingsScope, shared.openBudget])
+    void openBudget(selectedSharedBudgetId).catch(() => {})
+  }, [activeSharedReady, selectedSharedBudgetId, settingsScope, openBudget])
 
   // Re-seed the editable limit/category-budget fields whenever a different budget snapshot
   // loads. Adjusting state during render (guarded on the previous snapshot) is React's
@@ -742,37 +741,6 @@ export default function Settings({ onBack }: Props) {
       )}
 
       <ThemePicker />
-
-      {/* The token is plumbing for the iOS Shortcut, not a setting a normal user tunes.
-          Collapsed, explained, and kept away from the buttons that change money. */}
-      <details className="settings-advanced">
-        <summary className="settings-advanced__summary">Advanced</summary>
-        <div className="settings-advanced__body">
-          <p className="settings-advanced__help">
-            The API token authorises the iOS Shortcut that logs Apple Pay and DBS transactions
-            automatically. Leave this blank unless you are setting that up.
-          </p>
-          <div className="settings-row settings-row--stacked">
-            <label className="settings-label" htmlFor="api-token">API token</label>
-            <input
-              id="api-token"
-              type="password"
-              className="settings-input settings-input--wide"
-              value={token}
-              onChange={e => setToken(e.target.value)}
-              placeholder="Bearer token"
-              autoComplete="off"
-            />
-          </div>
-          <button
-            type="button"
-            className="export-btn"
-            onClick={() => { setApiToken(token); void refresh() }}
-          >
-            Save token
-          </button>
-        </div>
-      </details>
 
       {/* Destructive actions were previously three identical pills apart from red text.
           Colour alone is not a differentiator. */}

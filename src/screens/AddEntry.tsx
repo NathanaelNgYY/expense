@@ -1,5 +1,5 @@
 // src/screens/AddEntry.tsx
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Delete } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import { toLocalDateString } from '../dates'
@@ -30,6 +30,7 @@ export default function AddEntry({ onSave }: Props) {
   const [busy, setBusy] = useState(false)
   const { addEntry: addPersonalEntry } = useEntries()
   const shared = useSharedBudgets()
+  const { openBudget } = shared
 
   // If the chosen shared budget disappears (e.g. the user left or deleted it), snap back to
   // Personal. Adjusting state during render is React's recommended alternative to a syncing effect.
@@ -57,19 +58,31 @@ export default function AddEntry({ onSave }: Props) {
 
   useEffect(() => {
     if (!isSharedDestination || !selectedBudgetId || activeSharedReady) return
-    void shared.openBudget(selectedBudgetId).catch(() => {})
-  }, [activeSharedReady, isSharedDestination, selectedBudgetId, shared.openBudget])
+    void openBudget(selectedBudgetId).catch(() => {})
+  }, [activeSharedReady, isSharedDestination, selectedBudgetId, openBudget])
 
-  function handleDigit(key: string) {
-    const nextDigits = getNextDigits(digits, key)
-    if (nextDigits === digits) return
+  const handleDigit = useCallback((key: string) => {
+    setDigits(current => {
+      const nextDigits = getNextDigits(current, key)
+      if (nextDigits !== current) {
+        setAnimationCue(prev => ({ key, version: prev.version + 1 }))
+      }
+      return nextDigits
+    })
+  }, [])
 
-    setDigits(nextDigits)
-    setAnimationCue(prev => ({
-      key,
-      version: prev.version + 1,
-    }))
-  }
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target
+      if (target instanceof Element && target.matches('input, textarea, select, [contenteditable="true"]')) return
+      const key = event.key === 'Backspace' || event.key === 'Delete' ? 'backspace' : event.key
+      if (!NUMPAD_KEYS.includes(key)) return
+      event.preventDefault()
+      handleDigit(key)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [handleDigit])
 
   async function handleSave() {
     if (amount <= 0) return

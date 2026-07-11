@@ -58,6 +58,7 @@ export default function Dashboard({ onSettings, onAddEntry }: Props) {
   const now = new Date()
   const { entries, removeEntry, sync, refresh } = useEntries()
   const shared = useSharedBudgets()
+  const { openBudget } = shared
   const config = getBudgetConfig()
   const customCategories = getCustomCategories()
   const overrides = getCategoryOverrides()
@@ -100,8 +101,8 @@ export default function Dashboard({ onSettings, onAddEntry }: Props) {
 
   useEffect(() => {
     if (viewScope !== 'shared' || !selectedSharedBudgetId || activeSharedReady) return
-    void shared.openBudget(selectedSharedBudgetId).catch(() => {})
-  }, [activeSharedReady, selectedSharedBudgetId, shared.openBudget, viewScope])
+    void openBudget(selectedSharedBudgetId).catch(() => {})
+  }, [activeSharedReady, selectedSharedBudgetId, openBudget, viewScope])
 
   // The pass stack replaces the old Personal/Shared toggle: Personal plus every joined
   // shared budget are shown as a stack of cards, front-most first. Tapping a card behind

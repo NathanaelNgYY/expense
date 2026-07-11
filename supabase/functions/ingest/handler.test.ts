@@ -31,8 +31,8 @@ describe('edge ingest handler', () => {
     expect(result.entry.source).toBe('apple-pay')
     expect(result.entry.merchant).toBe('Ya Kun')
     expect(result.entry.note).toBe('Apple Pay · Ya Kun')
-    expect(result.entry.dedupeKey).toBe('apple_pay:2026-07-11:4.20:ya-kun')
-    expect(await store.has('apple_pay:2026-07-11:4.20:ya-kun')).toBe(true)
+    expect(result.entry.dedupeKey).toBe('apple_pay:2026-07-11T04:00:00.000Z:4.20:ya-kun')
+    expect(await store.has('apple_pay:2026-07-11T04:00:00.000Z:4.20:ya-kun')).toBe(true)
   })
 
   it('reports a duplicate instead of double-saving the same transaction', async () => {

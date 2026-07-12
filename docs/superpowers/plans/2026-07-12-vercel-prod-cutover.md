@@ -75,7 +75,7 @@ git commit -m "feat: swap entries transport to supabase-js with one-time localSt
 - [ ] **Step 6: Commit docs and remaining files**
 
 ```bash
-git add AGENTS.md docs/ 
+git add AGENTS.md docs/
 git commit -m "docs: Supabase migration spec, staging TDD notes, mockups"
 ```
 

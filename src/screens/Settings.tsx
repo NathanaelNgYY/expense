@@ -4,6 +4,7 @@ import { ChevronLeft, Download, Pencil, Plus, Save, Trash2, Upload, Wallet } fro
 import BudgetIcon from '../components/BudgetIcon'
 import { CUSTOM_ICON_NAMES } from '../components/budgetIcons'
 import { entriesToCsv, parseEntriesCsv } from '../csvEntries'
+import { buildExportPayload, parseImportPayload, applyImport } from '../dataTransfer'
 import {
   getBudgetConfig,
   saveBudgetConfig,
@@ -59,6 +60,9 @@ export default function Settings({ onBack }: Props) {
   const [removeError, setRemoveError] = useState('')
   const [importMessage, setImportMessage] = useState('')
   const [importError, setImportError] = useState(false)
+  const [showPasteImport, setShowPasteImport] = useState(false)
+  const [pasteText, setPasteText] = useState('')
+  const [jsonBusy, setJsonBusy] = useState(false)
   const [settingsScope, setSettingsScope] = useState<'personal' | 'shared'>('personal')
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
   const [sharedLimit, setSharedLimit] = useState('')
@@ -69,7 +73,8 @@ export default function Settings({ onBack }: Props) {
   const [sharedNewIcon, setSharedNewIcon] = useState<string>(CUSTOM_ICON_NAMES[0])
   const [sharedBusy, setSharedBusy] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
-  const { entries, addEntry, removeEntry } = useEntries()
+  const jsonFileInputRef = useRef<HTMLInputElement>(null)
+  const { entries, addEntry, removeEntry, refresh } = useEntries()
   const shared = useSharedBudgets()
   const { openBudget } = shared
 
@@ -295,6 +300,44 @@ export default function Settings({ onBack }: Props) {
       setImportError(true)
       setImportMessage(error instanceof Error ? error.message : 'Could not import this CSV file.')
     }
+  }
+
+  function handleExportJson() {
+    const payload = buildExportPayload()
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `budget-export-${payload.exportedAt.slice(0, 10)}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function importJsonText(text: string) {
+    setJsonBusy(true)
+    try {
+      const result = await applyImport(parseImportPayload(text))
+      await refresh()
+      setImportError(false)
+      setImportMessage(
+        `Imported ${result.newEntries} entr${result.newEntries === 1 ? 'y' : 'ies'} and ` +
+        `${result.newPokerSessions} poker session${result.newPokerSessions === 1 ? '' : 's'}.`,
+      )
+      setShowPasteImport(false)
+      setPasteText('')
+    } catch (error) {
+      setImportError(true)
+      setImportMessage(error instanceof Error ? error.message : 'Could not import this data.')
+    } finally {
+      setJsonBusy(false)
+    }
+  }
+
+  async function handleImportJsonFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0]
+    event.currentTarget.value = ''
+    if (!file) return
+    await importJsonText(await file.text())
   }
 
   function renderCategoryEditor(onDone: () => void) {
@@ -734,6 +777,54 @@ export default function Settings({ onBack }: Props) {
         <Upload aria-hidden="true" size={18} strokeWidth={2.3} />
         Import CSV
       </button>
+      <button className="export-btn" type="button" onClick={handleExportJson}>
+        <Download aria-hidden="true" size={18} strokeWidth={2.3} />
+        Export JSON (full backup)
+      </button>
+      <input
+        ref={jsonFileInputRef}
+        type="file"
+        accept=".json,application/json"
+        hidden
+        onChange={handleImportJsonFile}
+      />
+      <button
+        className="export-btn"
+        type="button"
+        onClick={() => jsonFileInputRef.current?.click()}
+      >
+        <Upload aria-hidden="true" size={18} strokeWidth={2.3} />
+        Import JSON file
+      </button>
+      <button
+        className="export-btn"
+        type="button"
+        onClick={() => setShowPasteImport(v => !v)}
+      >
+        <Upload aria-hidden="true" size={18} strokeWidth={2.3} />
+        Paste import
+      </button>
+      {showPasteImport && (
+        <div className="settings-row settings-row--stacked">
+          <label className="settings-label" htmlFor="paste-import-box">Pasted export</label>
+          <textarea
+            id="paste-import-box"
+            className="settings-input settings-input--wide"
+            rows={4}
+            value={pasteText}
+            onChange={event => setPasteText(event.target.value)}
+          />
+          <button
+            className="export-btn"
+            type="button"
+            disabled={jsonBusy || pasteText.trim() === ''}
+            onClick={() => void importJsonText(pasteText)}
+          >
+            Import
+          </button>
+        </div>
+      )}
+
       {importMessage && (
         <p className={`save-feedback ${importError ? 'save-feedback--error' : ''}`} role="status">
           {importMessage}

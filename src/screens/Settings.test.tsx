@@ -5,6 +5,7 @@ import Settings from './Settings'
 import { EntriesProvider } from '../EntriesContext'
 import { ThemeProvider } from '../theme/ThemeContext'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
+import * as dataTransfer from '../dataTransfer'
 
 const sharedCtx = vi.hoisted(() => ({
   value: {
@@ -38,6 +39,11 @@ const sharedCtx = vi.hoisted(() => ({
 vi.mock('../sharedBudgets/SharedBudgetsContext', () => ({
   useSharedBudgets: () => sharedCtx.value,
 }))
+
+vi.mock('../dataTransfer', async importOriginal => {
+  const actual = await importOriginal<typeof import('../dataTransfer')>()
+  return { ...actual, applyImport: vi.fn().mockResolvedValue({ newEntries: 2, newPokerSessions: 1 }) }
+})
 
 function renderWithEntries(entries: unknown[] = []) {
   localStorage.setItem('budget_entries', JSON.stringify(entries))
@@ -85,6 +91,29 @@ function changeInput(input: HTMLInputElement, value: string): void {
     input.dispatchEvent(new Event('input', { bubbles: true }))
     input.dispatchEvent(new Event('change', { bubbles: true }))
   })
+}
+
+function changeTextarea(textarea: HTMLTextAreaElement, value: string): void {
+  const valueSetter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set
+
+  act(() => {
+    valueSetter?.call(textarea, value)
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    textarea.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+}
+
+// The JSON import handler awaits the real EntriesContext refresh() (network + queue drain),
+// which can take a few extra event-loop turns in tests depending on what earlier tests left
+// running in the background. Poll with real macrotask boundaries instead of a single flush.
+async function waitForText(container: HTMLElement, text: string, timeoutMs = 2000): Promise<void> {
+  const start = Date.now()
+  while (!container.textContent?.includes(text)) {
+    if (Date.now() - start > timeoutMs) throw new Error(`Timed out waiting for text: ${text}`)
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 20))
+    })
+  }
 }
 
 // The save control is now a sticky bar that only exists while the form is dirty, and it
@@ -369,5 +398,82 @@ describe('Settings custom categories', () => {
       icon: expect.any(String),
     })
     expect(sharedCtx.value.updateActiveBudget).toHaveBeenCalledWith({ monthlyLimit: 250 })
+  })
+})
+
+describe('Settings JSON backup', () => {
+  let root: Root | null = null
+
+  beforeEach(() => {
+    ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    localStorage.clear()
+    vi.clearAllMocks()
+    sharedCtx.value.budgets = []
+    sharedCtx.value.active = null
+  })
+
+  afterEach(() => {
+    act(() => {
+      root?.unmount()
+    })
+    document.body.replaceChildren()
+    root = null
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  it('downloads a JSON export when Export JSON is pressed', () => {
+    const createObjectURL = vi.fn().mockReturnValue('blob:x')
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL })
+    const rendered = renderWithEntries()
+    root = rendered.root
+
+    clickButton(rendered.container, b => b.textContent?.toLowerCase().includes('export json') ?? false)
+
+    expect(createObjectURL).toHaveBeenCalledOnce()
+    const blob = createObjectURL.mock.calls[0][0] as Blob
+    expect(blob.type).toContain('application/json')
+  })
+
+  it('imports pasted JSON and reports the result', async () => {
+    const rendered = renderWithEntries()
+    root = rendered.root
+    const { container } = rendered
+
+    clickButton(container, b => b.textContent?.toLowerCase().includes('paste import') ?? false)
+    const box = container.querySelector<HTMLTextAreaElement>('#paste-import-box')
+    if (!box) throw new Error('Paste import textarea was not found')
+    changeTextarea(
+      box,
+      JSON.stringify({ schemaVersion: 1, exportedAt: 'x', entries: [], pokerSessions: [], settings: {} }),
+    )
+
+    const importButton = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Import')
+    if (!importButton) throw new Error('Import button was not found')
+    await act(async () => {
+      importButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await waitForText(container, 'Imported 2 entries and 1 poker session')
+
+    expect(dataTransfer.applyImport).toHaveBeenCalledOnce()
+  })
+
+  it('shows the validation error for malformed pasted JSON', async () => {
+    const rendered = renderWithEntries()
+    root = rendered.root
+    const { container } = rendered
+
+    clickButton(container, b => b.textContent?.toLowerCase().includes('paste import') ?? false)
+    const box = container.querySelector<HTMLTextAreaElement>('#paste-import-box')
+    if (!box) throw new Error('Paste import textarea was not found')
+    changeTextarea(box, 'nope')
+
+    const importButton = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Import')
+    if (!importButton) throw new Error('Import button was not found')
+    await act(async () => {
+      importButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await waitForText(container, 'not a valid JSON export')
   })
 })

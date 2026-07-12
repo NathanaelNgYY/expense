@@ -1,6 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { buildExportPayload, parseImportPayload } from './dataTransfer'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { applyImport, buildExportPayload, parseImportPayload } from './dataTransfer'
+import type { ExportPayloadV1 } from './dataTransfer'
 import type { Entry, PokerSession } from './types'
+import * as api from './api'
+
+vi.mock('./api', () => ({
+  bulkUpsertEntries: vi.fn().mockResolvedValue(undefined),
+  bulkUpsertPokerSessions: vi.fn().mockResolvedValue(undefined),
+}))
 
 const entry: Entry = {
   id: 'e1', amount: 12.5, category: 'lunch', note: 'kopi', date: '2026-07-01',
@@ -74,5 +81,53 @@ describe('parseImportPayload', () => {
     const minimal = { schemaVersion: 1, exportedAt: 'x', entries: [], pokerSessions: [] }
     const parsed = parseImportPayload(JSON.stringify(minimal))
     expect(parsed.settings).toEqual({})
+  })
+})
+
+function payloadWith(overrides: Partial<ExportPayloadV1>): ExportPayloadV1 {
+  return { schemaVersion: 1, exportedAt: '2026-07-12T00:00:00Z', entries: [], pokerSessions: [], settings: {}, ...overrides }
+}
+
+describe('applyImport', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.clearAllMocks()
+  })
+
+  it('upserts entries and poker sessions to the server', async () => {
+    await applyImport(payloadWith({ entries: [entry], pokerSessions: [poker] }))
+    expect(api.bulkUpsertEntries).toHaveBeenCalledWith([entry])
+    expect(api.bulkUpsertPokerSessions).toHaveBeenCalledWith([poker])
+  })
+
+  it('merges into local caches without removing existing local data', async () => {
+    const local: Entry = { ...entry, id: 'local1', note: 'existing' }
+    localStorage.setItem('budget_entries', JSON.stringify([local]))
+    const result = await applyImport(payloadWith({ entries: [entry] }))
+    const cached = JSON.parse(localStorage.getItem('budget_entries')!) as Entry[]
+    expect(cached.map(e => e.id).sort()).toEqual(['e1', 'local1'])
+    expect(result.newEntries).toBe(1)
+  })
+
+  it('keeps the local copy when ids collide and counts it as not new', async () => {
+    localStorage.setItem('budget_entries', JSON.stringify([{ ...entry, note: 'local wins' }]))
+    const result = await applyImport(payloadWith({ entries: [entry] }))
+    const cached = JSON.parse(localStorage.getItem('budget_entries')!) as Entry[]
+    expect(cached).toHaveLength(1)
+    expect(cached[0].note).toBe('local wins')
+    expect(result.newEntries).toBe(0)
+  })
+
+  it('restores only the settings present in the payload', async () => {
+    localStorage.setItem('poker_custom_stakes', JSON.stringify(['9/9']))
+    await applyImport(payloadWith({ settings: { theme: 'copper-current' } }))
+    expect(localStorage.getItem('budget-tracker-theme-v2')).toBe('copper-current')
+    expect(JSON.parse(localStorage.getItem('poker_custom_stakes')!)).toEqual(['9/9']) // untouched
+  })
+
+  it('does not touch local caches when the server upsert fails', async () => {
+    vi.mocked(api.bulkUpsertEntries).mockRejectedValueOnce(new Error('offline'))
+    await expect(applyImport(payloadWith({ entries: [entry] }))).rejects.toThrow('offline')
+    expect(localStorage.getItem('budget_entries')).toBeNull()
   })
 })

@@ -2,6 +2,7 @@
 // JSON export/import for moving a user's origin-locked data (localStorage) to a new
 // origin. Export copies; import upserts idempotently — nothing is ever cleared (C2).
 import type { BudgetConfig, CategoryOverrides, CustomCategory, Entry, PokerSession } from './types'
+import { bulkUpsertEntries, bulkUpsertPokerSessions } from './api'
 import {
   getBudgetConfig,
   getCachedEntries,
@@ -9,6 +10,12 @@ import {
   getCustomCategories,
   getCustomStakes,
   getPokerSessions,
+  saveBudgetConfig,
+  saveCategoryOverrides,
+  saveCustomCategories,
+  saveCustomStakes,
+  savePokerSessions,
+  setCachedEntries,
 } from './storage'
 import { THEME_STORAGE_KEY } from './theme/themeRegistry'
 
@@ -123,4 +130,34 @@ export function parseImportPayload(text: string): ExportPayloadV1 {
       theme: typeof settings.theme === 'string' ? settings.theme : undefined,
     },
   }
+}
+
+export interface ImportResult {
+  newEntries: number
+  newPokerSessions: number
+}
+
+export async function applyImport(payload: ExportPayloadV1): Promise<ImportResult> {
+  const { settings } = payload
+  if (settings.budgetConfig) saveBudgetConfig(settings.budgetConfig)
+  if (settings.customCategories) saveCustomCategories(settings.customCategories)
+  if (settings.categoryOverrides) saveCategoryOverrides(settings.categoryOverrides)
+  if (settings.customStakes) saveCustomStakes(settings.customStakes)
+  if (settings.theme) localStorage.setItem(THEME_STORAGE_KEY, settings.theme)
+
+  // Server first: if this throws (offline/auth), local caches are untouched and a retry is safe.
+  if (payload.entries.length > 0) await bulkUpsertEntries(payload.entries)
+  if (payload.pokerSessions.length > 0) await bulkUpsertPokerSessions(payload.pokerSessions)
+
+  const cachedEntries = getCachedEntries()
+  const knownEntryIds = new Set(cachedEntries.map(e => e.id))
+  const newEntries = payload.entries.filter(e => !knownEntryIds.has(e.id))
+  if (newEntries.length > 0) setCachedEntries([...cachedEntries, ...newEntries])
+
+  const cachedSessions = getPokerSessions()
+  const knownSessionIds = new Set(cachedSessions.map(s => s.id))
+  const newSessions = payload.pokerSessions.filter(s => !knownSessionIds.has(s.id))
+  if (newSessions.length > 0) savePokerSessions([...cachedSessions, ...newSessions])
+
+  return { newEntries: newEntries.length, newPokerSessions: newSessions.length }
 }

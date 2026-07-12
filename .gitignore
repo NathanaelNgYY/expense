@@ -47,3 +47,4 @@ graphify-out/
 # Agent scratch directories (not project source)
 .agents/
 .superpowers/
+.vercel/

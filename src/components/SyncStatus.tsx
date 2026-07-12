@@ -17,17 +17,27 @@ export default function SyncStatus({ sync, onRetry }: Props) {
   if (!sync.failed) return null
 
   const unsynced = sync.pendingCount > 0
+  // Retrying an unauthorized request just fails again. Send the user to the thing that can help.
+  const isAuth = sync.reason === 'auth'
 
   return (
     <div className="sync-status" role="status">
       <CloudOff className="sync-status__icon" aria-hidden="true" size={17} />
       <span className="sync-status__text">
-        {unsynced ? (
+        {isAuth ? (
+          <>
+            <strong>Can't sign in to sync</strong>
+            <span className="sync-status__detail">
+              {unsynced ? 'Your changes are saved on this device. ' : ''}
+              Sync resumes automatically once sign-in works again.
+            </span>
+          </>
+        ) : unsynced ? (
           <>
             <strong>
-              {sync.pendingCount} {sync.pendingCount === 1 ? 'entry' : 'entries'} not synced
+              {sync.pendingCount} {sync.pendingCount === 1 ? 'change' : 'changes'} not synced
             </strong>
-            <span className="sync-status__detail">Saved on this device. We'll retry automatically.</span>
+            <span className="sync-status__detail">Saved on this device. We'll retry when you reopen the app.</span>
           </>
         ) : (
           <>
@@ -36,10 +46,12 @@ export default function SyncStatus({ sync, onRetry }: Props) {
           </>
         )}
       </span>
-      <button type="button" className="sync-status__retry" onClick={onRetry}>
-        <RefreshCw aria-hidden="true" size={14} />
-        Retry
-      </button>
+      {!isAuth && (
+        <button type="button" className="sync-status__retry" onClick={onRetry}>
+          <RefreshCw aria-hidden="true" size={14} />
+          Retry
+        </button>
+      )}
     </div>
   )
 }

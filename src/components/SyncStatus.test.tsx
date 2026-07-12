@@ -17,14 +17,15 @@ describe('SyncStatus', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  test('reports how many entries have not reached the server', () => {
+  // The count is of queued mutations, not entries — one entry edited twice is two changes.
+  test('reports how many changes have not reached the server', () => {
     render(<SyncStatus sync={{ pendingCount: 2, failed: true }} onRetry={() => undefined} />)
-    expect(screen.getByRole('status')).toHaveTextContent('2 entries not synced')
+    expect(screen.getByRole('status')).toHaveTextContent('2 changes not synced')
   })
 
-  test('uses the singular for a single unsynced entry', () => {
+  test('uses the singular for a single unsynced change', () => {
     render(<SyncStatus sync={{ pendingCount: 1, failed: true }} onRetry={() => undefined} />)
-    expect(screen.getByRole('status')).toHaveTextContent('1 entry not synced')
+    expect(screen.getByRole('status')).toHaveTextContent('1 change not synced')
   })
 
   test('reassures the user their data is safe locally', () => {
@@ -46,5 +47,19 @@ describe('SyncStatus', () => {
     fireEvent.click(screen.getByRole('button', { name: /retry/i }))
 
     expect(onRetry).toHaveBeenCalledOnce()
+  })
+
+  test('an auth failure explains itself instead of offering a retry that cannot work', () => {
+    render(<SyncStatus sync={{ pendingCount: 3, failed: true, reason: 'auth' }} onRetry={() => undefined} />)
+
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent(/sync resumes automatically/i)
+    expect(status).toHaveTextContent(/saved on this device/i)
+    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument()
+  })
+
+  test('an offline failure still offers retry', () => {
+    render(<SyncStatus sync={{ pendingCount: 3, failed: true, reason: 'offline' }} onRetry={() => undefined} />)
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
   })
 })

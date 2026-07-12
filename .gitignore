@@ -26,6 +26,12 @@ dist-ssr
 # Local Netlify folder
 .netlify
 
+# Supabase CLI link state
+supabase/.temp/
+
+# Personal-data exports (owner's Netlify Blobs backup) — never commit
+docs/superpowers/backup/
+
 # Graphify generated knowledge graph (rebuilt by git post-commit hook)
 graphify-out/
 
@@ -37,3 +43,7 @@ graphify-out/
 
 # Playwright CLI browser-verification evidence (screenshots, snapshots, logs)
 .playwright-cli/
+
+# Agent scratch directories (not project source)
+.agents/
+.superpowers/

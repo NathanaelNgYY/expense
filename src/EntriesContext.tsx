@@ -3,9 +3,12 @@ import type { Entry } from './types'
 import { getCachedEntries, setCachedEntries } from './storage'
 import {
   fetchEntries,
+  ensureUserId,
   createEntryApi,
   updateEntryApi,
   deleteEntryApi,
+  isAuthFailure,
+  isPermanentFailure,
   type NewManualEntry,
 } from './api'
 import {
@@ -16,6 +19,7 @@ import {
   getPendingCreates,
   setPendingCreates,
 } from './syncQueue'
+import { migrateEntriesIfNeeded, syncPokerSessionsIfNeeded } from './supabaseSync'
 
 /**
  * What the user is owed after they tap Save. Mutations are locally durable the instant
@@ -26,7 +30,11 @@ import {
 export interface SyncState {
   pendingCount: number
   failed: boolean
+  /** Why the last drain stopped. `auth` is not fixable by retrying — the token must change. */
+  reason?: SyncFailureReason
 }
+
+export type SyncFailureReason = 'offline' | 'auth' | 'migration'
 
 interface EntriesContextValue {
   entries: Entry[]
@@ -40,18 +48,33 @@ interface EntriesContextValue {
 
 const EntriesContext = createContext<EntriesContextValue | null>(null)
 
-const MIGRATION_KEY = 'migration_done'
-
 // Only one drain runs at a time. Re-reading the queue each iteration (instead of working off
 // a snapshot) lets a single in-flight drain pick up mutations that other callers append while
 // a network round-trip is pending — so bulk operations (clear-month, CSV import) that fire many
 // mutations back-to-back stay correct without each one serialising on the network.
-let flushInFlight: Promise<boolean> | null = null
+let flushInFlight: Promise<DrainResult> | null = null
 
-async function drainQueue(): Promise<boolean> {
+type DrainResult = { ok: true } | { ok: false; reason: SyncFailureReason; error: unknown }
+
+function errorStatus(error: unknown): number | undefined {
+  return error instanceof Error && 'status' in error && typeof error.status === 'number'
+    ? error.status
+    : undefined
+}
+
+function logSyncFailure(stage: 'session' | 'migration' | 'queue' | 'poker', reason: SyncFailureReason, error: unknown) {
+  console.error('Supabase sync failed', {
+    stage,
+    reason,
+    status: errorStatus(error),
+    message: error instanceof Error ? error.message : 'Unknown error',
+  })
+}
+
+async function drainQueue(): Promise<DrainResult> {
   for (;;) {
     const queue = getQueue()
-    if (queue.length === 0) return true
+    if (queue.length === 0) return { ok: true }
     const mutation = queue[0]
     try {
       if (mutation.op === 'create') {
@@ -61,35 +84,23 @@ async function drainQueue(): Promise<boolean> {
       } else {
         await deleteEntryApi(mutation.id)
       }
-    } catch {
-      return false // still offline; keep the queue for next time
+    } catch (error) {
+      // A bad token keeps the mutation: fix the token and it sends.
+      if (isAuthFailure(error)) return { ok: false, reason: 'auth', error }
+      // Offline or a server fault: keep the queue for next time.
+      if (!isPermanentFailure(error)) return { ok: false, reason: 'offline', error }
+      // The server rejects this mutation on its merits and always will (a delete or update for
+      // an id it never had, a body it can't parse). Retrying it forever is what wedged the queue
+      // and stranded everything behind it, so drop it and keep draining. Nothing is lost that the
+      // server still holds: the entry is already absent there, and it survives in local state.
     }
-    setQueue(getQueue().slice(1)) // re-read: drop the head we just sent, keep any newly-queued tail
+    setQueue(getQueue().slice(1)) // re-read: drop the head we just handled, keep any newly-queued tail
   }
 }
 
-function flushQueue(): Promise<boolean> {
+function flushQueue(): Promise<DrainResult> {
   if (!flushInFlight) flushInFlight = drainQueue().finally(() => { flushInFlight = null })
   return flushInFlight
-}
-
-// Returns true if it pushed cached entries up (so the caller should re-fetch).
-async function migrateIfNeeded(serverEntries: Entry[]): Promise<boolean> {
-  if (localStorage.getItem(MIGRATION_KEY)) return false
-  const cached = getCachedEntries()
-  let migrated = false
-  if (serverEntries.length === 0 && cached.length > 0) {
-    for (const entry of cached) {
-      try {
-        await createEntryApi({ id: entry.id, amount: entry.amount, category: entry.category, note: entry.note, date: entry.date })
-        migrated = true
-      } catch {
-        return migrated // try again next load; don't mark migration done
-      }
-    }
-  }
-  localStorage.setItem(MIGRATION_KEY, '1')
-  return migrated
 }
 
 export function EntriesProvider({ children }: { children: ReactNode }) {
@@ -108,8 +119,8 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
 
   // Reflects the queue into `sync` so the UI can say what the network is doing. Called after
   // every mutation and every refresh, including the failing paths.
-  const reportSync = useCallback((failed: boolean) => {
-    setSync({ pendingCount: getQueue().length, failed })
+  const reportSync = useCallback((reason?: SyncFailureReason) => {
+    setSync({ pendingCount: getQueue().length, failed: reason !== undefined, reason })
   }, [])
 
   // A just-queued mutation should show as pending immediately, without waiting for the
@@ -119,16 +130,30 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const refresh = useCallback(async () => {
+    let stage: 'session' | 'migration' | 'queue' = 'session'
     try {
-      const flushed = await flushQueue()
-      if (!flushed) {
-        // The queue survived; the network didn't. Say so rather than failing silently.
-        reportSync(true)
+      // Resolve identity and migrate the durable legacy cache before replaying later offline
+      // mutations. This preserves the historical snapshot before applying queued changes.
+      await ensureUserId()
+      const server = await fetchEntries()
+      stage = 'migration'
+      const outcome = await migrateEntriesIfNeeded(server)
+      if (outcome === 'incomplete') {
+        // Some cached entries never reached the server; committing the server list now would
+        // overwrite the only copy of them. Keep the cache authoritative and surface the failure.
+        logSyncFailure('migration', 'migration', new Error('Server verification did not find every cached entry'))
+        reportSync('migration')
         return
       }
-      const server = await fetchEntries()
-      const migrated = await migrateIfNeeded(server)
-      const fresh = migrated ? await fetchEntries() : server
+      stage = 'queue'
+      const hadQueuedMutations = getQueue().length > 0
+      const flushed = await flushQueue()
+      if (!flushed.ok) {
+        logSyncFailure(flushed.reason === 'auth' ? 'session' : 'queue', flushed.reason, flushed.error)
+        reportSync(flushed.reason)
+        return
+      }
+      const fresh = outcome === 'migrated' || hadQueuedMutations ? await fetchEntries() : server
       // Netlify Blobs list() is eventually consistent, so the refreshed server list can
       // briefly lag a local mutation in BOTH directions. Reconcile both:
       //  - hide just-deleted ids the stale list still returns (tombstones), and
@@ -150,10 +175,17 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
       const extras = stillUnseen.map(id => localById.get(id)!)
 
       commit([...fresh.filter(e => !hidden.has(e.id)), ...extras])
-      reportSync(false)
-    } catch {
-      // Offline: the cache is still correct and the queue is still durable. Surface it.
-      reportSync(true)
+      reportSync()
+      // Poker backup rides along with every successful refresh; a failure here doesn't
+      // affect entries and is retried on the next refresh, so it never surfaces as a sync error.
+      void syncPokerSessionsIfNeeded().catch(error => {
+        logSyncFailure('poker', isAuthFailure(error) ? 'auth' : 'offline', error)
+      })
+    } catch (error) {
+      // Offline or unauthorized: the cache is still correct and the queue is still durable. Surface it.
+      const reason = isAuthFailure(error) ? 'auth' : stage === 'migration' ? 'migration' : 'offline'
+      logSyncFailure(reason === 'auth' ? 'session' : stage, reason, error)
+      reportSync(reason)
     }
   }, [commit, reportSync])
 

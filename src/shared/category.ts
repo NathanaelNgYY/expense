@@ -1,4 +1,5 @@
-import type { Category, Entry } from '../types'
+// .ts extension: reached by the Deno-bundled ingest Edge Function (see shared/entry.ts).
+import type { Category, Entry } from '../types.ts'
 
 const CATEGORY_RULES: Array<{ category: Category; keywords: string[] }> = [
   {

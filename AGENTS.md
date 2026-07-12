@@ -17,20 +17,24 @@ transport, savings, investments, others; a *buffer* is computed, not stored), ca
 automatically in the background from iOS Shortcuts, and includes a poker-session tracker + spending
 insights.
 
-## Planned direction — read `docs/APP_STORE.md`
+## Planned direction — Supabase migration (App Store plan ON HOLD)
 
-**Read that file before starting any feature work.** It is the plan of record for taking this app to a
-public App Store release, and it changes what "the right thing to build" means here.
+**The PWA is the product.** The App Store / SwiftUI rewrite plan (`docs/APP_STORE.md`) was put
+**on hold on 2026-07-10** — the owner has no macOS hardware to build/sign/submit iOS apps. Its task
+IDs (`T-01`–`T-35`) and gates are dormant; don't block PWA work on them or pick up `T-` tasks unless
+the hold is explicitly lifted.
 
-- It proposes a **rewrite to SwiftUI + SwiftData + CloudKit** and **deleting the Netlify backend
-  entirely**. Nothing in it has been built — the shipped app is still the PWA described above.
-- Work is dispatched by **stable task IDs** (`T-01`–`T-35`) and **gates** (`G-1`–`G-3`). When the user
-  names an ID ("do T-04"), that file is the spec. Each task lists the files to touch and a literal
-  `Done when` clause.
-- **`G-1` blocks all Swift work** and is unresolved: it is not yet confirmed that the Wallet transaction
-  trigger exposes a merchant name. Do not write production Swift before it passes.
-- Several existing features are **cut from the App Store build**: the poker tracker, and
-  `src/sharedBudgets/`. They stay in the personal build. Don't invest in them without asking.
+The active plan of record is **migrating the personal-data backend (entries CRUD, ingest) from
+Netlify Functions/Blobs to Supabase**, joining `src/sharedBudgets/` which already runs on Supabase.
+Spec: `docs/superpowers/specs/2026-07-11-supabase-migration.md` — read it before touching backend,
+sync, or storage code. Hard constraints:
+
+- **The app's URL must not change** until every user's localStorage data has migrated —
+  localStorage is origin-scoped and is the only copy of non-owner users' data.
+- **Never clear localStorage**; it remains the offline cache after migration.
+- The user-side migration is a one-time idempotent upload (preserve `id` + `dedupeKey`) behind a
+  **new** flag key (`migration_done` is already taken by the old localStorage→Netlify migration).
+- iOS Shortcuts keep the same `Bearer` token auth; only the ingest URL changes.
 
 ## Commands
 

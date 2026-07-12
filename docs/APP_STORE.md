@@ -1,8 +1,13 @@
 # iOS App Store — Execution Checklist
 
-> **Status: proposed, not started.** The shipped app is still the React 19 + Vite PWA on Netlify
-> Functions/Blobs. Nothing below has been built. This document is the plan of record for taking the
-> budget tracker to a public App Store release.
+> **Status: ON HOLD as of 2026-07-10.** The owner has no macOS hardware, which blocks building,
+> signing, and submitting iOS apps. No Swift was written and G-1 was never resolved. **The PWA is
+> the product for the foreseeable future.** The active plan of record is now the Supabase backend
+> migration — see `docs/superpowers/specs/2026-07-11-supabase-migration.md`. Task IDs (`T-01`–`T-35`)
+> and gates (`G-1`–`G-3`) below are dormant: do not block PWA work on them, and do not pick up `T-`
+> tasks unless this hold is explicitly lifted.
+>
+> *(Superseded status: proposed, not started. Nothing below has been built.)*
 
 ## How to use this document
 

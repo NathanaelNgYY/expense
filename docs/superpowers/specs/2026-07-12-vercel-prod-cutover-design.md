@@ -50,7 +50,9 @@ The only new application code in this migration.
   numeric amounts, `YYYY-MM-DD` dates). Invalid file ⇒ clear user-facing error, nothing written.
 - Requires being online (it must reach Supabase); offline ⇒ clear error, retry later.
 - Apply order:
-  1. Settings keys written to localStorage (import wins — it is a restore operation).
+  1. Settings keys written to localStorage: each key from the payload is applied only when the
+     device has none yet (fill-only-if-empty), so a stale export can never overwrite newer local
+     settings. Entries/poker sessions are still merged by id as before.
   2. Entries batch-upserted to Supabase **preserving `id` + `dedupeKey`** (`on conflict do
      nothing` semantics) and merged into the local cache (merge by id, never replace/clear — C2).
   3. Poker sessions via existing `bulkUpsertPokerSessions`.

@@ -395,7 +395,7 @@ export interface ImportResult { newEntries: number; newPokerSessions: number }
 export async function applyImport(payload: ExportPayloadV1): Promise<ImportResult>
 ```
 
-Behavior contract: settings restored first (only keys present in the payload); then server upserts (throws on network/auth failure — caller shows the error, nothing is lost, retry-safe); then local caches merged by id (existing local entries win; imported ones are appended). Never removes anything local.
+Behavior contract: settings restored first (only keys present in the payload) and only when the corresponding local key is absent (fill-only-if-empty, owner decision 2026-07-12); then server upserts (throws on network/auth failure — caller shows the error, nothing is lost, retry-safe); then local caches merged by id (existing local entries win; imported ones are appended). Never removes anything local.
 
 - [ ] **Step 1: Write failing tests**
 

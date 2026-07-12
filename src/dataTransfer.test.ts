@@ -119,10 +119,32 @@ describe('applyImport', () => {
   })
 
   it('restores only the settings present in the payload', async () => {
-    localStorage.setItem('poker_custom_stakes', JSON.stringify(['9/9']))
     await applyImport(payloadWith({ settings: { theme: 'copper-current' } }))
     expect(localStorage.getItem('budget-tracker-theme-v2')).toBe('copper-current')
-    expect(JSON.parse(localStorage.getItem('poker_custom_stakes')!)).toEqual(['9/9']) // untouched
+    expect(localStorage.getItem('poker_custom_stakes')).toBeNull() // not in payload, untouched
+  })
+
+  it('restores settings into empty localStorage', async () => {
+    await applyImport(payloadWith({
+      settings: {
+        budgetConfig: { monthlyIncome: 1500, lunch: 264, transport: 50, savings: 400, investments: 250, others: 236, buffer: 236 },
+        customCategories: [{ id: 'cat_x_1', label: 'X', budget: null, icon: 'Coffee' }],
+        categoryOverrides: { lunch: { label: 'Food' } },
+        customStakes: ['0.5/1'],
+        theme: 'copper-current',
+      },
+    }))
+    expect(JSON.parse(localStorage.getItem('budget_config')!).monthlyIncome).toBe(1500)
+    expect(JSON.parse(localStorage.getItem('budget_custom_categories')!)).toHaveLength(1)
+    expect(JSON.parse(localStorage.getItem('budget_category_overrides')!)).toEqual({ lunch: { label: 'Food' } })
+    expect(JSON.parse(localStorage.getItem('poker_custom_stakes')!)).toEqual(['0.5/1'])
+    expect(localStorage.getItem('budget-tracker-theme-v2')).toBe('copper-current')
+  })
+
+  it('keeps the local settings value when a settings key already exists locally', async () => {
+    localStorage.setItem('poker_custom_stakes', JSON.stringify(['9/9']))
+    await applyImport(payloadWith({ settings: { customStakes: ['0.5/1'] } }))
+    expect(JSON.parse(localStorage.getItem('poker_custom_stakes')!)).toEqual(['9/9'])
   })
 
   it('does not touch local caches when the server upsert fails', async () => {

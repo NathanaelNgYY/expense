@@ -137,13 +137,20 @@ export interface ImportResult {
   newPokerSessions: number
 }
 
+// Restore is fill-only-if-empty: a settings key from the payload is applied only when the
+// device has no local value yet, so re-importing an old export never clobbers newer local
+// settings. Entries/poker sessions are merged by id elsewhere in this function, unaffected.
+function isAbsentLocally(key: string): boolean {
+  return localStorage.getItem(key) === null
+}
+
 export async function applyImport(payload: ExportPayloadV1): Promise<ImportResult> {
   const { settings } = payload
-  if (settings.budgetConfig) saveBudgetConfig(settings.budgetConfig)
-  if (settings.customCategories) saveCustomCategories(settings.customCategories)
-  if (settings.categoryOverrides) saveCategoryOverrides(settings.categoryOverrides)
-  if (settings.customStakes) saveCustomStakes(settings.customStakes)
-  if (settings.theme) localStorage.setItem(THEME_STORAGE_KEY, settings.theme)
+  if (settings.budgetConfig && isAbsentLocally('budget_config')) saveBudgetConfig(settings.budgetConfig)
+  if (settings.customCategories && isAbsentLocally('budget_custom_categories')) saveCustomCategories(settings.customCategories)
+  if (settings.categoryOverrides && isAbsentLocally('budget_category_overrides')) saveCategoryOverrides(settings.categoryOverrides)
+  if (settings.customStakes && isAbsentLocally('poker_custom_stakes')) saveCustomStakes(settings.customStakes)
+  if (settings.theme && isAbsentLocally(THEME_STORAGE_KEY)) localStorage.setItem(THEME_STORAGE_KEY, settings.theme)
 
   // Server first: if this throws (offline/auth), local caches are untouched and a retry is safe.
   if (payload.entries.length > 0) await bulkUpsertEntries(payload.entries)

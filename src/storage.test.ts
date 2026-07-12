@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getEntries, saveEntries, updateEntry, getCachedEntries, setCachedEntries, getCustomCategories, saveCustomCategories, makeCustomCategoryId, getCategoryOverrides, saveCategoryOverrides } from './storage'
-import type { Entry, CustomCategory } from './types'
+import { getEntries, saveEntries, updateEntry, getCachedEntries, setCachedEntries, getCustomCategories, saveCustomCategories, makeCustomCategoryId, getCategoryOverrides, saveCategoryOverrides, getPokerSessions, savePokerSessions } from './storage'
+import type { Entry, CustomCategory, PokerSession } from './types'
 
 function entry(overrides: Partial<Entry> = {}): Entry {
   return {
@@ -116,5 +116,14 @@ describe('entries cache', () => {
   it('returns [] when cache empty', () => {
     localStorage.clear()
     expect(getCachedEntries()).toEqual([])
+  })
+})
+
+describe('savePokerSessions', () => {
+  it('replaces the stored poker session list', () => {
+    const a: PokerSession = { id: 'p1', date: '2026-07-01', startTime: '20:00', endTime: '21:00', stakes: '0.1/0.2', buyIn: 20, result: 'win', amount: 5 }
+    const b: PokerSession = { ...a, id: 'p2' }
+    savePokerSessions([a, b])
+    expect(getPokerSessions()).toEqual([a, b])
   })
 })

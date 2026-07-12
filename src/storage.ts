@@ -96,6 +96,10 @@ export function savePokerSession(session: PokerSession): void {
   localStorage.setItem(POKER_SESSIONS_KEY, JSON.stringify([...getPokerSessions(), session]))
 }
 
+export function savePokerSessions(sessions: PokerSession[]): void {
+  localStorage.setItem(POKER_SESSIONS_KEY, JSON.stringify(sessions))
+}
+
 export function getCustomStakes(): string[] {
   try {
     const raw = localStorage.getItem(POKER_CUSTOM_STAKES_KEY)

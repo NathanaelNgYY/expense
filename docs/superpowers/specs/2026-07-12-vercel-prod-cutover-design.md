@@ -93,8 +93,11 @@ green.
 1. **Backup first:** export the owner's Netlify Blobs store to a local JSON file (via
    `/api/entries` with the owner token or `netlify blobs:*`). Stored **outside git** — personal
    data is never committed.
-2. Owner: export on the old URL → import on the new Vercel URL → verify entry/poker counts
-   match the backup → add the new PWA to the iPhone home screen.
+2. The old origin never gets the export button because no Netlify deploys remain. On the old URL,
+   the owner runs the bookmarklet from the implementation plan (Task 9), which copies localStorage
+   as an `ExportPayloadV1` JSON string to the clipboard; they then use **Paste import** on the new
+   Vercel app, verify entry/poker counts match the backup, and add the new PWA to the iPhone home
+   screen.
 3. Seed the ingest token (see above); re-point both iOS Shortcuts (Apple Pay + DBS email) to the
    Edge Function URL; fire a test transaction through each and confirm `saved` / `duplicate`.
 4. Send the new URL to the 2 other users; walk each through export → import; verify their data

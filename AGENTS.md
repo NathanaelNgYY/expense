@@ -36,15 +36,19 @@ sync, or storage code. Hard constraints:
   **new** flag key (`migration_done` is already taken by the old localStorage→Netlify migration).
 - iOS Shortcuts keep the same `Bearer` token auth; only the ingest URL changes.
 
+Hosting moved to Vercel per `docs/superpowers/specs/2026-07-12-vercel-prod-cutover-design.md`; the
+Netlify site is a frozen fallback and must never be redeployed.
+
 ## Commands
 
 ```bash
 npm install
 npm run dev        # Vite UI only, http://localhost:5173 — /api/* not running, app uses localStorage cache
-npx netlify dev    # full stack (UI + functions + local Blobs), http://localhost:8888; set INGEST_TOKEN first
+npx netlify dev    # legacy fallback development only; the production backend is now Supabase
 npm test           # vitest run (unit + integration tests live next to source as *.test.ts[x])
 npm run build      # tsc -b && vite build  → dist/
 npm run preview    # serve the production build, http://localhost:4173
+npx vercel --prod  # deploy to Vercel (production). Never deploy to Netlify — no deploys remain.
 npm run lint       # eslint
 ```
 

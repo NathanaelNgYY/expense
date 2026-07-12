@@ -42,7 +42,8 @@ interface EntriesContextValue {
   restoreEntry: (entry: Entry) => Promise<void>
   editEntry: (id: string, patch: Partial<Entry>) => Promise<void>
   removeEntry: (id: string) => Promise<void>
-  refresh: () => Promise<void>
+  /** Resolves `true` once it reaches the successful commit path, `false` on any failure path. */
+  refresh: () => Promise<boolean>
   sync: SyncState
 }
 
@@ -129,7 +130,7 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
     setSync(current => ({ ...current, pendingCount: getQueue().length }))
   }, [])
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<boolean> => {
     let stage: 'session' | 'migration' | 'queue' = 'session'
     try {
       // Resolve identity and migrate the durable legacy cache before replaying later offline
@@ -143,7 +144,7 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
         // overwrite the only copy of them. Keep the cache authoritative and surface the failure.
         logSyncFailure('migration', 'migration', new Error('Server verification did not find every cached entry'))
         reportSync('migration')
-        return
+        return false
       }
       stage = 'queue'
       const hadQueuedMutations = getQueue().length > 0
@@ -151,7 +152,7 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
       if (!flushed.ok) {
         logSyncFailure(flushed.reason === 'auth' ? 'session' : 'queue', flushed.reason, flushed.error)
         reportSync(flushed.reason)
-        return
+        return false
       }
       const fresh = outcome === 'migrated' || hadQueuedMutations ? await fetchEntries() : server
       // Netlify Blobs list() is eventually consistent, so the refreshed server list can
@@ -181,11 +182,13 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
       void syncPokerSessionsIfNeeded().catch(error => {
         logSyncFailure('poker', isAuthFailure(error) ? 'auth' : 'offline', error)
       })
+      return true
     } catch (error) {
       // Offline or unauthorized: the cache is still correct and the queue is still durable. Surface it.
       const reason = isAuthFailure(error) ? 'auth' : stage === 'migration' ? 'migration' : 'offline'
       logSyncFailure(reason === 'auth' ? 'session' : stage, reason, error)
       reportSync(reason)
+      return false
     }
   }, [commit, reportSync])
 

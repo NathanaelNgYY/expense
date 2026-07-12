@@ -317,11 +317,18 @@ export default function Settings({ onBack }: Props) {
     setJsonBusy(true)
     try {
       const result = await applyImport(parseImportPayload(text))
-      await refresh()
+      // The import is already durable server-side and in the localStorage cache (applyImport's
+      // job) by this point — refresh() only pulls that into the rendered `entries` list. If it
+      // fails (offline/auth), don't claim the list is up to date; say so instead of lying.
+      const refreshed = await refresh()
       setImportError(false)
-      setImportMessage(
+      const countsMessage =
         `Imported ${result.newEntries} entr${result.newEntries === 1 ? 'y' : 'ies'} and ` +
-        `${result.newPokerSessions} poker session${result.newPokerSessions === 1 ? '' : 's'}.`,
+        `${result.newPokerSessions} poker session${result.newPokerSessions === 1 ? '' : 's'}.`
+      setImportMessage(
+        refreshed
+          ? countsMessage
+          : `${countsMessage} They're saved — the list will update on the next successful sync.`,
       )
       setShowPasteImport(false)
       setPasteText('')
@@ -791,6 +798,7 @@ export default function Settings({ onBack }: Props) {
       <button
         className="export-btn"
         type="button"
+        disabled={jsonBusy}
         onClick={() => jsonFileInputRef.current?.click()}
       >
         <Upload aria-hidden="true" size={18} strokeWidth={2.3} />

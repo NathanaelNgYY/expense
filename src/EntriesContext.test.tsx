@@ -83,12 +83,32 @@ function SyncProbe() {
   )
 }
 
+// Captures the boolean refresh() resolves with, outside React state, so tests can assert on
+// it without adding a hook dependency just for this probe.
+let lastRefreshResult: boolean | undefined
+
+function RefreshResultProbe() {
+  const { refresh } = useEntries()
+  return (
+    <button
+      onClick={() => {
+        void refresh().then(ok => {
+          lastRefreshResult = ok
+        })
+      }}
+    >
+      refresh
+    </button>
+  )
+}
+
 beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
   ensureUserIdMock.mockResolvedValue('u1')
   bulkUpsertEntriesMock.mockResolvedValue(undefined)
   fetchEntryIdsMock.mockResolvedValue(new Set())
+  lastRefreshResult = undefined
 })
 
 describe('EntriesContext', () => {
@@ -308,6 +328,28 @@ describe('EntriesContext', () => {
     })
     await waitFor(() => expect(JSON.parse(localStorage.getItem('deleted_ids') as string)).toEqual([]))
     expect(screen.getByTestId('count').textContent).toBe('0')
+  })
+
+  it('resolves refresh() to true when it reaches the successful commit path', async () => {
+    fetchEntriesMock.mockResolvedValue([])
+
+    render(<EntriesProvider><RefreshResultProbe /></EntriesProvider>)
+
+    await act(async () => {
+      screen.getByText('refresh').click()
+    })
+    await waitFor(() => expect(lastRefreshResult).toBe(true))
+  })
+
+  it('resolves refresh() to false when it hits the failure path', async () => {
+    fetchEntriesMock.mockRejectedValue(new TypeError('Failed to fetch'))
+
+    render(<EntriesProvider><RefreshResultProbe /></EntriesProvider>)
+
+    await act(async () => {
+      screen.getByText('refresh').click()
+    })
+    await waitFor(() => expect(lastRefreshResult).toBe(false))
   })
 })
 

@@ -442,8 +442,18 @@ describe('Settings JSON backup', () => {
     const { container } = rendered
 
     clickButton(container, b => b.textContent?.toLowerCase().includes('paste import') ?? false)
-    const box = container.querySelector<HTMLTextAreaElement>('#paste-import-box')
-    if (!box) throw new Error('Paste import textarea was not found')
+
+    // Locate the textarea via its accessible label, not just the raw id, so the label/input
+    // association itself is under test (a screen reader relies on this, not on the id alone).
+    const label = [...container.querySelectorAll('label')].find(
+      element => element.textContent?.trim() === 'Pasted export',
+    )
+    if (!label) throw new Error('Pasted export label was not found')
+    expect(label.htmlFor).toBe('paste-import-box')
+    const box = container.querySelector<HTMLTextAreaElement>(`#${label.htmlFor}`)
+    if (!box) throw new Error('Paste import textarea was not found via its label association')
+    expect(label.htmlFor).toBe(box.id)
+
     changeTextarea(
       box,
       JSON.stringify({ schemaVersion: 1, exportedAt: 'x', entries: [], pokerSessions: [], settings: {} }),
@@ -457,6 +467,76 @@ describe('Settings JSON backup', () => {
     await waitForText(container, 'Imported 2 entries and 1 poker session')
 
     expect(dataTransfer.applyImport).toHaveBeenCalledOnce()
+  })
+
+  it('reports import counts with a sync caveat when the post-import refresh fails', async () => {
+    const rendered = renderWithEntries()
+    root = rendered.root
+    const { container } = rendered
+
+    // Let the initial mount refresh (triggered by EntriesProvider) settle normally, then force
+    // every subsequent network call to fail so the refresh() inside importJsonText hits its
+    // failure path instead of its success path. The data is still safely upserted by applyImport
+    // (mocked below to succeed) — only the post-import refresh is made to fail.
+    await waitForText(container, 'Settings')
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    clickButton(container, b => b.textContent?.toLowerCase().includes('paste import') ?? false)
+    const box = container.querySelector<HTMLTextAreaElement>('#paste-import-box')
+    if (!box) throw new Error('Paste import textarea was not found')
+    changeTextarea(
+      box,
+      JSON.stringify({ schemaVersion: 1, exportedAt: 'x', entries: [], pokerSessions: [], settings: {} }),
+    )
+
+    const importButton = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Import')
+    if (!importButton) throw new Error('Import button was not found')
+    await act(async () => {
+      importButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    await waitForText(container, "the list will update on the next successful sync")
+
+    expect(container).toHaveTextContent('Imported 2 entries and 1 poker session')
+    // Non-error styling: the import itself succeeded, only the refresh lagged.
+    const feedback = [...container.querySelectorAll('p')].find(p => p.textContent?.includes('Imported 2'))
+    expect(feedback?.className).not.toContain('save-feedback--error')
+  })
+
+  it('disables the Import JSON file trigger while an import is in flight', async () => {
+    const rendered = renderWithEntries()
+    root = rendered.root
+    const { container } = rendered
+
+    let resolveImport: (value: { newEntries: number; newPokerSessions: number }) => void = () => {}
+    vi.mocked(dataTransfer.applyImport).mockImplementationOnce(
+      () => new Promise(resolve => { resolveImport = resolve }),
+    )
+
+    clickButton(container, b => b.textContent?.toLowerCase().includes('paste import') ?? false)
+    const box = container.querySelector<HTMLTextAreaElement>('#paste-import-box')
+    if (!box) throw new Error('Paste import textarea was not found')
+    changeTextarea(
+      box,
+      JSON.stringify({ schemaVersion: 1, exportedAt: 'x', entries: [], pokerSessions: [], settings: {} }),
+    )
+
+    const importButton = [...container.querySelectorAll('button')].find(b => b.textContent?.trim() === 'Import')
+    if (!importButton) throw new Error('Import button was not found')
+    act(() => {
+      importButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    const fileTriggerButton = [...container.querySelectorAll('button')].find(
+      b => b.textContent?.trim() === 'Import JSON file',
+    )
+    if (!fileTriggerButton) throw new Error('Import JSON file button was not found')
+    expect(fileTriggerButton.disabled).toBe(true)
+
+    await act(async () => {
+      resolveImport({ newEntries: 0, newPokerSessions: 0 })
+    })
+
+    expect(fileTriggerButton.disabled).toBe(false)
   })
 
   it('shows the validation error for malformed pasted JSON', async () => {

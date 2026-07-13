@@ -10,6 +10,7 @@ const grantLockdownSql = readFileSync(
   join(process.cwd(), 'supabase/migrations/20260713112626_lock_down_ingest_status_grants.sql'),
   'utf8',
 )
+const normalizedGrantLockdownSql = grantLockdownSql.replace(/\s+/g, ' ')
 
 describe('ingest visibility migration', () => {
   it('creates status immediately when a new token is minted', () => {
@@ -29,7 +30,7 @@ describe('ingest visibility migration', () => {
   })
 
   it('explicitly revokes client write privileges on the status projection', () => {
-    expect(grantLockdownSql).toContain(
+    expect(normalizedGrantLockdownSql).toContain(
       'revoke insert, update, delete, truncate, references, trigger on public.ingest_status from anon, authenticated',
     )
     expect(grantLockdownSql).toContain('grant select on public.ingest_status to authenticated')

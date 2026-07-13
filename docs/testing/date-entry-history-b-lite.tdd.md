@@ -1,5 +1,8 @@
 # Date Entry and History B-lite TDD Evidence
 
+> Superseded on 2026-07-13 by `history-b-lite-only.tdd.md`, which removes Option A's
+> Today/Yesterday/date-picker controls and keeps only the calendar-led B-lite flow.
+
 ## Source
 
 Journeys were derived from the user's correction that the implemented bottom-sheet flow should be B-lite. No external plan file was used.

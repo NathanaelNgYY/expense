@@ -75,6 +75,22 @@ describe('AddEntry', () => {
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
   })
 
+  it('starts on a date selected from History', async () => {
+    await act(async () => {
+      localStorage.setItem('budget_entries', '[]')
+      localStorage.setItem('api_token', 'tok')
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('[]', { status: 200 })))
+      render(
+        <EntriesProvider>
+          <AddEntry initialDate="2026-05-18" onSave={() => undefined} />
+        </EntriesProvider>,
+      )
+    })
+
+    expect(screen.getByRole('button', { name: 'Choose expense date, May 18' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add for May 18' })).toBeInTheDocument()
+  })
+
   it('saves an entry for yesterday and makes the non-today date visible', async () => {
     const yesterday = addDays(new Date(), -1)
     const yesterdayLabel = format(yesterday, 'MMM d')

@@ -316,44 +316,29 @@ describe('History entry editing', () => {
     })
   })
 
-  it('opens a calendar day sheet and adds an expense with the selected date locked', async () => {
+  it('filters the ledger to a tapped calendar day and offers dated entry', async () => {
+    const onAddForDate = vi.fn()
     const rendered = renderWithEntries([
       entry({ id: 'lunch', amount: 6.3, note: 'Food court', date: '2026-05-18' }),
       entry({ id: 'train', amount: 8.5, category: 'transport', note: '', date: '2026-05-18' }),
       entry({ id: 'other-day', amount: 20, category: 'others', date: '2026-05-17' }),
-    ])
+    ], { onAddForDate })
     root = rendered.root
     await act(async () => {})
 
     clickButton(rendered.container, 'May 18, S$14.80 spent')
 
-    const dialog = rendered.container.querySelector<HTMLElement>('[role="dialog"]')
-    if (!dialog) throw new Error('Day sheet was not found')
-    expect(dialog).toHaveAttribute('aria-label', 'Expenses for Mon, May 18')
-    expect(dialog).toHaveTextContent('2 expenses')
-    expect(dialog).toHaveTextContent('S$14.80')
-    expect(dialog).toHaveTextContent('Food court')
-    expect(dialog).not.toHaveTextContent('S$20.00')
+    expect(rendered.container.querySelector('[role="dialog"]')).not.toBeInTheDocument()
+    expect(rendered.container.querySelectorAll('.entry-row-button')).toHaveLength(2)
+    expect(rendered.container.querySelector('.entry-list')).toHaveTextContent('Food court')
+    expect(rendered.container.querySelector('.entry-list')).not.toHaveTextContent('S$20.00')
+    expect(rendered.container).toHaveTextContent('2 of 3 transactions')
 
-    clickButton(dialog, 'Add expense for May 18')
-    const amount = dialog.querySelector<HTMLInputElement>('#day-sheet-amount')
-    const note = dialog.querySelector<HTMLInputElement>('#day-sheet-note')
-    if (!amount || !note) throw new Error('Day sheet form was not found')
+    clickButton(rendered.container, 'Add for May 18')
+    expect(onAddForDate).toHaveBeenCalledWith('2026-05-18')
 
-    changeInput(amount, '12.40')
-    changeInput(note, 'Second lunch')
-    clickButton(dialog, 'Lunch')
-
-    await act(async () => {
-      clickButton(dialog, 'Add for May 18')
-    })
-
-    expect(getEntries()).toContainEqual(expect.objectContaining({
-      amount: 12.4,
-      category: 'lunch',
-      note: 'Second lunch',
-      date: '2026-05-18',
-    }))
+    clickButton(rendered.container, 'Clear day filter')
+    expect(rendered.container.querySelectorAll('.entry-row-button')).toHaveLength(3)
     expect(rendered.container).not.toHaveTextContent('Add missed expense')
     expect(rendered.container).toHaveTextContent('Calendar & insights')
   })

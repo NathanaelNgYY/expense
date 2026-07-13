@@ -12,6 +12,7 @@ export interface IngestStore {
   list(): Promise<Entry[]>
   has(dedupeKey: string): Promise<boolean>
   put(entry: Entry): Promise<void>
+  recordCapture?(sourceKind: IngestBody['sourceKind']): Promise<void>
 }
 
 export type IngestBody =
@@ -82,8 +83,10 @@ export async function handleIngest(
   const entry = buildEntryFromIngest(input, makeId)
 
   if (await store.has(entry.dedupeKey as string)) {
+    await store.recordCapture?.(body.sourceKind)
     return { status: 'duplicate', entry }
   }
   await store.put(entry)
+  await store.recordCapture?.(body.sourceKind)
   return { status: 'saved', entry }
 }

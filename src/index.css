@@ -2001,6 +2001,84 @@ input:focus-visible {
   margin-top: auto;
 }
 
+.ingest-status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 26%, var(--separator));
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--primary) 5%, var(--bg-elev-1));
+  padding: 15px;
+}
+
+.ingest-status-card--warning {
+  border-color: color-mix(in srgb, var(--red) 42%, var(--separator));
+  background: color-mix(in srgb, var(--red) 7%, var(--bg-elev-1));
+}
+
+.ingest-status-card__heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--primary);
+}
+
+.ingest-status-card--warning .ingest-status-card__heading {
+  color: var(--red);
+}
+
+.ingest-status-card__heading h3 {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.ingest-status-card__details {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+}
+
+.ingest-status-card__details > div {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 12px;
+}
+
+.ingest-status-card__details dt,
+.ingest-status-card__muted {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ingest-status-card__details dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.ingest-status-card__notice {
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 10px;
+}
+
+.ingest-status-card__notice strong {
+  color: var(--red);
+}
+
+.ingest-status-card__linked {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .settings-total {
   color: var(--text-secondary);
   font-size: 13px;

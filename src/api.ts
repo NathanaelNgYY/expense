@@ -1,6 +1,7 @@
 import type { Entry, PokerSession } from './types'
 import { getSupabase, isSupabaseConfigured } from './lib/supabaseClient'
 import { buildDedupeKey } from './shared/dedupe'
+import type { IngestSourceKind, IngestStatus } from './ingestVisibility'
 
 export class ApiError extends Error {
   status: number
@@ -58,6 +59,32 @@ async function resolveUserId(): Promise<string> {
 export function ensureUserId(): Promise<string> {
   if (!sessionInFlight) sessionInFlight = resolveUserId().finally(() => { sessionInFlight = null })
   return sessionInFlight
+}
+
+// ---------- ingest visibility ----------
+
+interface IngestStatusRow {
+  user_id: string
+  token_label: string
+  last_captured_at: string | null
+  last_source: IngestSourceKind | null
+}
+
+export async function fetchIngestStatus(): Promise<IngestStatus | null> {
+  await ensureUserId()
+  const { data, error, status } = await getSupabase()
+    .from('ingest_status')
+    .select('user_id,token_label,last_captured_at,last_source')
+    .maybeSingle()
+  if (error) throwFrom(error, status)
+  if (!data) return null
+  const row = data as IngestStatusRow
+  return {
+    recipientUserId: row.user_id,
+    tokenLabel: row.token_label,
+    lastCapturedAt: row.last_captured_at,
+    lastSource: row.last_source,
+  }
 }
 
 // ---------- row mapping ----------

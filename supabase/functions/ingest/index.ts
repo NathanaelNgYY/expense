@@ -33,6 +33,7 @@ class SupabaseEntryStore implements IngestStore {
   constructor(
     private client: SupabaseClient,
     private userId: string,
+    private tokenLabel: string,
   ) {}
 
   async list(): Promise<Entry[]> {
@@ -90,6 +91,23 @@ class SupabaseEntryStore implements IngestStore {
     )
     if (error) throw new Error(error.message)
   }
+
+  async recordCapture(sourceKind: IngestBody['sourceKind']): Promise<void> {
+    const capturedAt = new Date().toISOString()
+    const { error } = await this.client.from('ingest_status').upsert(
+      {
+        user_id: this.userId,
+        token_label: this.tokenLabel,
+        last_captured_at: capturedAt,
+        last_source: sourceKind,
+        updated_at: capturedAt,
+      },
+      { onConflict: 'user_id' },
+    )
+    // Visibility must never make transaction capture fail. A later request retries this
+    // best-effort status write while the entry itself remains durable.
+    if (error) console.error('Failed to update ingest status:', error.message)
+  }
 }
 
 function json(body: unknown, status: number): Response {
@@ -121,13 +139,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
   )
 
   let userId: string | null = null
+  let tokenLabel = ''
   if (token) {
     const { data } = await client
       .from('ingest_tokens')
-      .select('user_id')
+      .select('user_id,label')
       .eq('token_hash', await sha256Hex(token))
       .maybeSingle()
     userId = data?.user_id ?? null
+    tokenLabel = data?.label ?? ''
   }
   if (!userId) {
     const limit = checkRateLimit(req, AUTH_FAILURE_RATE_LIMIT)
@@ -145,7 +165,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: 'invalid-json' }, 400)
   }
 
-  const result = await handleIngest(body, new SupabaseEntryStore(client, userId))
+  const result = await handleIngest(body, new SupabaseEntryStore(client, userId, tokenLabel))
   if (result.status === 'error') {
     return json(result, 400)
   }

@@ -8,6 +8,7 @@ import DataSettings from './settings/DataSettings'
 import { useEntries } from '../EntriesContext'
 import { useTheme } from '../theme/ThemeContext'
 import { THEMES } from '../theme/themeRegistry'
+import IngestStatusCard from './settings/IngestStatusCard'
 
 interface Props {
   onBack: () => void
@@ -71,6 +72,8 @@ export default function Settings({ onBack }: Props) {
       {subscreen === 'hub' && (
         <>
           <SettingsHeader title="Settings" backLabel="Back" onBack={onBack} />
+
+          <IngestStatusCard />
 
           <div className="ios-list">
             <NavRow

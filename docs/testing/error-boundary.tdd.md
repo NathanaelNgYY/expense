@@ -48,4 +48,4 @@ The user journeys were derived from H8 in the production-readiness audit dated 2
 ## Known gaps
 
 - React error boundaries catch render, constructor, and lifecycle failures below them; they do not catch event-handler errors or arbitrary rejected promises.
-- External monitoring is not connected yet. The optional `onError` callback is ready for Sentry, but completing that phase requires a Sentry project/DSN and a deliberate dependency/configuration change.
+- The boundary now reports through the Sentry integration. Remote delivery remains disabled until the owner supplies a Sentry project DSN; see `docs/testing/sentry-monitoring.tdd.md`.

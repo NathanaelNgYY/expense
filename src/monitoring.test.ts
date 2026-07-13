@@ -47,4 +47,15 @@ describe('Sentry monitoring', () => {
       tags: { source: 'react-error-boundary' },
     })
   })
+
+  it('handles a missing component stack without attaching application state', () => {
+    const error = new Error('render failed before React produced a stack')
+
+    reportReactError(error, { componentStack: null })
+
+    expect(Sentry.captureException).toHaveBeenCalledWith(error, {
+      contexts: { react: { componentStack: '' } },
+      tags: { source: 'react-error-boundary' },
+    })
+  })
 })

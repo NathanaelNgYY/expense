@@ -126,6 +126,31 @@ describe('edge ingest handler', () => {
     expect(await store.list()).toHaveLength(1)
   })
 
+  it('does not trust a Shortcut Input value that only repeats the merchant name', async () => {
+    const store = new InMemoryStore()
+    const shortcutBody = {
+      sourceKind: 'apple_pay' as const,
+      amount: 4.2,
+      merchant: 'Ya Kun',
+      idempotencyKey: 'Ya Kun',
+    }
+
+    const first = await handleIngest(
+      { ...shortcutBody, occurredAt: '2026-07-11T04:00:00.000Z' },
+      store,
+      () => 'first-id',
+    )
+    const second = await handleIngest(
+      { ...shortcutBody, occurredAt: '2026-07-11T04:02:00.000Z' },
+      store,
+      () => 'second-id',
+    )
+
+    expect(first.status).toBe('saved')
+    expect(second.status).toBe('saved')
+    expect(await store.list()).toHaveLength(2)
+  })
+
   it('keeps two equal purchases from the same merchant when their timestamps differ', async () => {
     const store = new InMemoryStore()
     const first = await handleIngest(

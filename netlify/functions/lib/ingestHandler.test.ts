@@ -76,6 +76,30 @@ describe('handleIngest', () => {
     expect(await store.list()).toHaveLength(1)
   })
 
+  it('does not trust a Shortcut Input value that only repeats the merchant name', async () => {
+    const store = new InMemoryEntryStore()
+    const shortcutBody = {
+      sourceKind: 'apple_pay' as const,
+      amount: 4.5,
+      merchant: 'Ya Kun',
+      idempotencyKey: 'Ya Kun',
+    }
+
+    await handleIngest(
+      { ...shortcutBody, occurredAt: '2026-06-09T08:15:00.000Z' },
+      store,
+      () => 'first-id',
+    )
+    const res = await handleIngest(
+      { ...shortcutBody, occurredAt: '2026-06-09T08:17:00.000Z' },
+      store,
+      () => 'second-id',
+    )
+
+    expect(res.status).toBe('saved')
+    expect(await store.list()).toHaveLength(2)
+  })
+
   it('rejects invalid amount', async () => {
     const store = new InMemoryEntryStore()
     const res = await handleIngest({ sourceKind: 'apple_pay', amount: 0, merchant: 'X' }, store, ID)

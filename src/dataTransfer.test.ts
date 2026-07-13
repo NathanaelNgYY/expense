@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { applyImport, buildExportPayload, parseImportPayload } from './dataTransfer'
+import { applyImport, buildExportPayload, downloadJsonBackup, parseImportPayload } from './dataTransfer'
 import type { ExportPayloadV1 } from './dataTransfer'
 import type { Entry, PokerSession } from './types'
 import * as api from './api'
@@ -48,6 +48,23 @@ describe('buildExportPayload', () => {
     expect(payload.entries).toEqual([])
     expect(payload.pokerSessions).toEqual([])
     expect(payload.settings.theme).toBeUndefined()
+  })
+})
+
+describe('downloadJsonBackup', () => {
+  it('downloads the full local backup with a dated JSON filename', () => {
+    localStorage.setItem('budget_entries', JSON.stringify([entry]))
+    const createObjectURL = vi.fn(() => 'blob:backup')
+    const revokeObjectURL = vi.fn()
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL })
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+
+    const payload = downloadJsonBackup()
+
+    expect(payload.entries).toEqual([entry])
+    expect(createObjectURL).toHaveBeenCalledWith(expect.objectContaining({ type: 'application/json' }))
+    expect(click).toHaveBeenCalledOnce()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:backup')
   })
 })
 

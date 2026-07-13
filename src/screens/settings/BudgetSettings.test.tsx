@@ -323,6 +323,69 @@ describe('BudgetSettings', () => {
     expect(container.querySelector('#budget-monthly-income')).toBeNull()
   })
 
+  it('keeps unsaved personal edits across a Personal -> Shared -> Personal round-trip', () => {
+    const budget = makeSharedBudget()
+    sharedCtx.value.budgets = [budget]
+    sharedCtx.value.active = makeActive(budget)
+
+    const rendered = renderBudget()
+    root = rendered.root
+    const { container } = rendered
+
+    changeInput(container.querySelector<HTMLInputElement>('#budget-monthly-income')!, '1800')
+    clickButton(container, b => b.textContent?.trim() === 'Shared')
+    clickButton(container, b => b.textContent?.trim() === 'Personal')
+
+    expect(container.querySelector<HTMLInputElement>('#budget-monthly-income')!.value).toBe('1800')
+    expect(container).toHaveTextContent('Unsaved changes')
+  })
+
+  it('guards Back from shared scope when personal edits are unsaved', () => {
+    const budget = makeSharedBudget()
+    sharedCtx.value.budgets = [budget]
+    sharedCtx.value.active = makeActive(budget)
+    const onDone = vi.fn()
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    const rendered = renderBudget([], onDone)
+    root = rendered.root
+    const { container } = rendered
+
+    // Dirty the personal form, then leave from the shared tab: the personal state is still
+    // mounted and unsaved, so Back must still prompt.
+    changeInput(container.querySelector<HTMLInputElement>('#budget-monthly-income')!, '1800')
+    clickButton(container, b => b.textContent?.trim() === 'Shared')
+    clickButton(container, b => b.textContent?.includes('Settings') ?? false)
+
+    expect(confirmSpy).toHaveBeenCalledOnce()
+    expect(onDone).not.toHaveBeenCalled()
+    confirmSpy.mockRestore()
+  })
+
+  it('clears a stale remove error when the scope changes', () => {
+    const budget = makeSharedBudget()
+    sharedCtx.value.budgets = [budget]
+    sharedCtx.value.active = makeActive(budget)
+    localStorage.setItem(
+      'budget_custom_categories',
+      JSON.stringify([{ id: 'cat_gym_1', label: 'Gym', budget: null, icon: 'Dumbbell' }]),
+    )
+
+    const rendered = renderBudget([
+      { id: 'g1', amount: 10, category: 'cat_gym_1', note: '', date: '2026-05-04' },
+    ])
+    root = rendered.root
+    const { container } = rendered
+
+    clickButton(container, b => b.getAttribute('aria-label') === 'Remove Gym')
+    expect(container).toHaveTextContent(/use "Gym"/)
+
+    clickButton(container, b => b.textContent?.trim() === 'Shared')
+    clickButton(container, b => b.textContent?.trim() === 'Personal')
+
+    expect(container).not.toHaveTextContent(/use "Gym"/)
+  })
+
   it('guards Back when the form is dirty', () => {
     const onDone = vi.fn()
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)

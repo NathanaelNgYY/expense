@@ -71,11 +71,19 @@ export default function BudgetSettings({ onDone }: Props) {
     setSavedSnapshot(JSON.stringify({ config, customCategories, overrides }))
   }
 
-  // Only the personal form holds unsaved local state; shared edits are written straight
-  // through by SharedBudgetSettings, so there is nothing to guard there.
+  // The guard is unconditional: the personal form stays mounted (and dirty) behind the shared
+  // tab, so leaving from either scope would discard those edits. `isDirty` is computed from
+  // personal state alone, so shared edits never trigger the prompt.
   function handleBack() {
-    if (scope === 'personal' && isDirty && !confirm('You have unsaved budget changes. Leave without saving?')) return
+    if (isDirty && !confirm('You have unsaved budget changes. Leave without saving?')) return
     onDone()
+  }
+
+  // A remove error belongs to the row it was raised on; don't let it linger (hidden behind the
+  // shared tab, or above an unrelated open editor) and resurface as a stale complaint.
+  function changeScope(next: 'personal' | 'shared') {
+    setScope(next)
+    setRemoveError('')
   }
 
   function handleChange(key: keyof BudgetConfig, value: string) {
@@ -139,14 +147,14 @@ export default function BudgetSettings({ onDone }: Props) {
           <button
             type="button"
             className={scope === 'personal' ? 'scope-switch-btn scope-switch-btn--active' : 'scope-switch-btn'}
-            onClick={() => setScope('personal')}
+            onClick={() => changeScope('personal')}
           >
             Personal
           </button>
           <button
             type="button"
             className={scope === 'shared' ? 'scope-switch-btn scope-switch-btn--active' : 'scope-switch-btn'}
-            onClick={() => setScope('shared')}
+            onClick={() => changeScope('shared')}
           >
             Shared
           </button>
@@ -217,7 +225,6 @@ export default function BudgetSettings({ onDone }: Props) {
                   </div>
                   {editingId === key && (
                     <CategoryEditorForm
-                      key={key}
                       idPrefix="edit-cat"
                       initialLabel={categoryLabel(key, overrides)}
                       initialIcon={categoryIcon(key, overrides)}
@@ -272,7 +279,6 @@ export default function BudgetSettings({ onDone }: Props) {
                   </div>
                   {editingId === cat.id && (
                     <CategoryEditorForm
-                      key={cat.id}
                       idPrefix="edit-cat"
                       initialLabel={cat.label}
                       initialIcon={cat.icon}

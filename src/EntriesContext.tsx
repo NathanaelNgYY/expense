@@ -255,6 +255,9 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
   }, [bumpPending, commit, refresh])
 
   const restoreEntry = useCallback(async (entry: Entry) => {
+    // A restore supersedes the local deletion immediately. Leaving this id tombstoned would
+    // hide the restored server row during the next reconciliation pass.
+    setTombstones(getTombstones().filter(id => id !== entry.id))
     commit([...entriesRef.current.filter(candidate => candidate.id !== entry.id), entry])
     setPendingCreates([...new Set([...getPendingCreates(), entry.id])])
     setQueue([...getQueue(), { op: 'create', entry }])

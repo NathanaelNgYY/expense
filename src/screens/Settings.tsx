@@ -1,6 +1,6 @@
 // src/screens/Settings.tsx
 import { useState, type ReactNode } from 'react'
-import { ChevronRight, Database, Palette, Trash2, Wallet } from 'lucide-react'
+import { ChevronRight, Database, Palette, Trash2, Undo2, Wallet } from 'lucide-react'
 import SettingsHeader from './settings/SettingsHeader'
 import BudgetSettings from './settings/BudgetSettings'
 import AppearanceSettings from './settings/AppearanceSettings'
@@ -9,6 +9,7 @@ import { useEntries } from '../EntriesContext'
 import { useTheme } from '../theme/ThemeContext'
 import { THEMES } from '../theme/themeRegistry'
 import IngestStatusCard from './settings/IngestStatusCard'
+import type { Entry } from '../types'
 
 interface Props {
   onBack: () => void
@@ -46,20 +47,43 @@ function NavRow({ icon, label, sub, onClick }: NavRowProps) {
 
 export default function Settings({ onBack }: Props) {
   const [subscreen, setSubscreen] = useState<SettingsSubscreen>('hub')
-  const { entries, removeEntry } = useEntries()
+  const [resetSnapshot, setResetSnapshot] = useState<Entry[] | null>(null)
+  const [resetMessage, setResetMessage] = useState<string | null>(null)
+  const { entries, removeEntry, restoreEntry } = useEntries()
   const { theme } = useTheme()
   const themeName = THEMES.find(option => option.id === theme)?.name ?? THEMES[0].name
 
   async function handleReset() {
-    if (!confirm("Delete all entries for the current month? This can't be undone.")) return
-
     const now = new Date()
     const toRemove = entries.filter(entry =>
       isEntryInMonth(entry.date, now.getFullYear(), now.getMonth()),
     )
+    if (toRemove.length === 0) {
+      setResetMessage('No entries to reset this month')
+      return
+    }
+
+    const noun = toRemove.length === 1 ? 'entry' : 'entries'
+    if (!confirm(
+      `Delete ${toRemove.length} ${noun} from this month? You can undo this while Settings remains open.`,
+    )) return
+
     for (const entry of toRemove) {
       await removeEntry(entry.id)
     }
+    setResetSnapshot(toRemove)
+    setResetMessage(`Deleted ${toRemove.length} ${noun}`)
+  }
+
+  async function handleUndoReset() {
+    if (!resetSnapshot) return
+    const snapshot = resetSnapshot
+    setResetSnapshot(null)
+    for (const entry of snapshot) {
+      await restoreEntry(entry)
+    }
+    const noun = snapshot.length === 1 ? 'entry' : 'entries'
+    setResetMessage(`Restored ${snapshot.length} ${noun}`)
   }
 
   const goHub = () => setSubscreen('hub')
@@ -108,6 +132,17 @@ export default function Settings({ onBack }: Props) {
               <Trash2 aria-hidden="true" size={18} strokeWidth={2.3} />
               Reset This Month&apos;s Data
             </button>
+            {resetMessage && (
+              <div className="entry-ledger-feedback settings-reset-feedback" role="status" aria-live="polite">
+                <span>{resetMessage}</span>
+                {resetSnapshot && (
+                  <button type="button" onClick={() => void handleUndoReset()}>
+                    <Undo2 size={16} aria-hidden="true" />
+                    Undo
+                  </button>
+                )}
+              </div>
+            )}
           </section>
         </>
       )}

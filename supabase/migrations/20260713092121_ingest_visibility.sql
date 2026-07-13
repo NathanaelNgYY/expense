@@ -16,6 +16,31 @@ using ((select auth.uid()) = user_id);
 
 grant select on public.ingest_status to authenticated;
 
+-- Keep status in sync for future token mints, before any transaction has been
+-- captured. This is an invoker function with an empty search_path; only the
+-- service role may execute it and clients still cannot write ingest_status.
+create function public.sync_ingest_status_on_token()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  insert into public.ingest_status (user_id, token_label, updated_at)
+  values (new.user_id, new.label, now())
+  on conflict (user_id) do update set
+    token_label = excluded.token_label,
+    updated_at = excluded.updated_at;
+  return new;
+end;
+$$;
+
+revoke execute on function public.sync_ingest_status_on_token() from public, anon, authenticated;
+grant execute on function public.sync_ingest_status_on_token() to service_role;
+
+create trigger ingest_token_status_created
+after insert or update of label, user_id on public.ingest_tokens
+for each row execute function public.sync_ingest_status_on_token();
+
 -- Existing installs get an immediately useful status row without exposing or
 -- copying token_hash. The newest token label and newest ingested entry win.
 with latest_token as (

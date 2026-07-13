@@ -9,6 +9,7 @@ import type { SavedEntrySummary } from './screens/AddEntry'
 import { EntriesProvider, useEntries } from './EntriesContext'
 import { SharedBudgetsProvider } from './sharedBudgets/SharedBudgetsContext'
 import { ThemeProvider } from './theme/ThemeContext'
+import AppErrorBoundary from './components/AppErrorBoundary'
 
 const History = lazy(() => import('./screens/History'))
 const Settings = lazy(() => import('./screens/Settings'))
@@ -82,12 +83,14 @@ function AppShell() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <EntriesProvider>
-        <SharedBudgetsProvider>
-          <AppShell />
-        </SharedBudgetsProvider>
-      </EntriesProvider>
-    </ThemeProvider>
+    <AppErrorBoundary>
+      <ThemeProvider>
+        <EntriesProvider>
+          <SharedBudgetsProvider>
+            <AppShell />
+          </SharedBudgetsProvider>
+        </EntriesProvider>
+      </ThemeProvider>
+    </AppErrorBoundary>
   )
 }

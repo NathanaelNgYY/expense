@@ -2546,6 +2546,72 @@ input:focus-visible {
   align-items: flex-end;
 }
 
+/* ─── Root crash recovery ─────────────────────────────────── */
+
+.app-error-shell {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+}
+
+.app-error-boundary {
+  width: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.app-error-card {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--warning) 34%, transparent);
+  border-radius: 20px;
+  background: var(--bg-elev);
+  padding: 28px 22px 22px;
+  text-align: center;
+}
+
+.app-error-icon {
+  width: 48px;
+  height: 48px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--warning) 14%, transparent);
+  color: var(--warning);
+}
+
+.app-error-card h1 {
+  margin: 16px 0 8px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 25px;
+  line-height: 1.15;
+}
+
+.app-error-card p {
+  margin: 0 auto;
+  max-width: 32ch;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.app-error-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.app-error-action {
+  width: 100%;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+}
+
 /* ─── First run ──────────────────────────────────────────── */
 
 /* A dashboard of zeros tells a new user nothing. This tells them the one thing to do. */

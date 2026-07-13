@@ -3,15 +3,11 @@ import { useEffect, useState } from 'react'
 import { Plus, Save, Trash2, Wallet } from 'lucide-react'
 import BudgetIcon from '../../components/BudgetIcon'
 import CategoryEditorForm, { type CategoryEditorResult } from './CategoryEditorForm'
+import { parseOptionalBudget } from './parseOptionalBudget'
 import { useSharedBudgets } from '../../sharedBudgets/SharedBudgetsContext'
 
 interface Props {
   onSaved: () => void
-}
-
-function parseOptionalBudget(value: string): number | null {
-  const trimmed = value.trim()
-  return trimmed === '' ? null : Math.max(0, parseFloat(trimmed) || 0)
 }
 
 export default function SharedBudgetSettings({ onSaved }: Props) {

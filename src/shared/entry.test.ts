@@ -2,6 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { buildEntryFromIngest } from './entry'
 
 describe('buildEntryFromIngest', () => {
+  it('generates an id when the caller does not provide a factory', () => {
+    const entry = buildEntryFromIngest(
+      { sourceKind: 'apple_pay', amount: 1, merchant: 'X', occurredAt: '2026-06-09T08:15:00+08:00' },
+    )
+
+    expect(entry.id).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
   it('builds an apple-pay entry with a labelled note, guessed category and dedupeKey', () => {
     const entry = buildEntryFromIngest(
       { sourceKind: 'apple_pay', amount: 4.5, merchant: 'Ya Kun Kaya Toast', occurredAt: '2026-06-09T08:15:00+08:00' },

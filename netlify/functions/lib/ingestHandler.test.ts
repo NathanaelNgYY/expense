@@ -5,6 +5,17 @@ import { InMemoryEntryStore } from './store'
 const ID = () => 'fixed-id'
 
 describe('handleIngest', () => {
+  it('uses a generated id in the default production path', async () => {
+    const store = new InMemoryEntryStore()
+    const result = await handleIngest(
+      { sourceKind: 'apple_pay', amount: 4.5, merchant: 'Ya Kun', idempotencyKey: 'generated-id-event' },
+      store,
+    )
+
+    expect(result.status).toBe('saved')
+    if (result.status === 'saved') expect(result.entry.id).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
   it('saves an apple_pay transaction', async () => {
     const store = new InMemoryEntryStore()
     const res = await handleIngest(

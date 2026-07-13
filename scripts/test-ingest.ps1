@@ -29,6 +29,9 @@
 .PARAMETER Currency
   ISO currency. Default SGD.
 
+.PARAMETER IdempotencyKey
+  Stable key reused when testing Apple Pay retries. Change it to simulate a distinct transaction.
+
 .EXAMPLE
   ./scripts/test-ingest.ps1
   # fires a 12.50 apple_pay "Test Cafe" at local netlify dev
@@ -51,10 +54,20 @@ param(
   [double]$Amount = 12.50,
   [string]$Merchant = 'Test Cafe',
   [string]$RawBody = "Amount: SGD 12.00`nTo: NTUC FAIRPRICE",
-  [string]$Currency = 'SGD'
+  [string]$Currency = 'SGD',
+  [string]$IdempotencyKey = 'test-apple-pay-transaction'
 )
 
-$endpoint = "$($Url.TrimEnd('/'))/api/ingest"
+$baseUrl = $Url.TrimEnd('/')
+if ($baseUrl -match '/(api/ingest|functions/v1/ingest)$') {
+  $endpoint = $baseUrl
+}
+elseif ($baseUrl -match '\.supabase\.co$') {
+  $endpoint = "$baseUrl/functions/v1/ingest"
+}
+else {
+  $endpoint = "$baseUrl/api/ingest"
+}
 $occurredAt = (Get-Date).ToString('o')  # ISO 8601 with offset, like the Shortcut sends
 
 if ($Kind -eq 'apple_pay') {
@@ -64,6 +77,7 @@ if ($Kind -eq 'apple_pay') {
     merchant   = $Merchant
     occurredAt = $occurredAt
     currency   = $Currency
+    idempotencyKey = $IdempotencyKey
   }
 } else {
   $payload = [ordered]@{

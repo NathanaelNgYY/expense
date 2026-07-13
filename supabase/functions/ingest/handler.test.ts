@@ -19,6 +19,17 @@ class InMemoryStore implements IngestStore {
 const makeId = () => 'fixed-id'
 
 describe('edge ingest handler', () => {
+  it('uses a generated id in the default production path', async () => {
+    const store = new InMemoryStore()
+    const result = await handleIngest(
+      { sourceKind: 'apple_pay', amount: 4.2, merchant: 'Ya Kun', idempotencyKey: 'generated-id-event' },
+      store,
+    )
+
+    expect(result.status).toBe('saved')
+    if (result.status === 'saved') expect(result.entry.id).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
   it('saves an apple pay transaction with merchant, source and dedupe key', async () => {
     const store = new InMemoryStore()
     const result = await handleIngest(

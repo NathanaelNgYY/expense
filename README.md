@@ -1,6 +1,6 @@
 # Budget Tracker
 
-Personal iPhone-friendly budget tracker built as a React 19 + Vite PWA. Transactions live on a small Netlify Functions backend (Netlify Blobs store) so they can be captured automatically in the background; the PWA reads/writes through that API and keeps a `localStorage` cache for offline viewing. It tracks a configurable monthly budget (default S$1,200) and supports a shortcut URL that opens straight to the add-entry screen.
+Personal iPhone-friendly budget tracker built as a React 19 + Vite PWA, hosted on Vercel with Supabase for per-user storage and background ingestion. The PWA keeps a user-scoped `localStorage` cache for offline use. It tracks a configurable monthly budget (default S$1,200) and supports a shortcut URL that opens straight to the add-entry screen.
 
 ## Features
 
@@ -76,15 +76,16 @@ Transactions are captured automatically by two iOS Shortcuts that POST to the ap
 
 ### Server setup (one-time)
 
-1. In Netlify, go to Site settings → Environment variables and add `INGEST_TOKEN` set to a long random string.
-2. Deploy. The endpoints are `POST /api/ingest` and `GET/POST/PUT/DELETE /api/entries`.
-3. In the app, open Settings and paste the same `INGEST_TOKEN` into the **API token** field, then Save.
+1. Find the target account id in Supabase Dashboard → Authentication → Users.
+2. Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` locally, then run `node scripts/mint-ingest-token.mjs <user-id> ios-shortcut`.
+3. Save the raw token printed once by the script. The ingest endpoint is `https://<project>.supabase.co/functions/v1/ingest`.
 
 ### Shortcut 1 — Apple Pay
 
 - Automation trigger: **Transaction** → "When I tap" → select your card(s).
+- Before the request, add **Get Text from Input**. Use **Shortcut Input**, tap it, and select its **Transaction** field. Keep that output as `Transaction Key`.
 - Action: **Get Contents of URL**
-  - URL: `https://your-site.netlify.app/api/ingest`
+  - URL: `https://<project>.supabase.co/functions/v1/ingest`
   - Method: `POST`
   - Headers: `Authorization: Bearer <INGEST_TOKEN>`, `Content-Type: application/json`
   - Request Body (JSON):
@@ -93,12 +94,13 @@ Transactions are captured automatically by two iOS Shortcuts that POST to the ap
     - `merchant`: the Shortcut "Merchant" variable
     - `occurredAt`: Current Date, formatted ISO 8601 (include time)
     - `currency`: `SGD`
+    - `idempotencyKey`: the `Transaction Key` output above
 
 ### Shortcut 2 — DBS email alerts
 
 - Automation trigger: **Email** → from `ibanking.alert@dbs.com`, subject contains `Alerts`.
 - Action: **Get Contents of URL**
-  - URL: `https://your-site.netlify.app/api/ingest`
+  - URL: `https://<project>.supabase.co/functions/v1/ingest`
   - Method: `POST`
   - Headers: same as above
   - Request Body (JSON):
@@ -106,7 +108,7 @@ Transactions are captured automatically by two iOS Shortcuts that POST to the ap
     - `rawBody`: the email's body text
     - `occurredAt`: Current Date, ISO 8601
 
-The server extracts the amount and merchant from `rawBody`, so parsing can be improved in code without editing the Shortcut. Each transaction gets a deterministic `dedupeKey`, so a re-fired automation will not create duplicate entries.
+The server extracts the amount and merchant from `rawBody` and fingerprints that unchanged email body, so a re-fired email automation remains idempotent without another Shortcut field. Apple Pay uses `idempotencyKey` to distinguish real same-merchant purchases while collapsing retries of the same transaction. Older Apple Pay shortcuts without that field use a one-minute fallback and should be upgraded.
 
 ### Testing & troubleshooting ingestion (no Apple Pay needed)
 
@@ -115,9 +117,10 @@ purchase:
 
 ```bash
 npm run test:ingest         # the ingestHandler unit/integration tests (no network)
-# fire a real POST at a running server (start `npx netlify dev` first):
-npm run test:ingest:live    # → defaults to http://localhost:8888, token from $env:INGEST_TOKEN
-npm run test:ingest:live -- -Url https://<your-site>.netlify.app -Token <INGEST_TOKEN>   # hit prod
+# fire a real POST (the default still supports the frozen local Netlify fallback):
+npm run test:ingest:live
+npm run test:ingest:live -- -Url https://<project>.supabase.co -Token <INGEST_TOKEN>
+# repeat with the same -IdempotencyKey => duplicate; change it => a distinct transaction
 ```
 
 `scripts/test-ingest.ps1` prints the request and the response (`saved` / `duplicate` / an HTTP
@@ -155,12 +158,12 @@ totals but not the per-category rows.
 
 ## Data Notes
 
-Transactions are stored server-side in Netlify Blobs (the source of truth) and cached in browser `localStorage` for offline viewing; on first load after deploy, any pre-existing local entries are migrated up to the server. Each entry has a deterministic `dedupeKey`, so re-fired automations and re-imported CSVs won't create duplicates. Budget settings and poker sessions live only in `localStorage`. The Settings screen can export and import entries as CSV and reset the current month's entries.
+Transactions are stored per user in Supabase and cached in a user-scoped browser `localStorage` namespace for offline viewing. Ingest requests use stable event fingerprints for idempotency; manual entries preserve their own ids across queue retries and imports.
 
 ## Shared Budgets (Supabase)
 
 Shared budgets let friends or family spend from a common pot with live updates.
-Personal budget data stays on Netlify Blobs; Supabase only stores shared budgets.
+Personal and shared budget data both use Supabase with separate RLS-protected tables.
 
 One-time setup:
 

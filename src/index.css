@@ -1851,6 +1851,73 @@ input:focus-visible {
   box-shadow: 0 0 0 4px rgba(212, 175, 106, 0.12);
 }
 
+/* ─── Settings hub & subscreen rows ──────────────────────── */
+
+.settings-nav-row,
+.settings-action-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 17px;
+  min-height: 58px;
+}
+
+.settings-nav-row:active,
+.settings-action-row:active {
+  opacity: 0.7;
+}
+
+.settings-action-row:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-nav-row > .ui-icon,
+.settings-action-row > .ui-icon {
+  color: var(--primary);
+}
+
+.settings-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-row-sub {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.settings-action-label {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.settings-nav-chevron,
+.settings-row-trailing-icon {
+  color: var(--text-tertiary);
+  flex: 0 0 auto;
+}
+
+.settings-hint {
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 0 4px;
+}
+
+.settings-danger--push {
+  margin-top: auto;
+}
+
 .settings-total {
   color: var(--text-secondary);
   font-size: 13px;

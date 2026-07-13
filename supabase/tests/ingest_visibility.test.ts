@@ -6,6 +6,10 @@ const sql = readFileSync(
   join(process.cwd(), 'supabase/migrations/20260713092121_ingest_visibility.sql'),
   'utf8',
 )
+const grantLockdownSql = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20260713112626_lock_down_ingest_status_grants.sql'),
+  'utf8',
+)
 
 describe('ingest visibility migration', () => {
   it('creates status immediately when a new token is minted', () => {
@@ -22,5 +26,12 @@ describe('ingest visibility migration', () => {
     expect(sql).toContain('using ((select auth.uid()) = user_id)')
     expect(sql).toContain('grant select on public.ingest_status to authenticated')
     expect(sql).not.toContain('grant select on public.ingest_tokens to authenticated')
+  })
+
+  it('explicitly revokes client write privileges on the status projection', () => {
+    expect(grantLockdownSql).toContain(
+      'revoke insert, update, delete, truncate, references, trigger on public.ingest_status from anon, authenticated',
+    )
+    expect(grantLockdownSql).toContain('grant select on public.ingest_status to authenticated')
   })
 })

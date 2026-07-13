@@ -36,6 +36,35 @@ describe('handleIngest', () => {
     expect((await store.list()).length).toBe(1)
   })
 
+  it('matches the stable idempotency contract used by the Supabase handler', async () => {
+    const store = new InMemoryEntryStore()
+    await handleIngest(
+      {
+        sourceKind: 'apple_pay',
+        amount: 4.5,
+        merchant: 'Ya Kun',
+        occurredAt: '2026-06-09T08:15:00.000Z',
+        idempotencyKey: 'wallet-transaction-123',
+      },
+      store,
+      () => 'first-id',
+    )
+    const res = await handleIngest(
+      {
+        sourceKind: 'apple_pay',
+        amount: 4.5,
+        merchant: 'Ya Kun',
+        occurredAt: '2026-06-09T08:15:01.200Z',
+        idempotencyKey: 'wallet-transaction-123',
+      },
+      store,
+      () => 'second-id',
+    )
+
+    expect(res.status).toBe('duplicate')
+    expect(await store.list()).toHaveLength(1)
+  })
+
   it('rejects invalid amount', async () => {
     const store = new InMemoryEntryStore()
     const res = await handleIngest({ sourceKind: 'apple_pay', amount: 0, merchant: 'X' }, store, ID)

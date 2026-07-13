@@ -44,6 +44,77 @@ describe('edge ingest handler', () => {
     expect((await store.list()).length).toBe(1)
   })
 
+  it('deduplicates a re-fired Apple Pay event even when occurredAt changes', async () => {
+    const store = new InMemoryStore()
+    await handleIngest(
+      {
+        sourceKind: 'apple_pay',
+        amount: 4.2,
+        merchant: 'Ya Kun',
+        occurredAt: '2026-07-11T04:00:00.000Z',
+        idempotencyKey: 'wallet-transaction-123',
+      },
+      store,
+      () => 'first-id',
+    )
+    const second = await handleIngest(
+      {
+        sourceKind: 'apple_pay',
+        amount: 4.2,
+        merchant: 'Ya Kun',
+        occurredAt: '2026-07-11T04:00:01.200Z',
+        idempotencyKey: 'wallet-transaction-123',
+      },
+      store,
+      () => 'second-id',
+    )
+
+    expect(second.status).toBe('duplicate')
+    expect(await store.list()).toHaveLength(1)
+  })
+
+  it('keeps distinct Apple Pay events with the same merchant and amount in one minute', async () => {
+    const store = new InMemoryStore()
+    const common = {
+      sourceKind: 'apple_pay' as const,
+      amount: 4.2,
+      merchant: 'Ya Kun',
+      occurredAt: '2026-07-11T04:00:00.000Z',
+    }
+
+    const first = await handleIngest(
+      { ...common, idempotencyKey: 'wallet-transaction-123' },
+      store,
+      () => 'first-id',
+    )
+    const second = await handleIngest(
+      { ...common, idempotencyKey: 'wallet-transaction-456' },
+      store,
+      () => 'second-id',
+    )
+
+    expect(first.status).toBe('saved')
+    expect(second.status).toBe('saved')
+    expect(await store.list()).toHaveLength(2)
+  })
+
+  it('uses a minute fallback for legacy Apple Pay shortcuts without an idempotency key', async () => {
+    const store = new InMemoryStore()
+    await handleIngest(
+      { sourceKind: 'apple_pay', amount: 4.2, merchant: 'Ya Kun', occurredAt: '2026-07-11T04:00:00.000Z' },
+      store,
+      () => 'first-id',
+    )
+    const second = await handleIngest(
+      { sourceKind: 'apple_pay', amount: 4.2, merchant: 'Ya Kun', occurredAt: '2026-07-11T04:00:01.200Z' },
+      store,
+      () => 'second-id',
+    )
+
+    expect(second.status).toBe('duplicate')
+    expect(await store.list()).toHaveLength(1)
+  })
+
   it('keeps two equal purchases from the same merchant when their timestamps differ', async () => {
     const store = new InMemoryStore()
     const first = await handleIngest(
@@ -83,6 +154,35 @@ describe('edge ingest handler', () => {
     if (result.status !== 'saved') return
     expect(result.entry.source).toBe('dbs-email')
     expect(result.entry.amount).toBe(5.7)
+  })
+
+  it('deduplicates the same DBS email body when the automation re-fires later', async () => {
+    const store = new InMemoryStore()
+    const rawBody = 'You have made a PayNow transfer of SGD 5.70 to AH HUAT KOPI on 11 Jul.'
+    await handleIngest(
+      { sourceKind: 'dbs_email', rawBody, occurredAt: '2026-07-11T04:00:00.000Z' },
+      store,
+      () => 'first-id',
+    )
+    const second = await handleIngest(
+      { sourceKind: 'dbs_email', rawBody, occurredAt: '2026-07-11T04:05:00.000Z' },
+      store,
+      () => 'second-id',
+    )
+
+    expect(second.status).toBe('duplicate')
+    expect(await store.list()).toHaveLength(1)
+  })
+
+  it('rejects an oversized idempotency key at the request boundary', async () => {
+    const store = new InMemoryStore()
+    const result = await handleIngest(
+      { sourceKind: 'apple_pay', amount: 4.2, idempotencyKey: 'x'.repeat(501) },
+      store,
+    )
+
+    expect(result).toEqual({ status: 'error', reason: 'invalid-idempotency-key' })
+    expect(await store.list()).toHaveLength(0)
   })
 
   it('rejects a DBS email it cannot find an amount in', async () => {

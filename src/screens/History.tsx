@@ -1,9 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { endOfWeek, format } from 'date-fns'
-import { ChevronLeft, ChevronRight, Copy, Search, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Copy, Plus, Search, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import InsightsSection from '../components/InsightsSection'
-import HistoryDaySheet from '../components/HistoryDaySheet'
 import { formatSGD, formatSGDWhole } from '../format'
 import {
   entriesForMonth,
@@ -12,7 +11,6 @@ import {
   weeksInMonth,
 } from '../compute'
 import {
-  addDays,
   clampDateString,
   fromLocalDateString,
   isFutureDateString,
@@ -26,6 +24,7 @@ import type { Entry } from '../types'
 interface Props {
   initialEditingEntryId?: string | null
   onEditHandled?: () => void
+  onAddForDate?: (date: string) => void
 }
 
 interface EditDraft {
@@ -38,7 +37,6 @@ interface EditDraft {
 interface InitialHistoryState {
   year: number
   month: number
-  selectedDate: string
   editingEntryId: string | null
   editDraft: EditDraft | null
 }
@@ -73,18 +71,6 @@ function maxDateForMonth(year: number, month: number): string {
   return toLocalDateString(monthEnd > today ? today : monthEnd)
 }
 
-function defaultBackfillDate(year: number, month: number): string {
-  const today = new Date()
-  const isViewingCurrentMonth = year === today.getFullYear() && month === today.getMonth()
-  const candidate = isViewingCurrentMonth ? addDays(today, -1) : new Date(year, month + 1, 0)
-
-  return clampDateString(
-    toLocalDateString(candidate),
-    minDateForMonth(year, month),
-    maxDateForMonth(year, month),
-  )
-}
-
 function entrySort(a: Entry, b: Entry): number {
   return b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
 }
@@ -113,7 +99,6 @@ function initialHistoryState(
     return {
       year: entryYear,
       month: entryMonth - 1,
-      selectedDate: defaultBackfillDate(entryYear, entryMonth - 1),
       editingEntryId: entry.id,
       editDraft: editDraftForEntry(entry),
     }
@@ -122,20 +107,18 @@ function initialHistoryState(
   return {
     year: referenceDate.getFullYear(),
     month: referenceDate.getMonth(),
-    selectedDate: defaultBackfillDate(referenceDate.getFullYear(), referenceDate.getMonth()),
     editingEntryId: null,
     editDraft: null,
   }
 }
 
-export default function History({ initialEditingEntryId = null, onEditHandled }: Props) {
+export default function History({ initialEditingEntryId = null, onEditHandled, onAddForDate }: Props) {
   const now = new Date()
   const { entries, addEntry, restoreEntry, editEntry, removeEntry } = useEntries()
   const [initialState] = useState(() => initialHistoryState(initialEditingEntryId, now, entries))
   const [year, setYear] = useState(initialState.year)
   const [month, setMonth] = useState(initialState.month)
-  const [selectedDate, setSelectedDate] = useState(initialState.selectedDate)
-  const [daySheetDate, setDaySheetDate] = useState<string | null>(null)
+  const [dayFilterDate, setDayFilterDate] = useState<string | null>(null)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(initialState.editingEntryId)
   const [editDraft, setEditDraft] = useState<EditDraft | null>(initialState.editDraft)
   const [searchQuery, setSearchQuery] = useState('')
@@ -147,6 +130,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
   const [deletedEntry, setDeletedEntry] = useState<Entry | null>(null)
   const [ledgerMessage, setLedgerMessage] = useState('')
+  const dayFilterRef = useRef<HTMLElement>(null)
 
   const config = getBudgetConfig()
   const customCategories = getCustomCategories()
@@ -200,7 +184,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
 
     setYear(nextYear)
     setMonth(nextMonth)
-    setSelectedDate(defaultBackfillDate(nextYear, nextMonth))
+    setDayFilterDate(null)
     setDateFrom('')
     setDateTo('')
   }
@@ -213,14 +197,16 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
 
     setYear(nextYear)
     setMonth(nextMonth)
-    setSelectedDate(defaultBackfillDate(nextYear, nextMonth))
+    setDayFilterDate(null)
     setDateFrom('')
     setDateTo('')
   }
 
   function handleDateChange(value: string) {
-    setSelectedDate(clampDateString(value, dateMin, dateMax))
-    setDaySheetDate(clampDateString(value, dateMin, dateMax))
+    const date = clampDateString(value, dateMin, dateMax)
+    setDayFilterDate(date)
+    setDateFrom(date)
+    setDateTo(date)
   }
 
   function startEditingEntry(entry: Entry) {
@@ -301,6 +287,13 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     setSourceFilter('all')
     setDateFrom('')
     setDateTo('')
+    setDayFilterDate(null)
+  }
+
+  function clearDayFilter() {
+    setDateFrom('')
+    setDateTo('')
+    setDayFilterDate(null)
   }
 
   useEffect(() => {
@@ -308,6 +301,11 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
 
     onEditHandled?.()
   }, [initialEditingEntryId, onEditHandled])
+
+  useEffect(() => {
+    if (!dayFilterDate) return
+    dayFilterRef.current?.scrollIntoView?.({ block: 'start' })
+  }, [dayFilterDate])
 
   // Per-day spend for the calendar heatmap — keyed by day-of-month, derived from
   // the same monthEntries used everywhere else in this screen (single source of truth).
@@ -319,7 +317,9 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
   const maxDaySpend = Math.max(1, ...spendByDay.values())
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const todayStr = toLocalDateString(now)
-  const closeDaySheet = useCallback(() => setDaySheetDate(null), [])
+  const dayFilterEntryCount = dayFilterDate
+    ? monthEntries.filter(entry => entry.date === dayFilterDate).length
+    : 0
 
   return (
     <div className="screen history theme-screen theme-screen--history">
@@ -351,6 +351,26 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
       </div>
 
       <h3 className="section-title">Entries</h3>
+      {dayFilterDate && (
+        <aside ref={dayFilterRef} className="history-day-filter" aria-label="Selected calendar day">
+          <span className="history-day-filter__label">
+            <CalendarDays size={18} aria-hidden="true" />
+            <span>
+              <strong>{format(fromLocalDateString(dayFilterDate), 'EEE, MMM d')}</strong>
+              <small>{dayFilterEntryCount} {dayFilterEntryCount === 1 ? 'expense' : 'expenses'}</small>
+            </span>
+          </span>
+          <span className="history-day-filter__actions">
+            <button type="button" className="history-day-filter__clear" onClick={clearDayFilter} aria-label="Clear day filter">
+              <X size={18} aria-hidden="true" />
+            </button>
+            <button type="button" className="history-day-filter__add" onClick={() => onAddForDate?.(dayFilterDate)}>
+              <Plus size={17} aria-hidden="true" />
+              Add for {format(fromLocalDateString(dayFilterDate), 'MMM d')}
+            </button>
+          </span>
+        </aside>
+      )}
       <section className="history-ledger-tools" aria-label="Transaction search and filters">
         <div className="history-search-row">
           <label className="history-search">
@@ -421,7 +441,10 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
                   value={dateFrom}
                   min={dateMin}
                   max={dateTo || dateMax}
-                  onChange={event => setDateFrom(event.target.value)}
+                  onChange={event => {
+                    setDateFrom(event.target.value)
+                    setDayFilterDate(null)
+                  }}
                 />
               </label>
               <label className="form-field" htmlFor="history-date-to">
@@ -433,7 +456,10 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
                   value={dateTo}
                   min={dateFrom || dateMin}
                   max={dateMax}
-                  onChange={event => setDateTo(event.target.value)}
+                  onChange={event => {
+                    setDateTo(event.target.value)
+                    setDayFilterDate(null)
+                  }}
                 />
               </label>
             </div>
@@ -627,7 +653,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
         </div>
       )}
       {/* Analysis sits beneath the ledger: someone opening History wants the transaction
-          list first. The day sheet keeps calendar work contextual without another card. */}
+          list first. Calendar taps bring the chosen day back to that ledger. */}
       <details className="history-analysis">
         <summary className="history-analysis__summary">Calendar &amp; insights</summary>
         <div className="history-analysis__body">
@@ -637,7 +663,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
             const spend = spendByDay.get(day) ?? 0
             const alpha = spend > 0 ? 0.15 + Math.min(1, spend / maxDaySpend) * 0.65 : 0.06
             const isToday = dateStr === todayStr
-            const isSelected = dateStr === selectedDate
+            const isSelected = dateStr === dayFilterDate
 
             return (
               <button
@@ -656,7 +682,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
             )
           })}
         </div>
-        <p className="cal-caption muted">lighter = heavier spend day &middot; ring = today &middot; tap a day for details</p>
+        <p className="cal-caption muted">lighter = heavier spend day &middot; ring = today &middot; tap a day to filter the ledger</p>
 
         <h3 className="section-title">Weekly Spending</h3>
 
@@ -705,16 +731,6 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
 
         </div>
       </details>
-
-      {daySheetDate && (
-        <HistoryDaySheet
-          date={daySheetDate}
-          entries={monthEntries.filter(entry => entry.date === daySheetDate)}
-          categoryOptions={categoryOptions}
-          onAdd={addEntry}
-          onClose={closeDaySheet}
-        />
-      )}
 
     </div>
   )

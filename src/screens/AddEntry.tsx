@@ -17,17 +17,21 @@ export interface SavedEntrySummary {
 }
 
 interface Props {
+  initialDate?: string
   onSave: (saved?: SavedEntrySummary) => void
 }
 
 const NUMPAD_KEYS = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
 
-export default function AddEntry({ onSave }: Props) {
+export default function AddEntry({ initialDate, onSave }: Props) {
   const [digits, setDigits] = useState('0')
   const [animationCue, setAnimationCue] = useState({ key: '', version: 0 })
   const [category, setCategory] = useState<string | null>(null)
   const [note, setNote] = useState('')
-  const [entryDate, setEntryDate] = useState(() => toLocalDateString())
+  const [entryDate, setEntryDate] = useState(() => {
+    const today = toLocalDateString()
+    return initialDate && initialDate <= today ? initialDate : today
+  })
   const [showDateChoices, setShowDateChoices] = useState(false)
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)

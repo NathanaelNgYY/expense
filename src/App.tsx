@@ -22,6 +22,7 @@ function initialTab(): Tab {
 
 function AppShell() {
   const [tab, setTab] = useState<Tab>(initialTab)
+  const [addEntryDate, setAddEntryDate] = useState<string | undefined>()
   const [showSettings, setShowSettings] = useState(false)
   // Lives in the shell, not in AddEntry: the confirmation has to outlive the screen that
   // triggered it, because saving navigates straight home.
@@ -30,11 +31,22 @@ function AppShell() {
 
   function handleSave(saved?: SavedEntrySummary) {
     setTab('home')
+    setAddEntryDate(undefined)
     setToast(saved ?? null)
     window.history.replaceState({}, '', window.location.pathname)
   }
 
   const dismissToast = useCallback(() => setToast(null), [])
+
+  function handleTabChange(nextTab: Tab) {
+    setAddEntryDate(undefined)
+    setTab(nextTab)
+  }
+
+  function handleAddForDate(date: string) {
+    setAddEntryDate(date)
+    setTab('add')
+  }
 
   function handleUndo() {
     if (toast) void removeEntry(toast.id)
@@ -56,14 +68,14 @@ function AppShell() {
           {tab === 'home' && (
             <Dashboard onSettings={() => setShowSettings(true)} onAddEntry={() => setTab('add')} />
           )}
-          {tab === 'add' && <AddEntry onSave={handleSave} />}
-          {tab === 'history' && <History />}
+          {tab === 'add' && <AddEntry initialDate={addEntryDate} onSave={handleSave} />}
+          {tab === 'history' && <History onAddForDate={handleAddForDate} />}
           {tab === 'poker' && <Poker />}
           {tab === 'shared' && <SharedScreen />}
         </Suspense>
       </main>
       {toast && <SaveToast entry={toast} onUndo={handleUndo} onDismiss={dismissToast} />}
-      <TabBar active={tab} onChange={setTab} />
+      <TabBar active={tab} onChange={handleTabChange} />
     </div>
   )
 }

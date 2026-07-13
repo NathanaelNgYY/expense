@@ -14,12 +14,13 @@ import { categoryLabel } from '../categoryDisplay'
 import { getCategoryOverrides } from '../storage'
 import { formatSGD, formatSignedSGD } from '../format'
 import { fromLocalDateString } from '../dates'
-import type { Entry } from '../types'
+import type { CustomCategory, Entry } from '../types'
 
 interface Props {
   entries: Entry[]
   year: number
   month: number
+  customCategories: CustomCategory[]
 }
 
 // Below this many entries in the month, "Mostly Wednesdays" and "Most expensive category"
@@ -27,12 +28,12 @@ interface Props {
 // screen look equally made up.
 const MIN_ENTRIES_FOR_INSIGHTS = 15
 
-export default function InsightsSection({ entries, year, month }: Props) {
+export default function InsightsSection({ entries, year, month, customCategories }: Props) {
   const overrides = getCategoryOverrides()
-  const topCat = mostExpensiveCategory(entries, year, month)
+  const topCat = mostExpensiveCategory(entries, year, month, customCategories)
   const avgLunch = averageLunchPerEntry(entries, year, month)
   const topDay = highestSpendingDay(entries, year, month)
-  const topDow = topSpendingDayOfWeek(entries)
+  const topDow = topSpendingDayOfWeek(entries, year, month)
   const delta = monthOverMonthDelta(entries, year, month)
   const comparison = monthComparison(entries, year, month)
   const previousMonthLabel = comparison
@@ -47,7 +48,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
   const hasEnoughData = monthEntryCount >= MIN_ENTRIES_FOR_INSIGHTS
 
   const reviewParts = [
-    topCat ? `You spent most on ${categoryLabel(topCat.category, overrides)}.` : null,
+    topCat ? `You spent most on ${categoryLabel(topCat.category, overrides, customCategories)}.` : null,
     topDay ? `Biggest day: ${format(fromLocalDateString(topDay.date), 'EEE, MMM d')}.` : null,
     delta !== null ? `${delta > 0 ? 'Up' : 'Down'} ${formatSGD(Math.abs(delta))} vs last month.` : null,
   ].filter(Boolean)
@@ -83,7 +84,7 @@ export default function InsightsSection({ entries, year, month }: Props) {
               Most expensive
             </span>
             <span className="insight-value">
-              {categoryLabel(topCat.category, overrides)} — {formatSGD(topCat.amount)}
+              {categoryLabel(topCat.category, overrides, customCategories)} — {formatSGD(topCat.amount)}
             </span>
           </div>
         )}

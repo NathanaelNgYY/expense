@@ -727,7 +727,12 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
           )
         })}
 
-        <InsightsSection entries={entries} year={year} month={month} />
+        <InsightsSection
+          entries={entries}
+          year={year}
+          month={month}
+          customCategories={customCategories}
+        />
 
         </div>
       </details>

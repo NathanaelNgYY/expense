@@ -146,9 +146,11 @@ export function mostExpensiveCategory(
   entries: Entry[],
   year: number,
   month: number,
-): { category: Category; amount: number } | null {
-  const spend = monthlySpendByCategory(entries, year, month)
-  const categorized = SPENDING_CATEGORIES.filter(c => spend[c] > 0)
+  custom: CustomCategory[] = [],
+): { category: string; amount: number } | null {
+  const spend = monthlySpendByCategory(entries, year, month, custom)
+  const categorized = [...SPENDING_CATEGORIES, ...custom.map(category => category.id)]
+    .filter(category => spend[category] > 0)
   if (categorized.length === 0) return null
   const top = categorized.reduce((a, b) => (spend[a] >= spend[b] ? a : b))
   return { category: top, amount: spend[top] }
@@ -169,7 +171,7 @@ export function highestSpendingDay(
   year: number,
   month: number,
 ): { date: string; amount: number } | null {
-  const monthly = entriesForMonth(entries, year, month).filter(entry => entry.category === 'lunch')
+  const monthly = entriesForMonth(entries, year, month)
   const byDate = new Map<string, number>()
   for (const entry of monthly) {
     byDate.set(entry.date, (byDate.get(entry.date) ?? 0) + entry.amount)
@@ -179,9 +181,9 @@ export function highestSpendingDay(
   return { date: topDate, amount: topAmount }
 }
 
-export function topSpendingDayOfWeek(entries: Entry[]): string | null {
+export function topSpendingDayOfWeek(entries: Entry[], year: number, month: number): string | null {
   const byDow = [0, 0, 0, 0, 0, 0, 0]
-  for (const entry of entries) {
+  for (const entry of entriesForMonth(entries, year, month)) {
     const dow = parseISO(entry.date).getDay()
     byDow[dow] += entry.amount
   }

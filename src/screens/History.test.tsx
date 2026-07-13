@@ -315,4 +315,46 @@ describe('History entry editing', () => {
       dedupeKey: 'apple_pay:original',
     })
   })
+
+  it('opens a calendar day sheet and adds an expense with the selected date locked', async () => {
+    const rendered = renderWithEntries([
+      entry({ id: 'lunch', amount: 6.3, note: 'Food court', date: '2026-05-18' }),
+      entry({ id: 'train', amount: 8.5, category: 'transport', note: '', date: '2026-05-18' }),
+      entry({ id: 'other-day', amount: 20, category: 'others', date: '2026-05-17' }),
+    ])
+    root = rendered.root
+    await act(async () => {})
+
+    clickButton(rendered.container, 'May 18, S$14.80 spent')
+
+    const dialog = rendered.container.querySelector<HTMLElement>('[role="dialog"]')
+    if (!dialog) throw new Error('Day sheet was not found')
+    expect(dialog).toHaveAttribute('aria-label', 'Expenses for Mon, May 18')
+    expect(dialog).toHaveTextContent('2 expenses')
+    expect(dialog).toHaveTextContent('S$14.80')
+    expect(dialog).toHaveTextContent('Food court')
+    expect(dialog).not.toHaveTextContent('S$20.00')
+
+    clickButton(dialog, 'Add expense for May 18')
+    const amount = dialog.querySelector<HTMLInputElement>('#day-sheet-amount')
+    const note = dialog.querySelector<HTMLInputElement>('#day-sheet-note')
+    if (!amount || !note) throw new Error('Day sheet form was not found')
+
+    changeInput(amount, '12.40')
+    changeInput(note, 'Second lunch')
+    clickButton(dialog, 'Lunch')
+
+    await act(async () => {
+      clickButton(dialog, 'Add for May 18')
+    })
+
+    expect(getEntries()).toContainEqual(expect.objectContaining({
+      amount: 12.4,
+      category: 'lunch',
+      note: 'Second lunch',
+      date: '2026-05-18',
+    }))
+    expect(rendered.container).not.toHaveTextContent('Add missed expense')
+    expect(rendered.container).toHaveTextContent('Calendar & insights')
+  })
 })

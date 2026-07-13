@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { render, screen } from '@testing-library/react'
+import { format } from 'date-fns'
 import AddEntry from './AddEntry'
 import { EntriesProvider } from '../EntriesContext'
+import { getEntries } from '../storage'
+import { addDays, toLocalDateString } from '../dates'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
 
 const sharedCtx = vi.hoisted(() => ({
@@ -61,6 +64,71 @@ describe('AddEntry', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     localStorage.clear()
+  })
+
+  it('defaults to today and keeps the normal save label', async () => {
+    await act(async () => {
+      renderWithEntries()
+    })
+
+    expect(screen.getByRole('button', { name: 'Choose expense date, Today' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
+  })
+
+  it('saves an entry for yesterday and makes the non-today date visible', async () => {
+    const yesterday = addDays(new Date(), -1)
+    const yesterdayLabel = format(yesterday, 'MMM d')
+    const yesterdayValue = toLocalDateString(yesterday)
+    const onSave = vi.fn()
+    await act(async () => {
+      localStorage.setItem('budget_entries', '[]')
+      localStorage.setItem('api_token', 'tok')
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('[]', { status: 200 })))
+      render(
+        <EntriesProvider>
+          <AddEntry onSave={onSave} />
+        </EntriesProvider>,
+      )
+    })
+
+    act(() => {
+      screen.getByRole('button', { name: '5' }).click()
+      screen.getByRole('button', { name: 'Choose expense date, Today' }).click()
+      screen.getByRole('button', { name: 'Yesterday' }).click()
+    })
+
+    expect(screen.getByRole('button', { name: `Add for ${yesterdayLabel}` })).toBeInTheDocument()
+
+    await act(async () => {
+      screen.getByRole('button', { name: `Add for ${yesterdayLabel}` }).click()
+    })
+
+    expect(getEntries()).toEqual([
+      expect.objectContaining({ amount: 5, date: yesterdayValue }),
+    ])
+    expect(onSave).toHaveBeenCalledTimes(1)
+  })
+
+  it('lets the native picker select an older date and caps it at today', async () => {
+    await act(async () => {
+      renderWithEntries()
+    })
+
+    act(() => {
+      screen.getByRole('button', { name: '5' }).click()
+      screen.getByRole('button', { name: 'Choose expense date, Today' }).click()
+    })
+
+    const picker = screen.getByLabelText('Pick another expense date') as HTMLInputElement
+    expect(picker).toHaveAttribute('max', toLocalDateString())
+
+    act(() => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+      setter?.call(picker, '2020-01-08')
+      picker.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    expect(screen.getByRole('button', { name: 'Add for Jan 8' })).toBeInTheDocument()
   })
 
   it('renders the ADD ENTRY title', async () => {

@@ -229,6 +229,24 @@ describe('mostExpensiveCategory', () => {
 
     expect(result).toEqual({ category: 'others', amount: 200 })
   })
+
+  it('includes custom categories when finding the highest spending category', () => {
+    const groceries: CustomCategory = {
+      id: 'cat_groceries',
+      label: 'Groceries',
+      budget: 300,
+      icon: 'ShoppingBasket',
+    }
+    const entries = [
+      e({ category: 'transport', amount: 50, date: '2026-05-04' }),
+      e({ category: groceries.id, amount: 120, date: '2026-05-05' }),
+    ]
+
+    expect(mostExpensiveCategory(entries, 2026, 4, [groceries])).toEqual({
+      category: groceries.id,
+      amount: 120,
+    })
+  })
 })
 
 describe('averageLunchPerEntry', () => {
@@ -299,7 +317,7 @@ describe('highestSpendingDay', () => {
     expect(highestSpendingDay(entries, 2026, 4)).toEqual({ date: '2026-05-04', amount: 10 })
   })
 
-  it('uses only lunch entries for the highest spending day', () => {
+  it('uses total spend across every category for the highest spending day', () => {
     const entries = [
       e({ category: 'lunch', amount: 12, date: '2026-05-04' }),
       e({ category: 'savings', amount: 400, date: '2026-05-04' }),
@@ -307,7 +325,7 @@ describe('highestSpendingDay', () => {
       e({ category: 'investments', amount: 1000, date: '2026-05-05' }),
     ]
 
-    expect(highestSpendingDay(entries, 2026, 4)).toEqual({ date: '2026-05-04', amount: 12 })
+    expect(highestSpendingDay(entries, 2026, 4)).toEqual({ date: '2026-05-05', amount: 1010 })
   })
 })
 
@@ -317,7 +335,7 @@ describe('topSpendingDayOfWeek', () => {
       e({ amount: 10, date: '2026-05-04' }), // Monday
       e({ amount: 20, date: '2026-05-05' }), // Tuesday
     ]
-    expect(topSpendingDayOfWeek(entries)).toBeNull()
+    expect(topSpendingDayOfWeek(entries, 2026, 4)).toBeNull()
   })
 
   it('returns the pluralised day name with the highest total spend', () => {
@@ -327,17 +345,17 @@ describe('topSpendingDayOfWeek', () => {
       e({ amount: 3, date: '2026-05-06' }), // Wednesday
       e({ amount: 50, date: '2026-05-08' }), // Friday
     ]
-    expect(topSpendingDayOfWeek(entries)).toBe('Fridays')
+    expect(topSpendingDayOfWeek(entries, 2026, 4)).toBe('Fridays')
   })
 
-  it('uses all entries, not just the current month', () => {
+  it('uses only entries from the selected month', () => {
     const entries = [
-      e({ amount: 1, date: '2026-04-06' }), // Monday
-      e({ amount: 1, date: '2026-04-07' }), // Tuesday
-      e({ amount: 1, date: '2026-04-08' }), // Wednesday
-      e({ amount: 99, date: '2026-05-07' }), // Thursday - dominant
+      e({ amount: 100, date: '2026-04-06' }), // Monday in April, must not dominate May
+      e({ amount: 30, date: '2026-05-05' }), // Tuesday
+      e({ amount: 5, date: '2026-05-06' }), // Wednesday
+      e({ amount: 2, date: '2026-05-07' }), // Thursday
     ]
-    expect(topSpendingDayOfWeek(entries)).toBe('Thursdays')
+    expect(topSpendingDayOfWeek(entries, 2026, 4)).toBe('Tuesdays')
   })
 })
 

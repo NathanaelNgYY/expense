@@ -6,7 +6,8 @@ import { bulkUpsertEntries, bulkUpsertPokerSessions, ensureUserId, fetchEntryIds
 // docs/superpowers/specs/2026-07-11-supabase-migration.md):
 //  - localStorage is never cleared; it stays the offline cache. This only copies data UP.
 //  - Idempotent and resumable: uploads the diff (cached ids missing on the server), preserving
-//    id + dedupeKey, so an interrupted run finishes on the next load.
+//    id + dedupeKey unless that key collides with another row. Recovery keeps the id and stores
+//    a deterministic replacement key locally before continuing.
 //  - The done-flag is set only after a verified read-back.
 //  - Flags are scoped PER USER ID: signing into a different Supabase account (Google for shared
 //    budgets, or a fresh anonymous user after a sign-out) re-seeds that account from the cache,

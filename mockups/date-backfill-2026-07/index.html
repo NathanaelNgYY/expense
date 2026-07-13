@@ -89,7 +89,8 @@
 
     .flow {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 390px));
+      justify-content: center;
       gap: 26px;
       margin-top: 34px;
     }
@@ -186,50 +187,6 @@
       font-size: .48em;
       color: var(--text-2);
       letter-spacing: 0;
-    }
-
-    .date-pill {
-      min-height: 34px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      justify-self: center;
-      padding: 0 12px;
-      border: 1px solid color-mix(in srgb, var(--gold) 45%, var(--line));
-      border-radius: 999px;
-      background: var(--surface);
-      color: var(--gold-bright);
-      font-size: 13px;
-      font-weight: 750;
-    }
-
-    .chev { color: var(--text-3); font-size: 11px; }
-
-    .date-choices {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 5px;
-      padding: 5px;
-      border: 1px solid var(--line);
-      border-radius: 15px;
-      background: var(--surface);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, .28);
-    }
-
-    .date-choices span {
-      min-height: 37px;
-      display: grid;
-      place-items: center;
-      border-radius: 10px;
-      color: var(--text-2);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .date-choices .selected {
-      background: var(--gold);
-      color: var(--gold-ink);
     }
 
     .numpad {
@@ -487,14 +444,12 @@
     html[data-shot] .board-footer { display: none; }
     html[data-shot] .flow { display: block; margin: 0; }
     html[data-shot] .mock { display: none; }
-    html[data-shot="add-today"] .mock:nth-child(1),
-    html[data-shot="add-yesterday"] .mock:nth-child(2),
-    html[data-shot="history-filter"] .mock:nth-child(3),
-    html[data-shot="dated-add"] .mock:nth-child(4) { display: block; }
+    html[data-shot="history-filter"] .mock:nth-child(1),
+    html[data-shot="dated-add"] .mock:nth-child(2) { display: block; }
   </style>
   <script>
     const shot = new URLSearchParams(location.search).get('shot')
-    if (['add-today', 'add-yesterday', 'history-filter', 'dated-add'].includes(shot)) {
+    if (['history-filter', 'dated-add'].includes(shot)) {
       document.documentElement.dataset.shot = shot
     }
   </script>
@@ -503,70 +458,16 @@
   <main class="board">
     <header class="board-header">
       <div>
-        <h1>Date-first entry and calendar filtering</h1>
-        <span class="recommendation">Selected: A + B-lite</span>
+        <h1>Calendar-led backfill</h1>
+        <span class="recommendation">Selected: B-lite only</span>
       </div>
-      <p>Add Entry handles the common “yesterday” correction. History filters the existing ledger from a calendar tap, then hands the selected date back to the same numpad flow.</p>
+      <p>History filters the existing ledger from a calendar tap, then hands the selected date to the unchanged numpad flow. No date chooser is added to normal entry.</p>
     </header>
 
-    <section class="flow" aria-label="Recommended date entry flow">
+    <section class="flow" aria-label="B-lite calendar backfill flow">
       <article class="mock">
         <div class="mock-heading">
-          <h2>1. Today stays effortless</h2>
-          <p>The new date control is visible without adding a field-heavy form.</p>
-        </div>
-        <div class="phone">
-          <div class="island"></div>
-          <div class="status"><span>9:41</span><span>5G&nbsp;&nbsp;100%</span></div>
-          <div class="screen">
-            <p class="screen-title">ADD ENTRY</p>
-            <div class="amount-stage"><strong class="amount">S$8<small>.50</small></strong></div>
-            <div class="date-pill">Today <span class="chev">⌄</span></div>
-            <div class="numpad">
-              <span class="key">1</span><span class="key">2</span><span class="key">3</span>
-              <span class="key">4</span><span class="key">5</span><span class="key">6</span>
-              <span class="key">7</span><span class="key">8</span><span class="key">9</span>
-              <span class="key">.</span><span class="key">0</span><span class="key del">DELETE</span>
-            </div>
-            <p class="field-label">Category (optional)</p>
-            <div class="chips"><span class="chip active">Lunch</span><span class="chip">Transport</span><span class="chip">Savings</span><span class="chip">Others</span></div>
-            <div class="note">Note (optional)</div>
-            <div class="save">Save</div>
-          </div>
-          <nav class="tabbar"><span class="tab"><i class="tab-icon">⌂</i>Home</span><span class="tab active"><i class="tab-icon">＋</i>Add</span><span class="tab"><i class="tab-icon">▤</i>History</span><span class="tab"><i class="tab-icon">♠</i>Poker</span><span class="tab"><i class="tab-icon">◎</i>Shared</span></nav>
-        </div>
-      </article>
-
-      <article class="mock">
-        <div class="mock-heading">
-          <h2>2. Yesterday is one tap</h2>
-          <p>The expanded row gives two fast choices and one native date escape hatch.</p>
-        </div>
-        <div class="phone">
-          <div class="island"></div>
-          <div class="status"><span>9:41</span><span>5G&nbsp;&nbsp;100%</span></div>
-          <div class="screen">
-            <p class="screen-title">ADD ENTRY</p>
-            <div class="amount-stage"><strong class="amount">S$8<small>.50</small></strong></div>
-            <div class="date-choices"><span>Today</span><span class="selected">Yesterday</span><span>Pick date</span></div>
-            <div class="numpad">
-              <span class="key">1</span><span class="key">2</span><span class="key">3</span>
-              <span class="key">4</span><span class="key">5</span><span class="key">6</span>
-              <span class="key">7</span><span class="key">8</span><span class="key">9</span>
-              <span class="key">.</span><span class="key">0</span><span class="key del">DELETE</span>
-            </div>
-            <p class="field-label">Category (optional)</p>
-            <div class="chips"><span class="chip active">Lunch</span><span class="chip">Transport</span><span class="chip">Savings</span><span class="chip">Others</span></div>
-            <div class="note">Note (optional)</div>
-            <div class="save">Add for Jul 12</div>
-          </div>
-          <nav class="tabbar"><span class="tab"><i class="tab-icon">⌂</i>Home</span><span class="tab active"><i class="tab-icon">＋</i>Add</span><span class="tab"><i class="tab-icon">▤</i>History</span><span class="tab"><i class="tab-icon">♠</i>Poker</span><span class="tab"><i class="tab-icon">◎</i>Shared</span></nav>
-        </div>
-      </article>
-
-      <article class="mock">
-        <div class="mock-heading">
-          <h2>3. Tap a day to filter the ledger</h2>
+          <h2>1. Tap a day to filter the ledger</h2>
           <p>The chosen date becomes a visible filter above the existing entries.</p>
         </div>
         <div class="phone">
@@ -595,8 +496,8 @@
 
       <article class="mock">
         <div class="mock-heading">
-          <h2>4. Add reuses the dated numpad</h2>
-          <p>The existing Add Entry flow opens with the calendar date preselected.</p>
+          <h2>2. Add with the selected date locked</h2>
+          <p>The existing numpad stays unchanged; the save label confirms the calendar date.</p>
         </div>
         <div class="phone">
           <div class="island"></div>
@@ -604,7 +505,6 @@
           <div class="screen">
             <p class="screen-title">ADD ENTRY</p>
             <div class="amount-stage"><strong class="amount">S$12<small>.40</small></strong></div>
-            <div class="date-pill">Jul 8 <span class="chev">⌄</span></div>
             <div class="numpad">
               <span class="key">1</span><span class="key">2</span><span class="key">3</span>
               <span class="key">4</span><span class="key">5</span><span class="key">6</span>

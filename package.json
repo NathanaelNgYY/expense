@@ -9,6 +9,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "typecheck:functions": "deno check supabase/functions/ingest/index.ts supabase/functions/ingest/handler.ts supabase/functions/_shared/rateLimit.ts",
+    "size": "node scripts/check-bundle-size.mjs",
     "test:ingest": "vitest run ingestHandler",
     "test:ingest:live": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-ingest.ps1"
   },

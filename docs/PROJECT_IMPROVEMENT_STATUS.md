@@ -21,7 +21,7 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 | H7 — bulk month reset | Complete locally | Confirmation shows the affected count; Undo restores all entries with original ids and dedupe keys; restore clears stale tombstones. | `docs/testing/h7-bulk-reset-undo.tdd.md` |
 | H8 / M11 — blank crashes and no monitoring | Complete and deployed | Root error fallback offers Reload and backup; production errors report to the EU Sentry project with source maps. A controlled event was received as `BUDGET-TRACKER-1`. | `docs/testing/error-boundary.tdd.md`, `docs/testing/sentry-monitoring.tdd.md`, `docs/SENTRY.md` |
 | H1–H3 — incorrect month analytics | Complete locally | Highest day uses total daily spend, custom categories can rank as Most expensive, and Day pattern is scoped to the selected month. | `docs/testing/h1-h3-month-analytics.tdd.md` |
-| H9 — CI | Partially complete | GitHub Actions runs install, tests, lint, and build on pushes and pull requests. Required checks cannot be enforced on this private repository's current GitHub plan. | `.github/workflows/ci.yml` |
+| H9 — CI | Partially complete | GitHub Actions runs lint, Deno typecheck of the ingest Edge Function, tests with enforced coverage thresholds, build, an initial-bundle size budget, `npm audit` (non-blocking), and a gitleaks history scan — on pushes, pull requests, and a weekly schedule. Required checks still cannot be enforced on this private repository's current GitHub plan. | `.github/workflows/ci.yml`, `scripts/check-bundle-size.mjs` |
 | H10 — unpushed work | Reopened | Earlier work was pushed, but H7 and this documentation cleanup are currently local commits. Push after review. | `git status --branch` |
 | M10 — no identity linking | Complete | Google identity linking is implemented as part of C1. | `src/sharedBudgets/sharedApi.ts` |
 | M18 — stale architecture docs | Partially complete | README now describes Vercel, Supabase, the production URL, and the current Shortcut contract. Frozen Netlify function code remains as a fallback and should be removed only in a separate code-cleanup change. | `README.md`, `AGENTS.md` |
@@ -43,6 +43,10 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 
 - Current suite: 57 test files, 482 tests passed.
 - Lint and production build pass.
+- Whole-project coverage: 84.44% statements, 76.66% branches, 82.94% functions, 87.99% lines. These are now enforced as CI thresholds and may only be raised.
+- Initial payload: 159.6 KiB gzip entry JS, 11.2 KiB gzip CSS, against CI budgets of 166 and 12.
+- `deno check` of the ingest Edge Function passes. It previously did not: `IngestInput.learnedCategory` was typed `Category` while `categoryFromHistory` returns `string | null` (custom categories), and nothing typechecked `supabase/functions/`, so CI never saw it.
+- gitleaks: 218 commits scanned, no leaks.
 - Targeted H7 coverage: 95.1% statements, 82.55% branches, 93.61% functions, 98.72% lines.
 - Targeted H1–H3 coverage: 97.09% statements, 80.29% branches, 98.33% functions, 99.27% lines.
 - Dependency audit still reports 10 existing findings: 1 low, 7 moderate, 2 high.

@@ -61,6 +61,18 @@ export default defineConfig(({ mode }) => {
         '**/.worktrees/**',
         '**/.claude/worktrees/**',
       ],
+      coverage: {
+        provider: 'v8',
+        reporter: ['text-summary'],
+        // Set to the 2026-07-13 baseline so coverage can only go up. Raise these
+        // when a change lifts them; never lower them to make a red run pass.
+        thresholds: {
+          statements: 84,
+          branches: 76,
+          functions: 82,
+          lines: 87,
+        },
+      },
     },
   }
 })

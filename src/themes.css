@@ -402,6 +402,10 @@ body,
   margin-bottom: var(--add-space);
 }
 
+[data-theme='original-dark'] .add-entry-date {
+  margin: calc(var(--add-space) * -0.55) 0 var(--add-space);
+}
+
 [data-theme='original-dark'] .add-entry__keypad {
   flex: 0 0 auto;
   gap: clamp(7px, 1.3vh, 12px);
@@ -560,6 +564,7 @@ body,
     "title title"
     "scope scope"
     "amount amount"
+    "date date"
     "categories keypad"
     "details details";
   align-content: start;
@@ -580,6 +585,10 @@ body,
   border-top: 3px solid var(--primary);
   background: var(--bg-elev);
   padding: 18px 12px;
+}
+
+[data-theme='copper-current'] .add-entry-date {
+  grid-area: date;
 }
 
 [data-theme='copper-current'] .add-entry__categories {
@@ -738,6 +747,10 @@ body,
   border-block: 1px solid var(--separator);
   background: var(--bg-elev);
   padding: 22px 10px;
+}
+
+[data-theme='berry-circuit'] .add-entry-date {
+  order: -1;
 }
 
 [data-theme='berry-circuit'] .add-entry__keypad {

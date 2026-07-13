@@ -94,6 +94,8 @@ describe('AddEntry', () => {
     act(() => {
       screen.getByRole('button', { name: '5' }).click()
       screen.getByRole('button', { name: 'Choose expense date, Today' }).click()
+    })
+    act(() => {
       screen.getByRole('button', { name: 'Yesterday' }).click()
     })
 

@@ -547,6 +547,191 @@ input:focus-visible {
   height: 24px;
 }
 
+/* Date choice stays compact so today's fast-entry rhythm is unchanged. */
+.add-entry-date {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+}
+
+.add-entry-date__trigger {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid color-mix(in srgb, var(--primary) 48%, var(--separator));
+  border-radius: 999px;
+  background: var(--bg-elev);
+  color: var(--primary);
+  padding: 6px 13px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.add-entry-date__choices {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  border: 1px solid var(--separator);
+  border-radius: 14px;
+  background: var(--bg-elev);
+  padding: 5px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .32);
+}
+
+.add-entry-date__choice {
+  position: relative;
+  min-width: 0;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.add-entry-date__choice--active {
+  background: var(--primary);
+  color: var(--bg);
+}
+
+.add-entry-date__picker input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Calendar day detail and backfill sheet. */
+.day-sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.day-sheet-scrim {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: rgba(0, 0, 0, .64);
+}
+
+.day-sheet {
+  position: relative;
+  width: min(100%, 430px);
+  max-height: calc(100dvh - 72px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid var(--separator);
+  border-bottom: 0;
+  border-radius: 26px 26px 0 0;
+  background: var(--bg-elev);
+  padding: 9px 16px calc(18px + env(safe-area-inset-bottom));
+  box-shadow: 0 -22px 58px rgba(0, 0, 0, .46);
+  animation: day-sheet-enter 180ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+@keyframes day-sheet-enter {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.day-sheet-handle {
+  width: 38px;
+  height: 5px;
+  align-self: center;
+  border-radius: 999px;
+  background: var(--text-tertiary);
+  opacity: .55;
+}
+
+.day-sheet-header,
+.day-sheet-header-actions,
+.day-sheet-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.day-sheet-header { align-items: flex-start; }
+.day-sheet-header h2 { color: var(--text); font-size: 21px; line-height: 1.15; }
+.day-sheet-header p { margin-top: 4px; color: var(--text-secondary); font-size: 12px; }
+.day-sheet-header-actions { color: var(--primary); font-size: 14px; }
+.day-sheet-header-actions > button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg-elev-2);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.day-sheet-entries {
+  overflow: hidden;
+  border: 1px solid var(--separator);
+  border-radius: 14px;
+  background: var(--bg);
+}
+
+.day-sheet-entry {
+  min-height: 58px;
+  padding: 11px 13px;
+}
+
+.day-sheet-entry + .day-sheet-entry { border-top: 1px solid var(--separator); }
+.day-sheet-entry-main { min-width: 0; display: grid; gap: 3px; }
+.day-sheet-entry-main small {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.day-sheet-empty {
+  border: 1px solid var(--separator);
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--text-secondary);
+  padding: 22px 16px;
+  text-align: center;
+}
+
+.day-sheet-form { display: flex; flex-direction: column; gap: 12px; }
+.day-sheet .save-btn { margin-top: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .day-sheet { animation: none; }
+}
+
 /* ─── Touch targets ──────────────────────────────────────── */
 
 /* WCAG 2.5.5 / HIG both want ~44px. These controls are deliberately small visually

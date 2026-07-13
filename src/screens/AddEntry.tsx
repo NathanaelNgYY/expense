@@ -1,8 +1,9 @@
 // src/screens/AddEntry.tsx
 import { useCallback, useEffect, useState } from 'react'
-import { Delete } from 'lucide-react'
+import { CalendarDays, ChevronDown, Delete } from 'lucide-react'
+import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
-import { toLocalDateString } from '../dates'
+import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
 import { useEntries } from '../EntriesContext'
 import { getCustomCategories, getCategoryOverrides } from '../storage'
 import { buildCategoryOptions } from '../categoryDisplay'
@@ -26,6 +27,8 @@ export default function AddEntry({ onSave }: Props) {
   const [animationCue, setAnimationCue] = useState({ key: '', version: 0 })
   const [category, setCategory] = useState<string | null>(null)
   const [note, setNote] = useState('')
+  const [entryDate, setEntryDate] = useState(() => toLocalDateString())
+  const [showDateChoices, setShowDateChoices] = useState(false)
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const { addEntry: addPersonalEntry } = useEntries()
@@ -55,6 +58,14 @@ export default function AddEntry({ onSave }: Props) {
   const activeGlyphIndex = getActiveGlyphIndex(digits, amountText, animationCue.key)
   const sharedSaveDisabled =
     isSharedDestination && (!selectedSharedBudget || !activeSharedReady || busy)
+  const today = toLocalDateString()
+  const yesterday = toLocalDateString(addDays(new Date(), -1))
+  const dateLabel = entryDate === today
+    ? 'Today'
+    : entryDate === yesterday
+      ? 'Yesterday'
+      : format(fromLocalDateString(entryDate), 'MMM d')
+  const saveLabel = entryDate === today ? 'Save' : `Add for ${format(fromLocalDateString(entryDate), 'MMM d')}`
 
   useEffect(() => {
     if (!isSharedDestination || !selectedBudgetId || activeSharedReady) return
@@ -94,7 +105,7 @@ export default function AddEntry({ onSave }: Props) {
           amount,
           categoryId: category,
           note,
-          date: toLocalDateString(),
+          date: entryDate,
         })
         onSave()
       } catch {
@@ -115,7 +126,7 @@ export default function AddEntry({ onSave }: Props) {
       amount,
       category,
       note,
-      date: toLocalDateString(),
+      date: entryDate,
     })
     onSave({
       id,
@@ -189,6 +200,59 @@ export default function AddEntry({ onSave }: Props) {
         <span className="amount-screenreader">{amountText}</span>
       </div>
 
+      <div className="add-entry-date">
+        <button
+          type="button"
+          className="add-entry-date__trigger"
+          aria-label={`Choose expense date, ${dateLabel}`}
+          aria-expanded={showDateChoices}
+          onClick={() => setShowDateChoices(current => !current)}
+        >
+          <CalendarDays size={16} aria-hidden="true" />
+          <span>{dateLabel}</span>
+          <ChevronDown size={15} aria-hidden="true" />
+        </button>
+        {showDateChoices && (
+          <div className="add-entry-date__choices" role="group" aria-label="Expense date">
+            <button
+              type="button"
+              className={entryDate === today ? 'add-entry-date__choice add-entry-date__choice--active' : 'add-entry-date__choice'}
+              onClick={() => {
+                setEntryDate(today)
+                setShowDateChoices(false)
+              }}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              className={entryDate === yesterday ? 'add-entry-date__choice add-entry-date__choice--active' : 'add-entry-date__choice'}
+              onClick={() => {
+                setEntryDate(yesterday)
+                setShowDateChoices(false)
+              }}
+            >
+              Yesterday
+            </button>
+            <label className="add-entry-date__choice add-entry-date__picker">
+              <CalendarDays size={15} aria-hidden="true" />
+              <span>Pick date</span>
+              <input
+                type="date"
+                aria-label="Pick another expense date"
+                value={entryDate}
+                max={today}
+                onChange={event => {
+                  if (!event.target.value) return
+                  setEntryDate(event.target.value)
+                  setShowDateChoices(false)
+                }}
+              />
+            </label>
+          </div>
+        )}
+      </div>
+
       <div className="numpad add-entry__keypad">
         {NUMPAD_KEYS.map(key => (
           <button
@@ -246,7 +310,7 @@ export default function AddEntry({ onSave }: Props) {
           onClick={() => void handleSave()}
           disabled={amount <= 0 || sharedSaveDisabled}
         >
-          Save
+          {saveLabel}
         </button>
         {isSharedDestination && shared.error && <p className="form-error">{shared.error}</p>}
       </div>

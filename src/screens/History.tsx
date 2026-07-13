@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { endOfWeek, format } from 'date-fns'
 import { ChevronLeft, ChevronRight, Copy, Search, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import InsightsSection from '../components/InsightsSection'
+import HistoryDaySheet from '../components/HistoryDaySheet'
 import { formatSGD, formatSGDWhole } from '../format'
 import {
   entriesForMonth,
@@ -134,10 +135,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
   const [year, setYear] = useState(initialState.year)
   const [month, setMonth] = useState(initialState.month)
   const [selectedDate, setSelectedDate] = useState(initialState.selectedDate)
-  const [amountText, setAmountText] = useState('')
-  const [category, setCategory] = useState<string | null>(null)
-  const [note, setNote] = useState('')
-  const [savedMessage, setSavedMessage] = useState('')
+  const [daySheetDate, setDaySheetDate] = useState<string | null>(null)
   const [editingEntryId, setEditingEntryId] = useState<string | null>(initialState.editingEntryId)
   const [editDraft, setEditDraft] = useState<EditDraft | null>(initialState.editDraft)
   const [searchQuery, setSearchQuery] = useState('')
@@ -195,13 +193,6 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     month: 'long',
     year: 'numeric',
   })
-  const backfillAmount = parseFloat(amountText)
-  const canSaveBackfill =
-    Number.isFinite(backfillAmount) &&
-    backfillAmount > 0 &&
-    selectedDate >= dateMin &&
-    selectedDate <= dateMax &&
-    !isFutureDateString(selectedDate)
 
   function prevMonth() {
     const nextYear = month === 0 ? year - 1 : year
@@ -212,7 +203,6 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     setSelectedDate(defaultBackfillDate(nextYear, nextMonth))
     setDateFrom('')
     setDateTo('')
-    setSavedMessage('')
   }
 
   function nextMonth() {
@@ -226,36 +216,16 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
     setSelectedDate(defaultBackfillDate(nextYear, nextMonth))
     setDateFrom('')
     setDateTo('')
-    setSavedMessage('')
   }
 
   function handleDateChange(value: string) {
     setSelectedDate(clampDateString(value, dateMin, dateMax))
-    setSavedMessage('')
-  }
-
-  async function handleSaveBackfill() {
-    if (!canSaveBackfill) return
-
-    const amount = Math.round(backfillAmount * 100) / 100
-    const entryDate = clampDateString(selectedDate, dateMin, dateMax)
-    await addEntry({
-      amount,
-      category,
-      note: note.trim(),
-      date: entryDate,
-    })
-
-    setAmountText('')
-    setCategory(null)
-    setNote('')
-    setSavedMessage(`Saved ${formatSGD(amount)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
+    setDaySheetDate(clampDateString(value, dateMin, dateMax))
   }
 
   function startEditingEntry(entry: Entry) {
     setEditingEntryId(entry.id)
     setEditDraft(editDraftForEntry(entry))
-    setSavedMessage('')
     setConfirmingDeleteId(null)
     setLedgerMessage('')
   }
@@ -267,7 +237,6 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
 
   function handleEditDraftChange(nextDraft: Partial<EditDraft>) {
     setEditDraft(currentDraft => (currentDraft ? { ...currentDraft, ...nextDraft } : currentDraft))
-    setSavedMessage('')
   }
 
   async function handleSaveEditedEntry(entry: Entry) {
@@ -293,7 +262,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
       date: entryDate,
     })
 
-    setSavedMessage(`Updated ${formatSGD(amount)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
+    setLedgerMessage(`Updated ${formatSGD(amount)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
     setEditingEntryId(null)
     setEditDraft(null)
   }
@@ -350,6 +319,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
   const maxDaySpend = Math.max(1, ...spendByDay.values())
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const todayStr = toLocalDateString(now)
+  const closeDaySheet = useCallback(() => setDaySheetDate(null), [])
 
   return (
     <div className="screen history theme-screen theme-screen--history">
@@ -656,11 +626,10 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
           })}
         </div>
       )}
-      {/* Analysis and backfill sit beneath the ledger: someone opening "History" wants
-          the transaction list, not a data-entry form. Collapsed by default so the list
-          is what the screen is. */}
+      {/* Analysis sits beneath the ledger: someone opening History wants the transaction
+          list first. The day sheet keeps calendar work contextual without another card. */}
       <details className="history-analysis">
-        <summary className="history-analysis__summary">Calendar, backfill &amp; insights</summary>
+        <summary className="history-analysis__summary">Calendar &amp; insights</summary>
         <div className="history-analysis__body">
         <div className="cal-grid history__calendar" role="grid" aria-label="Daily spending">
           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
@@ -687,101 +656,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
             )
           })}
         </div>
-        <p className="cal-caption muted">lighter = heavier spend day &middot; ring = today &middot; tap a day to backfill it</p>
-
-        <section className="card history-backfill history__backfill" aria-labelledby="backfill-title">
-          <div className="card-heading-row">
-            <div>
-              <h2 id="backfill-title" className="card-title">
-                Add missed expense
-              </h2>
-              <p className="card-subtitle">Backfill a day you forgot to log.</p>
-            </div>
-          </div>
-
-          <div className="field-grid">
-            <label className="form-field" htmlFor="backfill-date">
-              <span>Date</span>
-              <span className="date-input-shell">
-                <span className="date-input-value">
-                  {format(fromLocalDateString(selectedDate), 'MMM d, yyyy')}
-                </span>
-                <input
-                  id="backfill-date"
-                  type="date"
-                  className="date-input date-input--native"
-                  value={selectedDate}
-                  min={dateMin}
-                  max={dateMax}
-                  onChange={event => handleDateChange(event.target.value)}
-                />
-              </span>
-            </label>
-            <label className="form-field" htmlFor="backfill-amount">
-              <span>Amount</span>
-              <input
-                id="backfill-amount"
-                type="number"
-                className="amount-input"
-                value={amountText}
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                placeholder="0.00"
-                onChange={event => {
-                  setAmountText(event.target.value)
-                  setSavedMessage('')
-                }}
-              />
-            </label>
-          </div>
-
-          <p className="category-label">
-            Category <span className="muted">(optional)</span>
-          </p>
-          <div className="chips chips--compact">
-            {categoryOptions.map(opt => (
-              <button
-                key={opt.id}
-                type="button"
-                className={`chip chip--compact ${category === opt.id ? 'chip--selected' : ''}`}
-                onClick={() => {
-                  setCategory(currentCategory => (currentCategory === opt.id ? null : opt.id))
-                  setSavedMessage('')
-                }}
-              >
-                <BudgetIcon name={opt.icon} />
-                <span>{opt.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <input
-            type="text"
-            className="note-input"
-            aria-label="Note (optional)"
-            placeholder="Note (optional)"
-            value={note}
-            onChange={event => {
-              setNote(event.target.value)
-              setSavedMessage('')
-            }}
-          />
-
-          <button
-            className="save-btn history-save-btn"
-            type="button"
-            onClick={handleSaveBackfill}
-            disabled={!canSaveBackfill}
-          >
-            Add to History
-          </button>
-          {savedMessage && (
-            <p className="save-feedback" role="status">
-              {savedMessage}
-            </p>
-          )}
-        </section>
+        <p className="cal-caption muted">lighter = heavier spend day &middot; ring = today &middot; tap a day for details</p>
 
         <h3 className="section-title">Weekly Spending</h3>
 
@@ -830,6 +705,16 @@ export default function History({ initialEditingEntryId = null, onEditHandled }:
 
         </div>
       </details>
+
+      {daySheetDate && (
+        <HistoryDaySheet
+          date={daySheetDate}
+          entries={monthEntries.filter(entry => entry.date === daySheetDate)}
+          categoryOptions={categoryOptions}
+          onAdd={addEntry}
+          onClose={closeDaySheet}
+        />
+      )}
 
     </div>
   )

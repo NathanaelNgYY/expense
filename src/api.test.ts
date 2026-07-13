@@ -9,6 +9,9 @@ import { getSupabase, isSupabaseConfigured } from './lib/supabaseClient'
 import {
   fetchEntries,
   fetchIngestStatus,
+  bulkUpsertEntries,
+  bulkUpsertPokerSessions,
+  fetchEntryIds,
   createEntryApi,
   updateEntryApi,
   deleteEntryApi,
@@ -171,6 +174,60 @@ describe('api client', () => {
     const failure = await updateEntryApi('ghost', { amount: 1 }).catch((e: unknown) => e)
     expect(failure).toBeInstanceOf(ApiError)
     expect((failure as ApiError).status).toBe(404)
+  })
+
+  it('maps the server row returned by a successful update', async () => {
+    stubSupabase({ data: serverRow, error: null, status: 200 })
+
+    await expect(updateEntryApi('e1', { note: 'kopi' })).resolves.toMatchObject({
+      id: 'e1',
+      note: 'kopi',
+      merchant: 'Kopitiam',
+    })
+  })
+
+  it('bulk-upserts entry rows under the current user id', async () => {
+    const { builder } = stubSupabase({ data: null, error: null, status: 201 })
+
+    await bulkUpsertEntries([{
+      id: 'bulk-1',
+      amount: 8,
+      category: 'lunch',
+      note: 'Rice',
+      date: '2026-07-13',
+      source: 'manual',
+      dedupeKey: 'manual:bulk-1',
+    }])
+
+    expect(builder.upsert).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: 'bulk-1', user_id: 'u1', dedupe_key: 'manual:bulk-1' })],
+      { onConflict: 'id', ignoreDuplicates: true },
+    )
+  })
+
+  it('fetches the set of server entry ids used by migration verification', async () => {
+    stubSupabase({ data: [{ id: 'e1' }, { id: 'e2' }], error: null, status: 200 })
+    await expect(fetchEntryIds()).resolves.toEqual(new Set(['e1', 'e2']))
+  })
+
+  it('bulk-upserts poker sessions under the current user id', async () => {
+    const { builder } = stubSupabase({ data: null, error: null, status: 201 })
+
+    await bulkUpsertPokerSessions([{
+      id: 'session-1',
+      date: '2026-07-13',
+      startTime: '20:00',
+      endTime: '22:00',
+      stakes: '1/2',
+      buyIn: 100,
+      result: 'win',
+      amount: 25,
+    }])
+
+    expect(builder.upsert).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: 'session-1', user_id: 'u1', result: 'win' })],
+      { onConflict: 'id', ignoreDuplicates: true },
+    )
   })
 
   it('treats deleting an already-deleted entry as success', async () => {

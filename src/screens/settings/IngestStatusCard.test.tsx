@@ -74,4 +74,39 @@ describe('IngestStatusCard', () => {
     expect(rendered.container).toHaveTextContent('old@example.com')
     expect(rendered.container).toHaveTextContent('nat@example.com')
   })
+
+  it('clearly reports when the current account has no Shortcut token', async () => {
+    api.fetchIngestStatus.mockResolvedValue(null)
+
+    const rendered = await renderCard()
+    root = rendered.root
+
+    expect(rendered.container).toHaveTextContent('Receives transactionsNot linked')
+    expect(rendered.container).toHaveTextContent('No Shortcut token is linked to this account')
+  })
+
+  it('shows a temporary status error without calling it an account mismatch', async () => {
+    api.fetchIngestStatus.mockRejectedValue(new Error('network'))
+
+    const rendered = await renderCard()
+    root = rendered.root
+
+    expect(rendered.container).toHaveTextContent('Capture status is temporarily unavailable')
+    expect(rendered.container).not.toHaveTextContent('Account mismatch')
+  })
+
+  it('labels the most recent DBS email capture', async () => {
+    api.fetchIngestStatus.mockResolvedValue({
+      recipientUserId: 'user-current',
+      tokenLabel: '',
+      lastCapturedAt: '2026-07-13T09:30:00.000Z',
+      lastSource: 'dbs_email',
+    })
+
+    const rendered = await renderCard()
+    root = rendered.root
+
+    expect(rendered.container).toHaveTextContent('DBS email')
+    expect(rendered.container).toHaveTextContent('Linked via iOS Shortcut')
+  })
 })

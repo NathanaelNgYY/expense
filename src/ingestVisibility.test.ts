@@ -70,4 +70,12 @@ describe('ingest visibility', () => {
     })
     expect(localStorage.getItem(INGEST_BINDING_STORAGE_KEY)).not.toContain('token_hash')
   })
+
+  it('ignores malformed remembered metadata', () => {
+    localStorage.setItem(INGEST_BINDING_STORAGE_KEY, '{not-json')
+    expect(readIngestBinding()).toBeNull()
+
+    localStorage.setItem(INGEST_BINDING_STORAGE_KEY, JSON.stringify({ userId: 42 }))
+    expect(readIngestBinding()).toBeNull()
+  })
 })

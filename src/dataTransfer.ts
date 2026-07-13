@@ -63,6 +63,18 @@ export function buildExportPayload(): ExportPayloadV1 {
   }
 }
 
+export function downloadJsonBackup(): ExportPayloadV1 {
+  const payload = buildExportPayload()
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `budget-export-${payload.exportedAt.slice(0, 10)}.json`
+  link.click()
+  URL.revokeObjectURL(url)
+  return payload
+}
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 
 function isRecord(value: unknown): value is Record<string, unknown> {

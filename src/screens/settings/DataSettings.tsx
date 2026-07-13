@@ -3,7 +3,7 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { Braces, Clipboard, Download, FileText, Upload } from 'lucide-react'
 import SettingsHeader from './SettingsHeader'
 import { entriesToCsv, parseEntriesCsv } from '../../csvEntries'
-import { buildExportPayload, parseImportPayload, applyImport } from '../../dataTransfer'
+import { downloadJsonBackup, parseImportPayload, applyImport } from '../../dataTransfer'
 import { useEntries } from '../../EntriesContext'
 
 interface Props {
@@ -81,14 +81,7 @@ export default function DataSettings({ onDone }: Props) {
   }
 
   function handleExportJson() {
-    const payload = buildExportPayload()
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `budget-export-${payload.exportedAt.slice(0, 10)}.json`
-    link.click()
-    URL.revokeObjectURL(url)
+    downloadJsonBackup()
   }
 
   async function importJsonText(text: string) {

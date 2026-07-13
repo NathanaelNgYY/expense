@@ -32,6 +32,8 @@ export interface SyncState {
   failed: boolean
   /** Why the last drain stopped. `auth` is not fixable by retrying — the token must change. */
   reason?: SyncFailureReason
+  /** Count verified as still local-only after a migration attempt. */
+  migrationMissingCount?: number
 }
 
 export type SyncFailureReason = 'offline' | 'auth' | 'migration'
@@ -120,8 +122,8 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
 
   // Reflects the queue into `sync` so the UI can say what the network is doing. Called after
   // every mutation and every refresh, including the failing paths.
-  const reportSync = useCallback((reason?: SyncFailureReason) => {
-    setSync({ pendingCount: getQueue().length, failed: reason !== undefined, reason })
+  const reportSync = useCallback((reason?: SyncFailureReason, migrationMissingCount?: number) => {
+    setSync({ pendingCount: getQueue().length, failed: reason !== undefined, reason, migrationMissingCount })
   }, [])
 
   // A just-queued mutation should show as pending immediately, without waiting for the
@@ -147,11 +149,11 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
       const server = await fetchEntries()
       stage = 'migration'
       const outcome = await migrateEntriesIfNeeded(server)
-      if (outcome === 'incomplete') {
+      if (typeof outcome === 'object' && outcome.status === 'incomplete') {
         // Some cached entries never reached the server; committing the server list now would
         // overwrite the only copy of them. Keep the cache authoritative and surface the failure.
         logSyncFailure('migration', 'migration', new Error('Server verification did not find every cached entry'))
-        reportSync('migration')
+        reportSync('migration', outcome.missingCount)
         return false
       }
       stage = 'queue'
@@ -193,7 +195,11 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
       return true
     } catch (error) {
       // Offline or unauthorized: the cache is still correct and the queue is still durable. Surface it.
-      const reason = isAuthFailure(error) ? 'auth' : stage === 'migration' ? 'migration' : 'offline'
+      const reason = isAuthFailure(error)
+        ? 'auth'
+        : stage === 'migration' && isPermanentFailure(error)
+          ? 'migration'
+          : 'offline'
       logSyncFailure(reason === 'auth' ? 'session' : stage, reason, error)
       reportSync(reason)
       return false

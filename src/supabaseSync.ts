@@ -1,6 +1,6 @@
 import type { Entry } from './types'
-import { activateUserStorage, getCachedEntries, getPokerSessions } from './storage'
-import { bulkUpsertEntries, bulkUpsertPokerSessions, ensureUserId, fetchEntryIds } from './api'
+import { activateUserStorage, getCachedEntries, getPokerSessions, setCachedEntries } from './storage'
+import { bulkUpsertEntries, bulkUpsertPokerSessions, ensureUserId, fetchEntryIds, isUniqueViolation } from './api'
 
 // One-time localStorage -> Supabase upload. Constraints (see
 // docs/superpowers/specs/2026-07-11-supabase-migration.md):
@@ -19,7 +19,40 @@ const POKER_SYNCED_PREFIX = 'poker_synced_count:'
 export type MigrationOutcome =
   | 'done' // nothing to do (already migrated, or no cached data)
   | 'migrated' // uploaded entries; caller should re-fetch
-  | 'incomplete' // some cached entries are still not on the server; caller MUST NOT commit the server list
+  | { status: 'incomplete'; missingCount: number } // caller MUST NOT commit the server list
+
+function recoveryDedupeKey(entryId: string): string {
+  return `migration-recovery:${entryId}`
+}
+
+async function uploadWithCollisionRecovery(missing: Entry[], cached: Entry[]): Promise<void> {
+  try {
+    await bulkUpsertEntries(missing)
+    return
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error
+  }
+
+  let recoveredCache = cached
+  for (const entry of missing) {
+    try {
+      await bulkUpsertEntries([entry])
+    } catch (error) {
+      if (!isUniqueViolation(error)) throw error
+      const recovered = { ...entry, dedupeKey: recoveryDedupeKey(entry.id) }
+      console.warn('Recovering migration dedupe collision', {
+        entryId: entry.id,
+        dedupeKey: entry.dedupeKey,
+      })
+      // Retry exactly once. A second failure is surfaced with backup guidance.
+      await bulkUpsertEntries([recovered])
+      recoveredCache = recoveredCache.map(cachedEntry => cachedEntry.id === entry.id ? recovered : cachedEntry)
+      // Persist after each successful repair. If a later row loses network, the next run resumes
+      // with the repaired key instead of colliding again.
+      setCachedEntries(recoveredCache)
+    }
+  }
+}
 
 export async function migrateEntriesIfNeeded(serverEntries: Entry[]): Promise<MigrationOutcome> {
   const userId = await ensureUserId()
@@ -35,12 +68,13 @@ export async function migrateEntriesIfNeeded(serverEntries: Entry[]): Promise<Mi
 
   const serverIds = new Set(serverEntries.map(e => e.id))
   const missing = cached.filter(e => !serverIds.has(e.id))
-  if (missing.length > 0) await bulkUpsertEntries(missing) // throws -> caller reports offline/auth, cache untouched
+  if (missing.length > 0) await uploadWithCollisionRecovery(missing, cached)
 
   // Verify before setting the flag: every cached id must exist server-side. An upsert that
   // skipped rows (e.g. a dedupe-key collision) must not be declared done.
   const verifiedIds = missing.length > 0 ? await fetchEntryIds() : serverIds
-  if (!cached.every(e => verifiedIds.has(e.id))) return 'incomplete'
+  const missingCount = cached.filter(e => !verifiedIds.has(e.id)).length
+  if (missingCount > 0) return { status: 'incomplete', missingCount }
 
   localStorage.setItem(flagKey, '1')
   return missing.length > 0 ? 'migrated' : 'done'

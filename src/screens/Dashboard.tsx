@@ -4,6 +4,7 @@ import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
 import BudgetUsageRing from '../components/BudgetUsageRing'
 import SyncStatus from '../components/SyncStatus'
+import { downloadJsonBackup } from '../dataTransfer'
 import { getBudgetConfig, getCustomCategories, getCategoryOverrides } from '../storage'
 import { categoryIcon, categoryLabel } from '../categoryDisplay'
 import {
@@ -233,7 +234,7 @@ export default function Dashboard({ onSettings, onAddEntry }: Props) {
         </button>
       </header>
 
-      <SyncStatus sync={sync} onRetry={() => void refresh()} />
+      <SyncStatus sync={sync} onRetry={() => void refresh()} onBackup={downloadJsonBackup} />
 
       <div className="pass-stack" style={{ height: `${168 + (passItems.length - 1) * 22}px` }}>
         {passItems.map((item, depth) => {

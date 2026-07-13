@@ -18,11 +18,12 @@ import {
   ApiError,
   isPermanentFailure,
   isAuthFailure,
+  isUniqueViolation,
 } from './api'
 
 interface FakeResult {
   data: unknown
-  error: { message: string; status?: number } | null
+  error: { message: string; status?: number; code?: string } | null
   status: number
 }
 
@@ -174,6 +175,20 @@ describe('api client', () => {
     const failure = await updateEntryApi('ghost', { amount: 1 }).catch((e: unknown) => e)
     expect(failure).toBeInstanceOf(ApiError)
     expect((failure as ApiError).status).toBe(404)
+  })
+
+  it('preserves the Postgres code needed to recover a unique-key collision', async () => {
+    stubSupabase({
+      data: null,
+      error: { message: 'duplicate key value violates unique constraint', code: '23505' },
+      status: 409,
+    })
+
+    const failure = await bulkUpsertEntries([{
+      id: 'collision', amount: 1, category: 'lunch', note: '', date: '2026-07-13',
+    }]).catch((error: unknown) => error)
+
+    expect(isUniqueViolation(failure)).toBe(true)
   })
 
   it('maps the server row returned by a successful update', async () => {

@@ -5,10 +5,12 @@ import type { IngestSourceKind, IngestStatus } from './ingestVisibility'
 
 export class ApiError extends Error {
   status: number
-  constructor(status: number, message: string) {
+  code?: string
+  constructor(status: number, message: string, code?: string) {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.code = code
   }
 }
 
@@ -31,11 +33,15 @@ export function isAuthFailure(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 401 || error.status === 403)
 }
 
+export function isUniqueViolation(error: unknown): boolean {
+  return error instanceof ApiError && error.code === '23505'
+}
+
 // status 0/undefined means the browser never got a response (offline, DNS): a plain error so
 // isPermanentFailure treats it as retryable, mirroring how fetch() rejections behaved before.
-function throwFrom(error: { message: string }, status: number | undefined): never {
+function throwFrom(error: { message: string; code?: string }, status: number | undefined): never {
   if (!status) throw new TypeError(error.message)
-  throw new ApiError(status, error.message)
+  throw new ApiError(status, error.message, error.code)
 }
 
 // ---------- session ----------

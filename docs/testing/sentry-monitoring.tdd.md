@@ -40,4 +40,6 @@
 
 ## External boundary
 
-The EU Sentry project `nee-x7/budget-tracker` now exists. `VITE_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT` and the sensitive `SENTRY_AUTH_TOKEN` are configured in both Vercel Production and Preview. The token has only the organization `org:ci` scope used for source-map upload. No deployment was performed, so live event delivery and source-map upload remain to be verified after the next approved deploy.
+The EU Sentry project `nee-x7/budget-tracker` now exists. `VITE_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT` and the sensitive `SENTRY_AUTH_TOKEN` are configured in both Vercel Production and Preview. The token has only the organization `org:ci` scope used for source-map upload.
+
+The approved production deployment completed on 2026-07-13. Vercel confirmed the Sentry artifact bundle upload, the live JavaScript contains the EU ingest endpoint, and the corresponding public `.map` URL returns 404. All five app tabs loaded without browser console warnings or errors. No artificial production exception was generated, so the first genuine captured error will provide the final event-delivery signal.

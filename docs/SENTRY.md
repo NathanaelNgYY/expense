@@ -9,8 +9,10 @@ The app initializes `@sentry/react` before React renders and reports root-bounda
 - Data region: European Union
 - Vercel environments configured: Production and Preview
 - Source-map token: organization-scoped `org:ci`, stored only as a sensitive Vercel variable
+- Production alias: `https://budget-tracker-sooty-ten.vercel.app`
+- Production status: deployed and smoke-tested on 2026-07-13; source-map upload verified
 
-These settings take effect on the next Vercel deployment. No token or private credential is committed to the repository.
+These settings are active in production. No token or private credential is committed to the repository.
 
 ## Privacy defaults
 

@@ -1,0 +1,26 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { describe, expect, it } from 'vitest'
+
+const sql = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20260713092121_ingest_visibility.sql'),
+  'utf8',
+)
+
+describe('ingest visibility migration', () => {
+  it('creates status immediately when a new token is minted', () => {
+    expect(sql).toContain('create trigger ingest_token_status_created')
+    expect(sql).toContain('execute function public.sync_ingest_status_on_token()')
+  })
+
+  it('keeps the trigger helper unavailable to client roles', () => {
+    expect(sql).toContain('revoke execute on function public.sync_ingest_status_on_token() from public, anon, authenticated')
+  })
+
+  it('allows authenticated users to select only their own status row', () => {
+    expect(sql).toContain('alter table public.ingest_status enable row level security')
+    expect(sql).toContain('using ((select auth.uid()) = user_id)')
+    expect(sql).toContain('grant select on public.ingest_status to authenticated')
+    expect(sql).not.toContain('grant select on public.ingest_tokens to authenticated')
+  })
+})

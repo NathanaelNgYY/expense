@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getEntries, saveEntries, updateEntry, getCachedEntries, setCachedEntries, getCustomCategories, saveCustomCategories, makeCustomCategoryId, getCategoryOverrides, saveCategoryOverrides, getPokerSessions, savePokerSessions } from './storage'
+import { activateUserStorage, getEntries, saveEntries, updateEntry, getCachedEntries, setCachedEntries, getCustomCategories, saveCustomCategories, makeCustomCategoryId, getCategoryOverrides, saveCategoryOverrides, getPokerSessions, savePokerSessions } from './storage'
 import type { Entry, CustomCategory, PokerSession } from './types'
 
 function entry(overrides: Partial<Entry> = {}): Entry {
@@ -116,6 +116,36 @@ describe('entries cache', () => {
   it('returns [] when cache empty', () => {
     localStorage.clear()
     expect(getCachedEntries()).toEqual([])
+  })
+})
+
+describe('user-scoped storage', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('copies the legacy cache only into the user recorded by the migration flag', () => {
+    const ownerEntry = entry({ id: 'owner-entry' })
+    localStorage.setItem('budget_entries', JSON.stringify([ownerEntry]))
+    localStorage.setItem('supabase_migration_done:user-a', '1')
+
+    activateUserStorage('user-b')
+    expect(getCachedEntries()).toEqual([])
+    expect(localStorage.getItem('budget_entries:user-b')).toBeNull()
+
+    activateUserStorage('user-a')
+    expect(getCachedEntries()).toEqual([ownerEntry])
+    expect(JSON.parse(localStorage.getItem('budget_entries:user-a')!)).toEqual([ownerEntry])
+  })
+
+  it('keeps entries isolated when the active user changes', () => {
+    activateUserStorage('user-a')
+    setCachedEntries([entry({ id: 'a' })])
+
+    activateUserStorage('user-b')
+    expect(getCachedEntries()).toEqual([])
+    setCachedEntries([entry({ id: 'b' })])
+
+    activateUserStorage('user-a')
+    expect(getCachedEntries().map(item => item.id)).toEqual(['a'])
   })
 })
 

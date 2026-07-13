@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { enqueue, getQueue, clearQueue, type Mutation } from './syncQueue'
+import { activateUserStorage } from './storage'
 
 beforeEach(() => localStorage.clear())
 
@@ -15,5 +16,16 @@ describe('syncQueue', () => {
     enqueue({ op: 'delete', id: 'x' })
     clearQueue()
     expect(getQueue()).toEqual([])
+  })
+
+  it('never exposes one user queue to another user', () => {
+    activateUserStorage('user-a')
+    enqueue({ op: 'delete', id: 'a-entry' })
+
+    activateUserStorage('user-b')
+    expect(getQueue()).toEqual([])
+
+    activateUserStorage('user-a')
+    expect(getQueue()).toEqual([{ op: 'delete', id: 'a-entry' }])
   })
 })

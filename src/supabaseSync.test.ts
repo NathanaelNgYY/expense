@@ -92,13 +92,13 @@ describe('migrateEntriesIfNeeded', () => {
     expect(localStorage.getItem('supabase_migration_done:u1')).toBe('1')
   })
 
-  it('re-seeds a different user id from the same cache (account switch keeps data visible)', async () => {
+  it('does not upload the previous user cache when the account changes', async () => {
     localStorage.setItem('supabase_migration_done:u1', '1') // migrated under the anonymous user
     seedCache([e('a')])
     ensureUserIdMock.mockResolvedValue('u2') // now signed in with Google
-    fetchEntryIdsMock.mockResolvedValue(new Set(['a']))
 
-    await expect(migrateEntriesIfNeeded([])).resolves.toBe('migrated')
+    await expect(migrateEntriesIfNeeded([])).resolves.toBe('done')
+    expect(bulkUpsertEntriesMock).not.toHaveBeenCalled()
     expect(localStorage.getItem('supabase_migration_done:u2')).toBe('1')
   })
 

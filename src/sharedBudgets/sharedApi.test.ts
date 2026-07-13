@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const rpc = vi.fn()
 const signInWithOAuth = vi.fn()
+const linkIdentity = vi.fn()
+const getSession = vi.fn()
 vi.mock('../lib/supabaseClient', () => ({
-  getSupabase: () => ({ rpc, auth: { signInWithOAuth } }),
+  getSupabase: () => ({ rpc, auth: { getSession, linkIdentity, signInWithOAuth } }),
   isSupabaseConfigured: () => true,
 }))
 
@@ -88,8 +90,26 @@ describe('joinBudget', () => {
 })
 
 describe('signInWithGoogle', () => {
-  it('starts Google OAuth with the current origin as the redirect target', async () => {
+  it('links Google to the current anonymous user instead of creating a new user', async () => {
     vi.stubGlobal('window', { location: { origin: 'https://budget.example' } })
+    getSession.mockResolvedValue({
+      data: { session: { user: { id: 'anon-user', is_anonymous: true } } },
+      error: null,
+    })
+    linkIdentity.mockResolvedValue({ data: {}, error: null })
+
+    await signInWithGoogle()
+
+    expect(linkIdentity).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: 'https://budget.example' },
+    })
+    expect(signInWithOAuth).not.toHaveBeenCalled()
+  })
+
+  it('starts Google OAuth when there is no anonymous identity to preserve', async () => {
+    vi.stubGlobal('window', { location: { origin: 'https://budget.example' } })
+    getSession.mockResolvedValue({ data: { session: null }, error: null })
     signInWithOAuth.mockResolvedValue({ data: {}, error: null })
 
     await signInWithGoogle()

@@ -17,6 +17,12 @@ function validIdempotencyKey(value: unknown): value is string | undefined {
   return value === undefined || (typeof value === 'string' && value.trim().length > 0 && value.length <= 500)
 }
 
+function usableApplePayIdempotencyKey(value: string | undefined, merchant: string): string | undefined {
+  const key = value?.trim()
+  if (!key || key.toLocaleLowerCase() === merchant.trim().toLocaleLowerCase()) return undefined
+  return key
+}
+
 export async function handleIngest(
   body: IngestBody,
   store: EntryStore,
@@ -33,6 +39,7 @@ export async function handleIngest(
       return { status: 'error', reason: 'invalid-amount' }
     }
     const merchant = body.merchant ?? ''
+    const idempotencyKey = usableApplePayIdempotencyKey(body.idempotencyKey, merchant)
     input = {
       sourceKind: 'apple_pay',
       amount: Math.round(body.amount * 100) / 100,
@@ -40,8 +47,8 @@ export async function handleIngest(
       learnedCategory: categoryFromHistory(await store.list(), merchant),
       occurredAt: body.occurredAt,
       currency: body.currency,
-      ...(body.idempotencyKey
-        ? { eventFingerprint: await fingerprintIngestEvent(body.idempotencyKey.trim()) }
+      ...(idempotencyKey
+        ? { eventFingerprint: await fingerprintIngestEvent(idempotencyKey) }
         : {}),
     }
   } else if (body?.sourceKind === 'dbs_email') {

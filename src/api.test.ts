@@ -8,6 +8,7 @@ vi.mock('./lib/supabaseClient', () => ({
 import { getSupabase, isSupabaseConfigured } from './lib/supabaseClient'
 import {
   fetchEntries,
+  fetchIngestStatus,
   createEntryApi,
   updateEntryApi,
   deleteEntryApi,
@@ -83,6 +84,28 @@ beforeEach(() => {
 })
 
 describe('api client', () => {
+  it('fetches only non-secret ingest status for the current user', async () => {
+    const { fake, builder } = stubSupabase({
+      data: {
+        user_id: 'u1',
+        token_label: 'ios-shortcut',
+        last_captured_at: '2026-07-13T09:30:00.000Z',
+        last_source: 'apple_pay',
+      },
+      error: null,
+      status: 200,
+    })
+
+    await expect(fetchIngestStatus()).resolves.toEqual({
+      recipientUserId: 'u1',
+      tokenLabel: 'ios-shortcut',
+      lastCapturedAt: '2026-07-13T09:30:00.000Z',
+      lastSource: 'apple_pay',
+    })
+    expect(fake.from).toHaveBeenCalledWith('ingest_status')
+    expect(builder.select).toHaveBeenCalledWith('user_id,token_label,last_captured_at,last_source')
+  })
+
   it('fetches entries and maps snake_case rows to the Entry shape', async () => {
     stubSupabase({ data: [serverRow], error: null, status: 200 })
     const entries = await fetchEntries()

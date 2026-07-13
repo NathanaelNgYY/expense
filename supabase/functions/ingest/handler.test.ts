@@ -16,6 +16,14 @@ class InMemoryStore implements IngestStore {
   }
 }
 
+class CaptureAwareStore extends InMemoryStore {
+  captures: Array<'apple_pay' | 'dbs_email'> = []
+
+  async recordCapture(sourceKind: 'apple_pay' | 'dbs_email'): Promise<void> {
+    this.captures.push(sourceKind)
+  }
+}
+
 const makeId = () => 'fixed-id'
 
 describe('edge ingest handler', () => {
@@ -53,6 +61,16 @@ describe('edge ingest handler', () => {
     const second = await handleIngest(body, store, makeId)
     expect(second.status).toBe('duplicate')
     expect((await store.list()).length).toBe(1)
+  })
+
+  it('records last-captured status for both saved and duplicate requests', async () => {
+    const store = new CaptureAwareStore()
+    const body = { sourceKind: 'apple_pay' as const, amount: 4.2, merchant: 'Ya Kun', occurredAt: '2026-07-11T04:00:00Z' }
+
+    await handleIngest(body, store, makeId)
+    await handleIngest(body, store, makeId)
+
+    expect(store.captures).toEqual(['apple_pay', 'apple_pay'])
   })
 
   it('deduplicates a re-fired Apple Pay event even when occurredAt changes', async () => {

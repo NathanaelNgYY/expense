@@ -8,7 +8,7 @@
 
 ## Current position
 
-The highest-risk identity, ingestion visibility, migration recovery, crash recovery, and bulk-reset safety work is implemented. H8 is live in production. H7 and this documentation cleanup are complete locally but are not pushed or deployed yet.
+The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, and month-analytics correctness work is implemented. H8 is live in production. H7, H1–H3, and the documentation cleanup are complete locally but are not pushed or deployed yet.
 
 ## Completed or materially addressed
 
@@ -20,6 +20,7 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 | C4 — migration dead end | Complete | Dedupe collisions recover deterministically, incomplete uploads remain recoverable, and migration failures no longer masquerade as offline errors. | `docs/testing/migration-recovery.tdd.md` |
 | H7 — bulk month reset | Complete locally | Confirmation shows the affected count; Undo restores all entries with original ids and dedupe keys; restore clears stale tombstones. | `docs/testing/h7-bulk-reset-undo.tdd.md` |
 | H8 / M11 — blank crashes and no monitoring | Complete and deployed | Root error fallback offers Reload and backup; production errors report to the EU Sentry project with source maps. A controlled event was received as `BUDGET-TRACKER-1`. | `docs/testing/error-boundary.tdd.md`, `docs/testing/sentry-monitoring.tdd.md`, `docs/SENTRY.md` |
+| H1–H3 — incorrect month analytics | Complete locally | Highest day uses total daily spend, custom categories can rank as Most expensive, and Day pattern is scoped to the selected month. | `docs/testing/h1-h3-month-analytics.tdd.md` |
 | H9 — CI | Partially complete | GitHub Actions runs install, tests, lint, and build on pushes and pull requests. Required checks cannot be enforced on this private repository's current GitHub plan. | `.github/workflows/ci.yml` |
 | H10 — unpushed work | Reopened | Earlier work was pushed, but H7 and this documentation cleanup are currently local commits. Push after review. | `git status --branch` |
 | M10 — no identity linking | Complete | Google identity linking is implemented as part of C1. | `src/sharedBudgets/sharedApi.ts` |
@@ -27,21 +28,21 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 
 ## Next recommended work
 
-1. Push and deploy H7 plus this documentation cleanup; verify the Undo flow on the production PWA.
-2. Fix H1, H2, and H3 together: biggest day, custom-category ranking, and month-scoped day pattern.
-3. Resolve H6: stop presenting Others and Buffer as the same money twice.
-4. Add M17 browser E2E, accessibility checks, and automated live RLS isolation tests.
-5. Address H11/M14 performance: batch CSV imports and reduce the initial bundle.
+1. Push and deploy H7, H1–H3, and the documentation cleanup; verify Month Review and Undo on the production PWA.
+2. Resolve H6: stop presenting Others and Buffer as the same money twice.
+3. Add M17 browser E2E, accessibility checks, and automated live RLS isolation tests.
+4. Address H11/M14 performance: batch CSV imports and reduce the initial bundle.
 
 ## Remaining audit items
 
-- H1–H6, H9 enforcement, H11.
+- H4–H6, H9 enforcement, H11.
 - M1–M9 and M12–M17, except where a later implementation or product decision explicitly retires an item.
 - C3's perfect Apple Pay dedupe guarantee remains impossible without a stable transaction identifier from iOS; the current fallback is deliberately documented rather than overstated.
 
 ## Verification baseline
 
-- Final H7 suite: 56 test files, 477 tests passed.
+- Current suite: 57 test files, 482 tests passed.
 - Lint and production build pass.
 - Targeted H7 coverage: 95.1% statements, 82.55% branches, 93.61% functions, 98.72% lines.
+- Targeted H1–H3 coverage: 97.09% statements, 80.29% branches, 98.33% functions, 99.27% lines.
 - Dependency audit still reports 10 existing findings: 1 low, 7 moderate, 2 high.

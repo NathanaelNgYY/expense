@@ -60,7 +60,7 @@ npm run lint       # eslint
 - **Supabase backend** (`entries` CRUD with RLS, idempotent Edge Function ingest) → `Components/Serverless Backend.md`
 - **Legacy fallback** (`netlify/functions/`) is frozen and must not be deployed
 - **UI shell + screens** → `Components/UI Layer.md`
-- **Background ingestion**: two iOS Shortcuts POST to `/api/ingest` — Apple Pay (Wallet trigger) and DBS
+- **Background ingestion**: two iOS Shortcuts POST to the Supabase `ingest` Edge Function — Apple Pay (Wallet trigger) and DBS
   transaction-alert emails (no native PayNow trigger). Full Shortcut setup in `README.md`.
 
 ## Conventions
@@ -99,5 +99,5 @@ Read the hub + the relevant `Components/<X>.md` note (design intent). For *struc
 
 ## Process artifacts
 
-- Plans and specs → `docs/superpowers/{plans,specs}/`, dated filenames.
+- Design specs → `docs/superpowers/specs/`, dated filenames. Completed implementation plans live in Git history.
 - Durable design intent ("how the system works today / why a decision was made") → the Obsidian vault, folded into the matching Component/Concept note.

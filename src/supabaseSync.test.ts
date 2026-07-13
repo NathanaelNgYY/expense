@@ -121,6 +121,28 @@ describe('migrateEntriesIfNeeded', () => {
     expect(localStorage.getItem('supabase_migration_done:u1')).toBe('1')
   })
 
+  it('persists each recovered key before continuing so a later network failure remains resumable', async () => {
+    const first = { ...e('a'), dedupeKey: 'apple_pay:duplicate' }
+    const second = { ...e('b'), dedupeKey: 'dbs_email:second' }
+    seedCache([first, second])
+    const uniqueViolation = Object.assign(new ApiError(409, 'duplicate key value violates unique constraint'), {
+      code: '23505',
+    })
+    bulkUpsertEntriesMock
+      .mockRejectedValueOnce(uniqueViolation) // batch fails
+      .mockRejectedValueOnce(uniqueViolation) // a is the collision
+      .mockResolvedValueOnce(undefined) // a recovery lands
+      .mockRejectedValueOnce(new TypeError('Failed to fetch')) // b is interrupted
+
+    await expect(migrateEntriesIfNeeded([])).rejects.toBeInstanceOf(TypeError)
+
+    expect(JSON.parse(localStorage.getItem('budget_entries:u1') as string)).toEqual([
+      expect.objectContaining({ id: 'a', dedupeKey: 'migration-recovery:a' }),
+      second,
+    ])
+    expect(localStorage.getItem('supabase_migration_done:u1')).toBeNull()
+  })
+
   it('propagates an upload failure without setting the flag, and resumes next run', async () => {
     seedCache([e('a')])
     bulkUpsertEntriesMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))

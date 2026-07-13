@@ -1,6 +1,6 @@
 // Explicit .ts extensions: this module is bundled by Deno for the ingest Edge Function,
 // which cannot resolve extensionless specifiers. Vite/tsc accept them (allowImportingTsExtensions).
-import type { Category, Entry, EntrySource } from '../types.ts'
+import type { Entry, EntrySource } from '../types.ts'
 import type { DbsChannel } from './dbsEmail.ts'
 import { guessCategory } from './category.ts'
 import { buildDedupeKey } from './dedupe.ts'
@@ -11,7 +11,9 @@ export interface IngestInput {
   amount: number
   merchant: string
   channel?: DbsChannel // payment channel for dbs_email (PayNow vs card)
-  learnedCategory?: Category | null // category learned from the user's history
+  // Category learned from the user's history. Widened to string because the user
+  // may have taught us a custom category, which is not in the Category union.
+  learnedCategory?: string | null
   occurredAt?: string
   currency?: string
   eventFingerprint?: string

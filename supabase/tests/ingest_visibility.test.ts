@@ -11,6 +11,10 @@ const grantLockdownSql = readFileSync(
   'utf8',
 )
 const normalizedGrantLockdownSql = grantLockdownSql.replace(/\s+/g, ' ')
+const anonLockdownSql = readFileSync(
+  join(process.cwd(), 'supabase/migrations/20260713112827_lock_down_ingest_status_anon_access.sql'),
+  'utf8',
+).replace(/\s+/g, ' ')
 
 describe('ingest visibility migration', () => {
   it('creates status immediately when a new token is minted', () => {
@@ -34,5 +38,9 @@ describe('ingest visibility migration', () => {
       'revoke insert, update, delete, truncate, references, trigger on public.ingest_status from anon, authenticated',
     )
     expect(grantLockdownSql).toContain('grant select on public.ingest_status to authenticated')
+  })
+
+  it('removes the legacy unauthenticated table grant', () => {
+    expect(anonLockdownSql).toContain('revoke all privileges on public.ingest_status from anon')
   })
 })

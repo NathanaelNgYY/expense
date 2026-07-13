@@ -35,11 +35,7 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background:
-        linear-gradient(var(--canvas-line) 1px, transparent 1px),
-        linear-gradient(90deg, var(--canvas-line) 1px, transparent 1px),
-        var(--canvas);
-      background-size: 32px 32px;
+      background: var(--canvas);
       color: var(--text);
       font-family: var(--body);
       font-variant-numeric: tabular-nums;
@@ -440,67 +436,6 @@
     .entry small { display: block; margin-top: 2px; color: var(--text-2); font-size: 10px; }
     .entry-amount { font-weight: 800; white-space: nowrap; }
 
-    .scrim {
-      position: absolute;
-      z-index: 8;
-      inset: 0;
-      background: rgba(0, 0, 0, .62);
-    }
-
-    .sheet {
-      position: absolute;
-      z-index: 9;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      padding: 9px 16px 24px;
-      border: 1px solid rgba(212, 175, 106, .28);
-      border-radius: 26px 26px 0 0;
-      background: var(--surface);
-      box-shadow: 0 -24px 60px rgba(0, 0, 0, .46);
-    }
-
-    .handle {
-      width: 38px;
-      height: 5px;
-      margin: 0 auto 14px;
-      border-radius: 99px;
-      background: rgba(241, 236, 224, .26);
-    }
-
-    .sheet-heading {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 18px;
-      margin-bottom: 13px;
-    }
-
-    .sheet-heading h3 { margin: 0; font: 700 22px/1.1 var(--display); }
-    .sheet-heading p { margin: 4px 0 0; color: var(--text-2); font-size: 12px; }
-    .sheet-heading .total { color: var(--gold-bright); font-weight: 800; }
-
-    .sheet .ledger { margin-bottom: 12px; }
-    .sheet .save { min-height: 48px; }
-
-    .sheet-form {
-      display: grid;
-      gap: 10px;
-    }
-
-    .sheet-amount {
-      min-height: 57px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 14px;
-      border-radius: 13px;
-      background: var(--surface-2);
-    }
-
-    .sheet-amount span { color: var(--text-2); font-size: 13px; }
-    .sheet-amount strong { font: 700 25px/1 var(--display); }
-
     .lite-banner {
       display: flex;
       align-items: center;
@@ -526,43 +461,6 @@
       font-size: 13px;
     }
 
-    .alternative {
-      display: grid;
-      grid-template-columns: minmax(0, 390px) minmax(300px, 560px);
-      gap: 34px;
-      align-items: center;
-      margin-top: 72px;
-      padding-top: 34px;
-      border-top: 1px solid var(--canvas-line);
-    }
-
-    .alternative-copy h2 {
-      margin: 0;
-      font: 700 30px/1.08 var(--display);
-    }
-
-    .alternative-copy p {
-      margin: 13px 0 0;
-      color: var(--text-2);
-      line-height: 1.6;
-    }
-
-    .tradeoffs {
-      display: grid;
-      gap: 11px;
-      margin-top: 22px;
-    }
-
-    .tradeoff {
-      padding-left: 14px;
-      border-left: 2px solid var(--line);
-      color: var(--text-2);
-      font-size: 14px;
-      line-height: 1.45;
-    }
-
-    .tradeoff b { color: var(--text); }
-
     .board-footer {
       margin-top: 60px;
       padding-top: 22px;
@@ -581,25 +479,22 @@
       .board-header { display: block; }
       .board-header p { margin-top: 16px; }
       .flow { grid-template-columns: 1fr; }
-      .alternative { grid-template-columns: 1fr; }
-      .alternative .phone { order: 2; }
     }
 
     html[data-shot] body { min-height: auto; background: var(--canvas); }
     html[data-shot] .board { width: 430px; padding: 18px 14px; }
     html[data-shot] .board-header,
-    html[data-shot] .alternative,
     html[data-shot] .board-footer { display: none; }
     html[data-shot] .flow { display: block; margin: 0; }
     html[data-shot] .mock { display: none; }
     html[data-shot="add-today"] .mock:nth-child(1),
     html[data-shot="add-yesterday"] .mock:nth-child(2),
-    html[data-shot="day-sheet"] .mock:nth-child(3),
-    html[data-shot="backfill-sheet"] .mock:nth-child(4) { display: block; }
+    html[data-shot="history-filter"] .mock:nth-child(3),
+    html[data-shot="dated-add"] .mock:nth-child(4) { display: block; }
   </style>
   <script>
     const shot = new URLSearchParams(location.search).get('shot')
-    if (['add-today', 'add-yesterday', 'day-sheet', 'backfill-sheet'].includes(shot)) {
+    if (['add-today', 'add-yesterday', 'history-filter', 'dated-add'].includes(shot)) {
       document.documentElement.dataset.shot = shot
     }
   </script>
@@ -608,10 +503,10 @@
   <main class="board">
     <header class="board-header">
       <div>
-        <h1>Date-first entry and day review</h1>
-        <span class="recommendation">Recommended: A + B</span>
+        <h1>Date-first entry and calendar filtering</h1>
+        <span class="recommendation">Selected: A + B-lite</span>
       </div>
-      <p>Add Entry handles the common “yesterday” correction. History handles month review through a day sheet that shows context before asking for another expense.</p>
+      <p>Add Entry handles the common “yesterday” correction. History filters the existing ledger from a calendar tap, then hands the selected date back to the same numpad flow.</p>
     </header>
 
     <section class="flow" aria-label="Recommended date entry flow">
@@ -671,8 +566,8 @@
 
       <article class="mock">
         <div class="mock-heading">
-          <h2>3. Tap a day to inspect it</h2>
-          <p>The sheet first answers what happened on that date.</p>
+          <h2>3. Tap a day to filter the ledger</h2>
+          <p>The chosen date becomes a visible filter above the existing entries.</p>
         </div>
         <div class="phone">
           <div class="island"></div>
@@ -680,7 +575,11 @@
           <div class="screen">
             <div class="month-nav"><span class="round">‹</span><strong>July 2026</strong><span class="round">›</span></div>
             <div class="summary"><div><span>Month total</span><strong>S$650.40</strong></div><div><span>Entries</span><strong>27</strong></div></div>
-            <p class="field-label">DAILY SPENDING</p>
+            <p class="field-label">ENTRIES</p>
+            <div class="lite-banner"><span>Showing Tue, Jul 8</span><strong>＋ Add for Jul 8</strong></div>
+            <div class="search">Search note or merchant</div>
+            <div class="ledger"><div class="entry"><div><strong>Lunch</strong><small>Tue, Jul 8 · Food court</small></div><span class="entry-amount">S$6.30</span></div><div class="entry"><div><strong>Transport</strong><small>Tue, Jul 8 · Manual</small></div><span class="entry-amount">S$8.50</span></div></div>
+            <p class="field-label">CALENDAR &amp; INSIGHTS</p>
             <div class="calendar">
               <span class="weekday">M</span><span class="weekday">T</span><span class="weekday">W</span><span class="weekday">T</span><span class="weekday">F</span><span class="weekday">S</span><span class="weekday">S</span>
               <span class="day empty"></span><span class="day empty"></span><span class="day m1">1</span><span class="day">2</span><span class="day m2">3</span><span class="day m1">4</span><span class="day m3">5</span>
@@ -690,80 +589,36 @@
               <span class="day m1">27</span><span class="day">28</span><span class="day">29</span><span class="day">30</span><span class="day">31</span>
             </div>
           </div>
-          <div class="scrim"></div>
-          <section class="sheet">
-            <div class="handle"></div>
-            <div class="sheet-heading"><div><h3>Tue, Jul 8</h3><p>2 expenses</p></div><span class="total">S$14.80</span></div>
-            <div class="ledger"><div class="entry"><div><strong>Lunch</strong><small>Food court</small></div><span class="entry-amount">S$6.30</span></div><div class="entry"><div><strong>Transport</strong><small>Manual</small></div><span class="entry-amount">S$8.50</span></div></div>
-            <div class="save">Add expense for Jul 8</div>
-          </section>
+          <nav class="tabbar"><span class="tab"><i class="tab-icon">⌂</i>Home</span><span class="tab"><i class="tab-icon">＋</i>Add</span><span class="tab active"><i class="tab-icon">▤</i>History</span><span class="tab"><i class="tab-icon">♠</i>Poker</span><span class="tab"><i class="tab-icon">◎</i>Shared</span></nav>
         </div>
       </article>
 
       <article class="mock">
         <div class="mock-heading">
-          <h2>4. Add without losing context</h2>
-          <p>The sheet expands in place and keeps the selected date locked.</p>
+          <h2>4. Add reuses the dated numpad</h2>
+          <p>The existing Add Entry flow opens with the calendar date preselected.</p>
         </div>
         <div class="phone">
           <div class="island"></div>
           <div class="status"><span>9:41</span><span>5G&nbsp;&nbsp;100%</span></div>
           <div class="screen">
-            <div class="month-nav"><span class="round">‹</span><strong>July 2026</strong><span class="round">›</span></div>
-            <div class="summary"><div><span>Month total</span><strong>S$650.40</strong></div><div><span>Entries</span><strong>27</strong></div></div>
-            <p class="field-label">DAILY SPENDING</p>
-            <div class="calendar">
-              <span class="weekday">M</span><span class="weekday">T</span><span class="weekday">W</span><span class="weekday">T</span><span class="weekday">F</span><span class="weekday">S</span><span class="weekday">S</span>
-              <span class="day empty"></span><span class="day empty"></span><span class="day m1">1</span><span class="day">2</span><span class="day m2">3</span><span class="day m1">4</span><span class="day m3">5</span>
-              <span class="day">6</span><span class="day m1">7</span><span class="day selected">8</span><span class="day m2">9</span><span class="day">10</span><span class="day m1">11</span><span class="day m2">12</span>
-              <span class="day m1">13</span><span class="day">14</span><span class="day m1">15</span><span class="day m3">16</span><span class="day m1">17</span><span class="day">18</span><span class="day m2">19</span>
+            <p class="screen-title">ADD ENTRY</p>
+            <div class="amount-stage"><strong class="amount">S$12<small>.40</small></strong></div>
+            <div class="date-pill">Jul 8 <span class="chev">⌄</span></div>
+            <div class="numpad">
+              <span class="key">1</span><span class="key">2</span><span class="key">3</span>
+              <span class="key">4</span><span class="key">5</span><span class="key">6</span>
+              <span class="key">7</span><span class="key">8</span><span class="key">9</span>
+              <span class="key">.</span><span class="key">0</span><span class="key del">DELETE</span>
             </div>
+            <p class="field-label">Category (optional)</p>
+            <div class="chips"><span class="chip active">Lunch</span><span class="chip">Transport</span><span class="chip">Savings</span><span class="chip">Others</span></div>
+            <div class="note">Note (optional)</div>
+            <div class="save">Add for Jul 8</div>
           </div>
-          <div class="scrim"></div>
-          <section class="sheet">
-            <div class="handle"></div>
-            <div class="sheet-heading"><div><h3>Add for Tue, Jul 8</h3><p>Date locked from calendar</p></div><span class="total">Jul 8</span></div>
-            <div class="sheet-form">
-              <div class="sheet-amount"><span>Amount</span><strong>S$12.40</strong></div>
-              <div class="chips"><span class="chip active">Lunch</span><span class="chip">Transport</span><span class="chip">Savings</span><span class="chip">Others</span></div>
-              <div class="note">Note (optional)</div>
-              <div class="save">Add for Jul 8</div>
-            </div>
-          </section>
+          <nav class="tabbar"><span class="tab"><i class="tab-icon">⌂</i>Home</span><span class="tab active"><i class="tab-icon">＋</i>Add</span><span class="tab"><i class="tab-icon">▤</i>History</span><span class="tab"><i class="tab-icon">♠</i>Poker</span><span class="tab"><i class="tab-icon">◎</i>Shared</span></nav>
         </div>
       </article>
-    </section>
-
-    <section class="alternative">
-      <div class="phone">
-        <div class="island"></div>
-        <div class="status"><span>9:41</span><span>5G&nbsp;&nbsp;100%</span></div>
-        <div class="screen">
-          <div class="month-nav"><span class="round">‹</span><strong>July 2026</strong><span class="round">›</span></div>
-          <div class="summary"><div><span>Month total</span><strong>S$650.40</strong></div><div><span>Entries</span><strong>27</strong></div></div>
-          <p class="field-label">DAILY SPENDING</p>
-          <div class="calendar">
-            <span class="weekday">M</span><span class="weekday">T</span><span class="weekday">W</span><span class="weekday">T</span><span class="weekday">F</span><span class="weekday">S</span><span class="weekday">S</span>
-            <span class="day empty"></span><span class="day empty"></span><span class="day m1">1</span><span class="day">2</span><span class="day m2">3</span><span class="day m1">4</span><span class="day m3">5</span>
-            <span class="day">6</span><span class="day m1">7</span><span class="day selected">8</span><span class="day m2">9</span><span class="day">10</span><span class="day m1">11</span><span class="day m2">12</span>
-            <span class="day m1">13</span><span class="day">14</span><span class="day m1">15</span><span class="day m3">16</span><span class="day m1">17</span><span class="day">18</span><span class="day m2">19</span>
-            <span class="day">20</span><span class="day m1">21</span><span class="day">22</span><span class="day m2">23</span><span class="day m1">24</span><span class="day">25</span><span class="day">26</span>
-          </div>
-          <div class="lite-banner"><span>Showing Tue, Jul 8</span><strong>＋ Add for Jul 8</strong></div>
-          <div class="search">Search note or merchant</div>
-          <div class="ledger"><div class="entry"><div><strong>Lunch</strong><small>Tue, Jul 8 · Food court</small></div><span class="entry-amount">S$6.30</span></div><div class="entry"><div><strong>Transport</strong><small>Tue, Jul 8 · Manual</small></div><span class="entry-amount">S$8.50</span></div></div>
-        </div>
-        <nav class="tabbar"><span class="tab"><i class="tab-icon">⌂</i>Home</span><span class="tab"><i class="tab-icon">＋</i>Add</span><span class="tab active"><i class="tab-icon">▤</i>History</span><span class="tab"><i class="tab-icon">♠</i>Poker</span><span class="tab"><i class="tab-icon">◎</i>Shared</span></nav>
-      </div>
-      <div class="alternative-copy">
-        <h2>B-lite: filter and pin</h2>
-        <p>If the bottom sheet feels too expensive for this release, tapping a date can filter the existing ledger and pin the add action directly above it.</p>
-        <div class="tradeoffs">
-          <div class="tradeoff"><b>Cheaper:</b> reuses the current date filters and ledger.</div>
-          <div class="tradeoff"><b>Less direct:</b> the calendar, add action, and entries compete in one scroll surface.</div>
-          <div class="tradeoff"><b>Good fallback:</b> the information model stays compatible with a future sheet.</div>
-        </div>
-      </div>
     </section>
 
     <footer class="board-footer">The standalone “Add missed expense” card disappears in both directions. The calendar remains in History for this pass; promoting it into a List / Calendar toggle can follow after the day interaction proves useful.</footer>

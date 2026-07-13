@@ -62,4 +62,32 @@ describe('SyncStatus', () => {
     render(<SyncStatus sync={{ pendingCount: 3, failed: true, reason: 'offline' }} onRetry={() => undefined} />)
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
   })
+
+  test('a migration failure names the missing entries and never claims the user is offline', () => {
+    render(
+      <SyncStatus
+        sync={{ pendingCount: 0, failed: true, reason: 'migration', migrationMissingCount: 2 }}
+        onRetry={() => undefined}
+      />,
+    )
+
+    const status = screen.getByRole('status')
+    expect(status).toHaveTextContent("2 entries couldn't be uploaded")
+    expect(status).toHaveTextContent(/saved on this device/i)
+    expect(status).not.toHaveTextContent(/offline/i)
+  })
+
+  test('a migration failure offers an immediate full-backup action', () => {
+    const onBackup = vi.fn()
+    render(
+      <SyncStatus
+        sync={{ pendingCount: 0, failed: true, reason: 'migration', migrationMissingCount: 1 }}
+        onRetry={() => undefined}
+        onBackup={onBackup}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /download backup/i }))
+    expect(onBackup).toHaveBeenCalledOnce()
+  })
 })

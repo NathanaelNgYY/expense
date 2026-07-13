@@ -1,15 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Entry, PokerSession } from './types'
 
-vi.mock('./api', () => ({
-  ensureUserId: vi.fn(),
-  bulkUpsertEntries: vi.fn(),
-  bulkUpsertPokerSessions: vi.fn(),
-  fetchEntryIds: vi.fn(),
-}))
+vi.mock('./api', async importOriginal => {
+  const actual = await importOriginal<typeof import('./api')>()
+  return {
+    ...actual,
+    ensureUserId: vi.fn(),
+    bulkUpsertEntries: vi.fn(),
+    bulkUpsertPokerSessions: vi.fn(),
+    fetchEntryIds: vi.fn(),
+  }
+})
 
 import { ensureUserId, bulkUpsertEntries, bulkUpsertPokerSessions, fetchEntryIds } from './api'
 import { migrateEntriesIfNeeded, syncPokerSessionsIfNeeded } from './supabaseSync'
+import { ApiError } from './api'
 
 const ensureUserIdMock = vi.mocked(ensureUserId)
 const bulkUpsertEntriesMock = vi.mocked(bulkUpsertEntries)
@@ -44,7 +49,10 @@ const pokerSession: PokerSession = {
 
 beforeEach(() => {
   localStorage.clear()
-  vi.clearAllMocks()
+  ensureUserIdMock.mockReset()
+  bulkUpsertEntriesMock.mockReset()
+  bulkUpsertPokerMock.mockReset()
+  fetchEntryIdsMock.mockReset()
   ensureUserIdMock.mockResolvedValue('u1')
   bulkUpsertEntriesMock.mockResolvedValue(undefined)
   bulkUpsertPokerMock.mockResolvedValue(undefined)
@@ -80,8 +88,37 @@ describe('migrateEntriesIfNeeded', () => {
     seedCache([e('a'), e('b')])
     fetchEntryIdsMock.mockResolvedValue(new Set(['a'])) // b never appeared
 
-    await expect(migrateEntriesIfNeeded([])).resolves.toBe('incomplete')
+    await expect(migrateEntriesIfNeeded([])).resolves.toEqual({
+      status: 'incomplete',
+      missingCount: 1,
+    })
     expect(localStorage.getItem('supabase_migration_done:u1')).toBeNull()
+  })
+
+  it('isolates a dedupe collision, assigns that entry a stable recovery key, and verifies the migration', async () => {
+    const duplicate = { ...e('a'), dedupeKey: 'apple_pay:duplicate' }
+    const colliding = { ...e('b'), dedupeKey: 'apple_pay:duplicate' }
+    seedCache([duplicate, colliding])
+    const uniqueViolation = Object.assign(new ApiError(409, 'duplicate key value violates unique constraint'), {
+      code: '23505',
+    })
+    bulkUpsertEntriesMock
+      .mockRejectedValueOnce(uniqueViolation) // batch fails
+      .mockResolvedValueOnce(undefined) // a succeeds alone
+      .mockRejectedValueOnce(uniqueViolation) // b identifies the collision
+      .mockResolvedValueOnce(undefined) // b succeeds with the recovery key
+    fetchEntryIdsMock.mockResolvedValue(new Set(['a', 'b']))
+
+    await expect(migrateEntriesIfNeeded([])).resolves.toBe('migrated')
+
+    expect(bulkUpsertEntriesMock).toHaveBeenNthCalledWith(4, [
+      expect.objectContaining({ id: 'b', dedupeKey: 'migration-recovery:b' }),
+    ])
+    expect(JSON.parse(localStorage.getItem('budget_entries:u1') as string)).toEqual([
+      duplicate,
+      expect.objectContaining({ id: 'b', dedupeKey: 'migration-recovery:b' }),
+    ])
+    expect(localStorage.getItem('supabase_migration_done:u1')).toBe('1')
   })
 
   it('propagates an upload failure without setting the flag, and resumes next run', async () => {

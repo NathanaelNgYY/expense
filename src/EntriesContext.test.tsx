@@ -78,6 +78,7 @@ function SyncProbe() {
       <span data-testid="pending">{sync.pendingCount}</span>
       <span data-testid="failed">{String(sync.failed)}</span>
       <span data-testid="reason">{sync.reason ?? ''}</span>
+      <span data-testid="migration-missing">{sync.migrationMissingCount ?? ''}</span>
       <button onClick={() => void refresh()}>refresh</button>
     </div>
   )
@@ -226,9 +227,25 @@ describe('EntriesContext', () => {
     render(<EntriesProvider><SyncProbe /></EntriesProvider>)
 
     await waitFor(() => expect(screen.getByTestId('failed').textContent).toBe('true'))
+    expect(screen.getByTestId('reason').textContent).toBe('migration')
+    expect(screen.getByTestId('migration-missing').textContent).toBe('1')
     // The empty server list must NOT have been committed over the cache.
     expect(JSON.parse(localStorage.getItem('budget_entries') as string)).toHaveLength(1)
     expect(localStorage.getItem('supabase_migration_done:u1')).toBeNull()
+  })
+
+  it('reports a genuine network failure during migration as offline', async () => {
+    localStorage.setItem('budget_entries', JSON.stringify([
+      { id: 'c1', amount: 7, category: 'lunch', note: 'old', date: '2026-06-01' },
+    ]))
+    fetchEntriesMock.mockResolvedValue([])
+    bulkUpsertEntriesMock.mockRejectedValue(new TypeError('Failed to fetch'))
+
+    render(<EntriesProvider><SyncProbe /></EntriesProvider>)
+
+    await waitFor(() => expect(screen.getByTestId('failed').textContent).toBe('true'))
+    expect(screen.getByTestId('reason').textContent).toBe('offline')
+    expect(screen.getByTestId('migration-missing').textContent).toBe('')
   })
 
   it('keeps a deleted entry gone even when the server list is briefly stale', async () => {

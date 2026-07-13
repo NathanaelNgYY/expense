@@ -6,6 +6,11 @@ export function normalizeMerchant(value: string): string {
 
 export type DedupeSource = 'apple_pay' | 'dbs_email' | 'manual'
 
+export async function fingerprintIngestEvent(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('')
+}
+
 export function buildDedupeKey(
   source: DedupeSource,
   occurrence: string,
@@ -16,5 +21,6 @@ export function buildDedupeKey(
   if (source === 'manual') {
     return `manual:${id}`
   }
+  if (id) return `${source}:event:${id}`
   return `${source}:${occurrence}:${amount.toFixed(2)}:${normalizeMerchant(merchant)}`
 }

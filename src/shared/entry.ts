@@ -14,6 +14,7 @@ export interface IngestInput {
   learnedCategory?: Category | null // category learned from the user's history
   occurredAt?: string
   currency?: string
+  eventFingerprint?: string
 }
 
 const SOURCE_MAP: Record<IngestInput['sourceKind'], EntrySource> = {
@@ -35,6 +36,8 @@ export function buildEntryFromIngest(
 ): Entry {
   const occurredAt = input.occurredAt ?? now.toISOString()
   const canonicalOccurredAt = new Date(occurredAt).toISOString()
+  const occurrenceMinute = new Date(canonicalOccurredAt)
+  occurrenceMinute.setUTCSeconds(0, 0)
   const date = sgtDateString(canonicalOccurredAt)
   const merchant = input.merchant.trim()
   const label = sourceLabel(input)
@@ -52,6 +55,12 @@ export function buildEntryFromIngest(
     merchant,
     occurredAt: canonicalOccurredAt,
     currency: input.currency ?? 'SGD',
-    dedupeKey: buildDedupeKey(input.sourceKind, canonicalOccurredAt, input.amount, merchant),
+    dedupeKey: buildDedupeKey(
+      input.sourceKind,
+      occurrenceMinute.toISOString(),
+      input.amount,
+      merchant,
+      input.eventFingerprint,
+    ),
   }
 }

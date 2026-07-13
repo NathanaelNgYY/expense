@@ -1,5 +1,8 @@
 # Date Entry and History Day Sheet TDD Evidence
 
+> Superseded on 2026-07-13 by the B-lite calendar-to-ledger flow documented in
+> `date-entry-history-b-lite.tdd.md`. This file remains as historical evidence for the removed sheet.
+
 ## Source
 
 Journeys were derived from the approved A + B mockup flow during this TDD run. No external plan file was used.

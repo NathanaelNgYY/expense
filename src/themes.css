@@ -439,13 +439,51 @@ body,
     margin-bottom: 2px;
   }
 
+  [data-theme='original-dark'] .add-entry__amount {
+    min-height: 52px;
+    max-height: 64px;
+    padding-block: 2px;
+    font-size: 56px;
+  }
+
+  [data-theme='original-dark'] .add-entry-date {
+    margin: -3px 0 6px;
+  }
+
+  [data-theme='original-dark'] .add-entry-date__trigger {
+    min-height: 32px;
+    padding-block: 4px;
+  }
+
+  [data-theme='original-dark'] .add-entry__keypad {
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+
+  [data-theme='original-dark'] .add-entry__keypad .numpad-key {
+    min-height: 42px;
+  }
+
+  [data-theme='original-dark'] .add-entry__categories .chips {
+    gap: 6px 8px;
+  }
+
   [data-theme='original-dark'] .add-entry__categories .chip {
-    min-height: 34px;
-    padding-block: 5px;
+    min-height: 32px;
+    padding-block: 4px;
+  }
+
+  [data-theme='original-dark'] .add-entry__details {
+    gap: 8px;
+    padding-top: 8px;
   }
 
   [data-theme='original-dark'] .add-entry__details .note-input {
-    min-height: 44px;
+    min-height: 42px;
+  }
+
+  [data-theme='original-dark'] .add-entry__details .save-btn {
+    min-height: 46px;
   }
 }
 

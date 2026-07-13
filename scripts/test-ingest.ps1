@@ -30,7 +30,8 @@
   ISO currency. Default SGD.
 
 .PARAMETER IdempotencyKey
-  Stable key reused when testing Apple Pay retries. Change it to simulate a distinct transaction.
+  Optional stable event id for non-Shortcuts clients. The default Apple Pay payload omits it,
+  matching iOS Wallet transaction automations.
 
 .EXAMPLE
   ./scripts/test-ingest.ps1
@@ -55,7 +56,7 @@ param(
   [string]$Merchant = 'Test Cafe',
   [string]$RawBody = "Amount: SGD 12.00`nTo: NTUC FAIRPRICE",
   [string]$Currency = 'SGD',
-  [string]$IdempotencyKey = 'test-apple-pay-transaction'
+  [string]$IdempotencyKey = ''
 )
 
 $baseUrl = $Url.TrimEnd('/')
@@ -77,7 +78,9 @@ if ($Kind -eq 'apple_pay') {
     merchant   = $Merchant
     occurredAt = $occurredAt
     currency   = $Currency
-    idempotencyKey = $IdempotencyKey
+  }
+  if (-not [string]::IsNullOrWhiteSpace($IdempotencyKey)) {
+    $payload['idempotencyKey'] = $IdempotencyKey.Trim()
   }
 } else {
   $payload = [ordered]@{

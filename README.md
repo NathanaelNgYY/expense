@@ -83,7 +83,6 @@ Transactions are captured automatically by two iOS Shortcuts that POST to the ap
 ### Shortcut 1 — Apple Pay
 
 - Automation trigger: **Transaction** → "When I tap" → select your card(s).
-- Before the request, add **Get Text from Input**. Use **Shortcut Input**, tap it, and select its **Transaction** field. Keep that output as `Transaction Key`.
 - Action: **Get Contents of URL**
   - URL: `https://<project>.supabase.co/functions/v1/ingest`
   - Method: `POST`
@@ -92,9 +91,9 @@ Transactions are captured automatically by two iOS Shortcuts that POST to the ap
     - `sourceKind`: `apple_pay`
     - `amount`: the Shortcut "Amount" variable
     - `merchant`: the Shortcut "Merchant" variable
-    - `occurredAt`: Current Date, formatted ISO 8601 (include time)
     - `currency`: `SGD`
-    - `idempotencyKey`: the `Transaction Key` output above
+
+Keep this as the original four-field payload. Do **not** add `idempotencyKey`: the Wallet trigger does not expose a documented stable transaction identifier, and its whole `Transaction` value can collapse to the merchant name when converted to text.
 
 ### Shortcut 2 — DBS email alerts
 
@@ -108,7 +107,7 @@ Transactions are captured automatically by two iOS Shortcuts that POST to the ap
     - `rawBody`: the email's body text
     - `occurredAt`: Current Date, ISO 8601
 
-The server extracts the amount and merchant from `rawBody` and fingerprints that unchanged email body, so a re-fired email automation remains idempotent without another Shortcut field. Apple Pay uses `idempotencyKey` to distinguish real same-merchant purchases while collapsing retries of the same transaction. Older Apple Pay shortcuts without that field use a one-minute fallback and should be upgraded.
+The server extracts the amount and merchant from `rawBody` and fingerprints that unchanged email body, so a re-fired email automation remains idempotent without another Shortcut field. Apple Pay uses a one-minute fallback based on merchant and amount. This catches quick re-fires, but two identical real purchases in the same minute can be merged and a retry that crosses a minute boundary can be saved twice. A non-Shortcuts client may send `idempotencyKey` only when it has a genuinely stable, unique external event identifier.
 
 ### Testing & troubleshooting ingestion (no Apple Pay needed)
 
@@ -120,7 +119,8 @@ npm run test:ingest         # the ingestHandler unit/integration tests (no netwo
 # fire a real POST (the default still supports the frozen local Netlify fallback):
 npm run test:ingest:live
 npm run test:ingest:live -- -Url https://<project>.supabase.co -Token <INGEST_TOKEN>
-# repeat with the same -IdempotencyKey => duplicate; change it => a distinct transaction
+# optional for non-Shortcuts clients with a true event id:
+npm run test:ingest:live -- -IdempotencyKey <stable-external-event-id>
 ```
 
 `scripts/test-ingest.ps1` prints the request and the response (`saved` / `duplicate` / an HTTP
@@ -158,7 +158,7 @@ totals but not the per-category rows.
 
 ## Data Notes
 
-Transactions are stored per user in Supabase and cached in a user-scoped browser `localStorage` namespace for offline viewing. Ingest requests use stable event fingerprints for idempotency; manual entries preserve their own ids across queue retries and imports.
+Transactions are stored per user in Supabase and cached in a user-scoped browser `localStorage` namespace for offline viewing. DBS emails use a stable body fingerprint, Apple Pay uses a one-minute merchant/amount fallback, and manual entries preserve their own ids across queue retries and imports.
 
 ## Shared Budgets (Supabase)
 

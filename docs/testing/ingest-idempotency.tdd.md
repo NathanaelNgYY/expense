@@ -5,8 +5,8 @@
 
 ## User journeys
 
-- As an Apple Pay user, I want a re-fired automation to save one transaction even when its run timestamp changes.
-- As a user making two real equal purchases in one minute, I want both transactions preserved.
+- As an Apple Pay user, I want my original four-field Shortcut to suppress quick duplicate firings without inventing an unstable transaction ID.
+- As an Apple Pay user, I do not want a merchant-derived Shortcut value to suppress later real purchases at that merchant.
 - As a DBS user, I want repeated processing of the same email to be idempotent without extra Shortcut setup.
 
 ## RED
@@ -22,14 +22,23 @@
 - Command: `npm test -- supabase/functions/ingest/handler.test.ts netlify/functions/lib/ingestHandler.test.ts src/shared/entry.test.ts src/shared/dedupe.test.ts`
 - Result before coverage-path additions: 4 files passed, 36 tests passed.
 
+## Shortcut Input correction
+
+- Invalidated assumption: iOS Wallet automations do not expose a documented stable transaction identifier; converting the whole `Transaction` input to text can produce the merchant name.
+- RED checkpoint: `29cedc7 test: reproduce merchant-name idempotency collision`.
+- RED result: 2 intended failures and 27 passes; a later purchase at the same merchant was incorrectly reported as `duplicate`.
+- GREEN checkpoint: `f751b16 fix: ignore merchant-derived Apple Pay keys`.
+- GREEN result: 4 focused files and 41 tests passed.
+- User-facing contract: the standard Apple Pay Shortcut keeps its original `sourceKind`, `currency`, `merchant`, and `amount` fields and omits `idempotencyKey`.
+
 ## Coverage
 
 - Command: `npm exec vitest -- run supabase/functions/ingest/handler.test.ts netlify/functions/lib/ingestHandler.test.ts src/shared/entry.test.ts src/shared/dedupe.test.ts --coverage` with the four changed modules included.
-- Result: 4 files and 39 tests passed; 98.43% statements, 92.4% branches, 100% functions, and 98.36% lines.
+- Result after the Shortcut correction: 4 files and 41 tests passed; 98.64% statements, 93.1% branches, 100% functions, and 98.55% lines.
 
 ## Full verification
 
-- `npm test`: 51 files and 436 tests passed.
+- `npm test`: 51 files and 438 tests passed after the Shortcut correction.
 - `npm run lint`: passed with no errors.
 - `npm run build`: TypeScript and the Vite production build passed.
 
@@ -37,21 +46,25 @@
 
 | Guarantee | Test target | Type | Result |
 |---|---|---|---|
-| Stable Apple Pay event key ignores changing run timestamps | `supabase/functions/ingest/handler.test.ts` | integration | PASS |
-| Distinct event keys preserve equal same-minute purchases | `supabase/functions/ingest/handler.test.ts` | integration | PASS |
-| Legacy Apple Pay payloads dedupe within one minute | `supabase/functions/ingest/handler.test.ts` | integration | PASS |
+| Optional stable event keys ignore changing run timestamps | `supabase/functions/ingest/handler.test.ts` | integration | PASS |
+| Distinct trusted event keys preserve equal same-minute purchases | `supabase/functions/ingest/handler.test.ts` | integration | PASS |
+| Standard four-field Apple Pay payloads dedupe within one minute | `supabase/functions/ingest/handler.test.ts` | integration | PASS |
+| Merchant-derived Shortcut values cannot suppress later purchases | `supabase/functions/ingest/handler.test.ts` | integration | PASS |
 | Repeated DBS raw email bodies dedupe across timestamps | `supabase/functions/ingest/handler.test.ts` | integration | PASS |
 | Oversized external keys are rejected before storage | `supabase/functions/ingest/handler.test.ts` | boundary | PASS |
 | Frozen Netlify fallback follows the same contract | `netlify/functions/lib/ingestHandler.test.ts` | integration | PASS |
 
 ## Known gaps and rollout
 
-- The Apple Pay Shortcut must be updated to send its transaction-derived `idempotencyKey`; until then, the one-minute fallback can merge two identical legacy events in the same minute.
-- The Supabase Edge Function must be deployed before the new request field changes production behavior.
+- Apple Wallet automations expose no documented stable transaction identifier. The one-minute fallback can merge two identical real purchases in the same minute, and a retry crossing a minute boundary can be saved twice.
+- `idempotencyKey` is reserved for non-Shortcuts callers that possess a genuinely stable, unique external event identifier.
+- The Supabase Edge Function must be deployed before the corrected dedupe behavior reaches production.
 - Live deployment verification requires the user's ingest bearer token and is intentionally not performed by unit tests.
 
 ## Merge evidence
 
 - RED checkpoint: `d8c1c67`
 - GREEN checkpoint: `52a3df6`
+- Correction RED checkpoint: `29cedc7`
+- Correction GREEN checkpoint: `f751b16`
 - Preserve these commands and outcomes in any squash commit or PR description.

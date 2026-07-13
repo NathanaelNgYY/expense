@@ -140,10 +140,15 @@ export async function requestOtp(email: string): Promise<void> {
 }
 
 export async function signInWithGoogle(): Promise<void> {
-  const { error } = await getSupabase().auth.signInWithOAuth({
+  const supabase = getSupabase()
+  const { data: { session } } = await supabase.auth.getSession()
+  const credentials = {
     provider: 'google',
     options: { redirectTo: window.location.origin },
-  })
+  } as const
+  const { error } = session?.user.is_anonymous
+    ? await supabase.auth.linkIdentity(credentials)
+    : await supabase.auth.signInWithOAuth(credentials)
   if (error) throw friendly(error.message)
 }
 

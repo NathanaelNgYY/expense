@@ -1,5 +1,6 @@
 import type { Entry } from './types'
 import type { NewManualEntry } from './api'
+import { getUserStorageItem, removeUserStorageItem, setUserStorageItem } from './userStorage'
 
 export type Mutation =
   | { op: 'create'; entry: Entry }
@@ -10,7 +11,7 @@ const QUEUE_KEY = 'sync_queue'
 
 export function getQueue(): Mutation[] {
   try {
-    const raw = localStorage.getItem(QUEUE_KEY)
+    const raw = getUserStorageItem(QUEUE_KEY)
     return raw ? (JSON.parse(raw) as Mutation[]) : []
   } catch {
     return []
@@ -18,15 +19,15 @@ export function getQueue(): Mutation[] {
 }
 
 export function enqueue(mutation: Mutation): void {
-  localStorage.setItem(QUEUE_KEY, JSON.stringify([...getQueue(), mutation]))
+  setUserStorageItem(QUEUE_KEY, JSON.stringify([...getQueue(), mutation]))
 }
 
 export function setQueue(queue: Mutation[]): void {
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
+  setUserStorageItem(QUEUE_KEY, JSON.stringify(queue))
 }
 
 export function clearQueue(): void {
-  localStorage.removeItem(QUEUE_KEY)
+  removeUserStorageItem(QUEUE_KEY)
 }
 
 // Tombstones: ids of entries deleted locally. Netlify Blobs `list()` is eventually
@@ -37,7 +38,7 @@ const TOMBSTONES_KEY = 'deleted_ids'
 
 export function getTombstones(): string[] {
   try {
-    const raw = localStorage.getItem(TOMBSTONES_KEY)
+    const raw = getUserStorageItem(TOMBSTONES_KEY)
     return raw ? (JSON.parse(raw) as string[]) : []
   } catch {
     return []
@@ -45,7 +46,7 @@ export function getTombstones(): string[] {
 }
 
 export function setTombstones(ids: string[]): void {
-  localStorage.setItem(TOMBSTONES_KEY, JSON.stringify(ids))
+  setUserStorageItem(TOMBSTONES_KEY, JSON.stringify(ids))
 }
 
 // Pending creates: ids of entries created locally that Blobs `list()` may not return
@@ -56,7 +57,7 @@ const PENDING_CREATES_KEY = 'pending_creates'
 
 export function getPendingCreates(): string[] {
   try {
-    const raw = localStorage.getItem(PENDING_CREATES_KEY)
+    const raw = getUserStorageItem(PENDING_CREATES_KEY)
     return raw ? (JSON.parse(raw) as string[]) : []
   } catch {
     return []
@@ -64,7 +65,7 @@ export function getPendingCreates(): string[] {
 }
 
 export function setPendingCreates(ids: string[]): void {
-  localStorage.setItem(PENDING_CREATES_KEY, JSON.stringify(ids))
+  setUserStorageItem(PENDING_CREATES_KEY, JSON.stringify(ids))
 }
 
 // Re-exported for callers that build create mutations.

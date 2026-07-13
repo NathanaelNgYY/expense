@@ -19,11 +19,16 @@ const fetchEntryIdsMock = vi.mocked(fetchEntryIds)
 const e = (id: string): Entry => ({ id, amount: 1, category: 'lunch', note: '', date: '2026-07-01' })
 
 function seedCache(entries: Entry[]) {
+  localStorage.setItem('budget_legacy_storage_owner', 'u1')
   localStorage.setItem('budget_entries', JSON.stringify(entries))
 }
 
 function seedPoker(sessions: PokerSession[]) {
+  localStorage.setItem('budget_legacy_storage_owner', 'u1')
   localStorage.setItem('poker_sessions', JSON.stringify(sessions))
+  if (localStorage.getItem('budget_active_user_id') === 'u1') {
+    localStorage.setItem('poker_sessions:u1', JSON.stringify(sessions))
+  }
 }
 
 const pokerSession: PokerSession = {

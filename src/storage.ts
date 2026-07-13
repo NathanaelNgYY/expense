@@ -1,6 +1,9 @@
 // src/storage.ts
 import type { Entry, BudgetConfig, CategoryOverrides, PokerSession, CustomCategory } from './types'
 import { DEFAULT_BUDGET } from './types'
+import { getUserStorageItem, setUserStorageItem } from './userStorage'
+
+export { activateUserStorage } from './userStorage'
 
 const ENTRIES_KEY = 'budget_entries'
 const CONFIG_KEY = 'budget_config'
@@ -9,7 +12,7 @@ const CATEGORY_OVERRIDES_KEY = 'budget_category_overrides'
 
 export function getEntries(): Entry[] {
   try {
-    const raw = localStorage.getItem(ENTRIES_KEY)
+    const raw = getUserStorageItem(ENTRIES_KEY)
     return raw ? (JSON.parse(raw) as Entry[]) : []
   } catch {
     return []
@@ -17,7 +20,7 @@ export function getEntries(): Entry[] {
 }
 
 export function saveEntries(entries: Entry[]): void {
-  localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries))
+  setUserStorageItem(ENTRIES_KEY, JSON.stringify(entries))
 }
 
 // Entries now live on the server; localStorage is a read-through cache.
@@ -34,7 +37,7 @@ export function updateEntry(updatedEntry: Entry): void {
 
 export function getBudgetConfig(): BudgetConfig {
   try {
-    const raw = localStorage.getItem(CONFIG_KEY)
+    const raw = getUserStorageItem(CONFIG_KEY)
     if (!raw) return { ...DEFAULT_BUDGET }
 
     const parsed = { ...DEFAULT_BUDGET, ...(JSON.parse(raw) as Partial<BudgetConfig>) }
@@ -45,12 +48,12 @@ export function getBudgetConfig(): BudgetConfig {
 }
 
 export function saveBudgetConfig(config: BudgetConfig): void {
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(config))
+  setUserStorageItem(CONFIG_KEY, JSON.stringify(config))
 }
 
 export function getCustomCategories(): CustomCategory[] {
   try {
-    const raw = localStorage.getItem(CUSTOM_CATEGORIES_KEY)
+    const raw = getUserStorageItem(CUSTOM_CATEGORIES_KEY)
     return raw ? (JSON.parse(raw) as CustomCategory[]) : []
   } catch {
     return []
@@ -58,13 +61,13 @@ export function getCustomCategories(): CustomCategory[] {
 }
 
 export function saveCustomCategories(categories: CustomCategory[]): void {
-  localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(categories))
+  setUserStorageItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(categories))
 }
 
 // Display overrides (rename / re-icon) for the built-in basic categories.
 export function getCategoryOverrides(): CategoryOverrides {
   try {
-    const raw = localStorage.getItem(CATEGORY_OVERRIDES_KEY)
+    const raw = getUserStorageItem(CATEGORY_OVERRIDES_KEY)
     return raw ? (JSON.parse(raw) as CategoryOverrides) : {}
   } catch {
     return {}
@@ -72,7 +75,7 @@ export function getCategoryOverrides(): CategoryOverrides {
 }
 
 export function saveCategoryOverrides(overrides: CategoryOverrides): void {
-  localStorage.setItem(CATEGORY_OVERRIDES_KEY, JSON.stringify(overrides))
+  setUserStorageItem(CATEGORY_OVERRIDES_KEY, JSON.stringify(overrides))
 }
 
 export function makeCustomCategoryId(label: string): string {
@@ -85,7 +88,7 @@ const POKER_CUSTOM_STAKES_KEY = 'poker_custom_stakes'
 
 export function getPokerSessions(): PokerSession[] {
   try {
-    const raw = localStorage.getItem(POKER_SESSIONS_KEY)
+    const raw = getUserStorageItem(POKER_SESSIONS_KEY)
     return raw ? (JSON.parse(raw) as PokerSession[]) : []
   } catch {
     return []
@@ -93,16 +96,16 @@ export function getPokerSessions(): PokerSession[] {
 }
 
 export function savePokerSession(session: PokerSession): void {
-  localStorage.setItem(POKER_SESSIONS_KEY, JSON.stringify([...getPokerSessions(), session]))
+  setUserStorageItem(POKER_SESSIONS_KEY, JSON.stringify([...getPokerSessions(), session]))
 }
 
 export function savePokerSessions(sessions: PokerSession[]): void {
-  localStorage.setItem(POKER_SESSIONS_KEY, JSON.stringify(sessions))
+  setUserStorageItem(POKER_SESSIONS_KEY, JSON.stringify(sessions))
 }
 
 export function getCustomStakes(): string[] {
   try {
-    const raw = localStorage.getItem(POKER_CUSTOM_STAKES_KEY)
+    const raw = getUserStorageItem(POKER_CUSTOM_STAKES_KEY)
     return raw ? (JSON.parse(raw) as string[]) : []
   } catch {
     return []
@@ -110,5 +113,5 @@ export function getCustomStakes(): string[] {
 }
 
 export function saveCustomStakes(stakes: string[]): void {
-  localStorage.setItem(POKER_CUSTOM_STAKES_KEY, JSON.stringify(stakes))
+  setUserStorageItem(POKER_CUSTOM_STAKES_KEY, JSON.stringify(stakes))
 }

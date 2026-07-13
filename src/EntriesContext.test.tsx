@@ -104,6 +104,7 @@ function RefreshResultProbe() {
 
 beforeEach(() => {
   localStorage.clear()
+  localStorage.setItem('budget_legacy_storage_owner', 'u1')
   vi.clearAllMocks()
   ensureUserIdMock.mockResolvedValue('u1')
   bulkUpsertEntriesMock.mockResolvedValue(undefined)

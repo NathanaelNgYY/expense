@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Entry } from './types'
-import { getCachedEntries, setCachedEntries } from './storage'
+import { activateUserStorage, getCachedEntries, setCachedEntries } from './storage'
 import {
   fetchEntries,
   ensureUserId,
@@ -135,7 +135,15 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
     try {
       // Resolve identity and migrate the durable legacy cache before replaying later offline
       // mutations. This preserves the historical snapshot before applying queued changes.
-      await ensureUserId()
+      const userId = await ensureUserId()
+      if (activateUserStorage(userId)) {
+        // Swap the visible cache before any migration or queue work. A newly active account must
+        // never inherit the previous account's optimistic state while its server data loads.
+        const userEntries = getCachedEntries()
+        entriesRef.current = userEntries
+        setEntries(userEntries)
+        setSync({ pendingCount: getQueue().length, failed: false })
+      }
       const server = await fetchEntries()
       stage = 'migration'
       const outcome = await migrateEntriesIfNeeded(server)

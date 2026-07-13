@@ -1,5 +1,5 @@
 import type { Entry } from './types'
-import { getCachedEntries, getPokerSessions } from './storage'
+import { activateUserStorage, getCachedEntries, getPokerSessions } from './storage'
 import { bulkUpsertEntries, bulkUpsertPokerSessions, ensureUserId, fetchEntryIds } from './api'
 
 // One-time localStorage -> Supabase upload. Constraints (see
@@ -23,6 +23,7 @@ export type MigrationOutcome =
 
 export async function migrateEntriesIfNeeded(serverEntries: Entry[]): Promise<MigrationOutcome> {
   const userId = await ensureUserId()
+  activateUserStorage(userId)
   const flagKey = MIGRATION_KEY_PREFIX + userId
   if (localStorage.getItem(flagKey)) return 'done'
 
@@ -49,9 +50,12 @@ export async function migrateEntriesIfNeeded(serverEntries: Entry[]): Promise<Mi
 // is enough to know whether the server is behind. Runs after every successful refresh;
 // failures are retried on the next one.
 export async function syncPokerSessionsIfNeeded(): Promise<void> {
+  const currentSessions = getPokerSessions()
+  if (currentSessions.length === 0) return
+  const userId = await ensureUserId()
+  activateUserStorage(userId)
   const sessions = getPokerSessions()
   if (sessions.length === 0) return // most users never touch poker; don't hit the network for them
-  const userId = await ensureUserId()
   const countKey = POKER_SYNCED_PREFIX + userId
   const synced = Number(localStorage.getItem(countKey) ?? '0')
   if (sessions.length === synced) return

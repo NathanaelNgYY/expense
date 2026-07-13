@@ -48,6 +48,7 @@ interface Seed {
   category: string
   note: string
   date: string
+  dedupeKey?: string
 }
 
 function renderSettings(entries: Seed[] = [], onBack: () => void = () => undefined) {
@@ -203,14 +204,15 @@ describe('Settings hub', () => {
     expect(onBack).toHaveBeenCalledOnce()
   })
 
-  it('resets only the current month from the danger zone once confirmed', async () => {
+  it('resets only the current month after confirming the number of affected entries', async () => {
     const now = new Date()
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     const thisMonth: Seed = { id: 'now-1', amount: 12, category: 'lunch', note: 'Rice', date: `${month}-05` }
+    const alsoThisMonth: Seed = { id: 'now-2', amount: 8, category: 'transport', note: 'Bus', date: `${month}-06` }
     const lastYear: Seed = { id: 'old-1', amount: 8, category: 'lunch', note: 'Noodles', date: '2020-01-05' }
     vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))
 
-    const rendered = renderSettings([thisMonth, lastYear])
+    const rendered = renderSettings([thisMonth, alsoThisMonth, lastYear])
     root = rendered.root
 
     await act(async () => {
@@ -218,10 +220,55 @@ describe('Settings hub', () => {
         new MouseEvent('click', { bubbles: true }),
       )
     })
-    await waitFor(() => readCachedEntries().every(entry => entry.id !== 'now-1'))
+    await waitFor(() => readCachedEntries().every(entry => !entry.id.startsWith('now-')))
 
-    expect(confirm).toHaveBeenCalledOnce()
+    expect(confirm).toHaveBeenCalledWith(
+      'Delete 2 entries from this month? You can undo this while Settings remains open.',
+    )
     expect(readCachedEntries().map(entry => entry.id)).toEqual(['old-1'])
+    expect(rendered.container).toHaveTextContent('Deleted 2 entries')
+    expect(findButton(rendered.container, 'Undo')).toBeEnabled()
+  })
+
+  it('undoes a month reset with every original id and dedupe key intact', async () => {
+    const now = new Date()
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const first: Seed = {
+      id: 'wallet-1',
+      amount: 12,
+      category: 'lunch',
+      note: 'Rice',
+      date: `${month}-05`,
+      dedupeKey: 'apple-pay:transaction-1',
+    }
+    const second: Seed = {
+      id: 'wallet-2',
+      amount: 8,
+      category: 'transport',
+      note: 'Bus',
+      date: `${month}-06`,
+      dedupeKey: 'apple-pay:transaction-2',
+    }
+    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))
+
+    const rendered = renderSettings([first, second])
+    root = rendered.root
+
+    await act(async () => {
+      findButton(rendered.container, 'Reset This Month').click()
+    })
+    await waitFor(() => readCachedEntries().length === 0)
+
+    await act(async () => {
+      findButton(rendered.container, 'Undo').click()
+    })
+    await waitFor(() => readCachedEntries().length === 2)
+
+    expect(readCachedEntries()).toEqual([first, second])
+    expect(rendered.container).toHaveTextContent('Restored 2 entries')
+    expect([...rendered.container.querySelectorAll('button')].some(button =>
+      button.textContent?.includes('Undo'),
+    )).toBe(false)
   })
 
   it('keeps the current month when the reset confirmation is declined', () => {

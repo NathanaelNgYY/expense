@@ -61,6 +61,16 @@ function DeleteProbe() {
   )
 }
 
+function RestoreProbe({ entry }: { entry: Entry }) {
+  const { entries, restoreEntry } = useEntries()
+  return (
+    <div>
+      <span data-testid="restored-entry">{JSON.stringify(entries.find(candidate => candidate.id === entry.id) ?? null)}</span>
+      <button onClick={() => void restoreEntry(entry)}>restore</button>
+    </div>
+  )
+}
+
 function EditProbe() {
   const { entries, editEntry } = useEntries()
   return (
@@ -346,6 +356,30 @@ describe('EntriesContext', () => {
     })
     await waitFor(() => expect(JSON.parse(localStorage.getItem('deleted_ids') as string)).toEqual([]))
     expect(screen.getByTestId('count').textContent).toBe('0')
+  })
+
+  it('clears the tombstone when restoring an entry and preserves its identity metadata', async () => {
+    const restored: Entry = {
+      id: 's1',
+      amount: 2,
+      category: 'lunch',
+      note: 'Wallet lunch',
+      date: '2026-06-09',
+      source: 'apple-pay',
+      dedupeKey: 'apple-pay:transaction-1',
+    }
+    localStorage.setItem('deleted_ids', JSON.stringify(['s1']))
+    fetchEntriesMock.mockResolvedValue([])
+    createEntryMock.mockImplementation(async input => input as Entry)
+
+    render(<EntriesProvider><RestoreProbe entry={restored} /></EntriesProvider>)
+
+    await act(async () => {
+      screen.getByText('restore').click()
+    })
+
+    expect(JSON.parse(screen.getByTestId('restored-entry').textContent ?? 'null')).toEqual(restored)
+    expect(JSON.parse(localStorage.getItem('deleted_ids') ?? '[]')).toEqual([])
   })
 
   it('resolves refresh() to true when it reaches the successful commit path', async () => {

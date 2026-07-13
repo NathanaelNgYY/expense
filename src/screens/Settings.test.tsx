@@ -284,4 +284,24 @@ describe('Settings hub', () => {
 
     expect(readCachedEntries().map(entry => entry.id)).toEqual(['now-1'])
   })
+
+  it('does not ask for confirmation when there are no entries this month', () => {
+    const oldEntry: Seed = {
+      id: 'old-1',
+      amount: 8,
+      category: 'lunch',
+      note: 'Noodles',
+      date: '2020-01-05',
+    }
+    vi.stubGlobal('confirm', vi.fn())
+
+    const rendered = renderSettings([oldEntry])
+    root = rendered.root
+
+    click(findButton(rendered.container, 'Reset This Month'))
+
+    expect(confirm).not.toHaveBeenCalled()
+    expect(rendered.container).toHaveTextContent('No entries to reset this month')
+    expect(readCachedEntries()).toEqual([oldEntry])
+  })
 })

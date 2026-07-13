@@ -28,7 +28,7 @@ Journeys were derived from H7 in the project improvement report:
 
 ## Full verification
 
-- `npm test`: 56 files, 476 tests passed.
+- `npm test`: 56 files, 477 tests passed.
 - `npm run lint`: passed.
 - `npm run build`: passed; the existing main-chunk warning remains (560.87 kB minified).
 - `npm audit --audit-level=low`: reports the existing 10 dependency findings (1 low, 7 moderate, 2 high); H7 added no dependencies.

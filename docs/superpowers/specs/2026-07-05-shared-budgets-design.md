@@ -1,7 +1,7 @@
 # Shared Budgets — Design
 
 **Date:** 2026-07-05
-**Status:** Approved by user (brainstorming session)
+**Status:** implemented
 
 ## Summary
 

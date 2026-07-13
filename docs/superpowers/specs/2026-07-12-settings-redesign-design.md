@@ -1,7 +1,7 @@
 # Settings Redesign — iOS Hub + Subscreens
 
 **Date:** 2026-07-12
-**Status:** Approved (mockups: Claude artifact `73cc9132`, version `two-levels-only`)
+**Status:** implemented (approved direction: `two-levels-only`)
 **Owner:** Settings screen only. No backend, storage, or sync changes.
 
 ## Problem

@@ -1,7 +1,7 @@
 # Netlify → Vercel hosting move + prod Supabase cutover — design spec
 
 **Date:** 2026-07-12
-**Status:** approved design; supersedes the *rollout* section of
+**Status:** implemented and deployed; supersedes the *rollout* section of
 `2026-07-11-supabase-migration.md` (whose code-level design remains authoritative and is already
 implemented in the working tree). Constraint **C1 (frozen URL) is consciously retired** by this
 spec — see "User handoff" for how data safety is preserved without it.

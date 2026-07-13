@@ -1,7 +1,7 @@
 # Netlify → Supabase backend migration — design spec
 
 **Date:** 2026-07-11
-**Status:** approved direction; implementation in progress
+**Status:** implemented and running in production
 **Supersedes:** the backend portions of `docs/APP_STORE.md` (on hold 2026-07-10 — the PWA is the product)
 
 ## Why

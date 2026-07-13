@@ -1,6 +1,6 @@
 # Vercel deploy dependency fix — TDD evidence
 
-**Source plan:** `docs/superpowers/plans/2026-07-12-vercel-prod-cutover.md`, Task 8.
+**Source:** the Vercel cutover work described by `docs/superpowers/specs/2026-07-12-vercel-prod-cutover-design.md`.
 
 ## User journey
 

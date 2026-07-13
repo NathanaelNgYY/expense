@@ -1,7 +1,7 @@
 # Custom Categories — Design Spec
 
 **Date:** 2026-06-29
-**Status:** Approved for planning
+**Status:** implemented
 **Topic:** Let the user add and remove their own budget categories alongside the built-in five.
 
 ## Goal

@@ -1,5 +1,7 @@
 # Carbon Ledger Theme Design
 
+**Status:** implemented
+
 ## Goal
 
 Restyle the existing Budget Tracker PWA with the approved Carbon Ledger visual language while preserving every existing feature and behavior. The redesign covers Home, Add, History, Settings, Poker, Shared Budgets, authentication, forms, empty states, loading states, confirmation states, and navigation.

@@ -7,7 +7,7 @@ Personal iPhone-friendly budget tracker built as a React 19 + Vite PWA, hosted o
 - **Dashboard** — per-category spend vs. budget, a computed buffer that absorbs overages, and a this-week strip.
 - **Add Entry** — fast custom numpad, category chips, optional note. Deep-linkable via `?add=true`.
 - **History** — weekly bars, lunch pace, monthly category breakdown, and spending insights.
-- **Settings** — edit monthly income + per-category budgets, check which account receives Shortcut transactions and when the last capture arrived, export/import CSV, reset the month.
+- **Settings** — edit monthly income + per-category budgets, check which account receives Shortcut transactions and when the last capture arrived, export/import CSV, and reset the month with Undo.
 - **Poker tracker** — log sessions and see P&L, hourly rate, win rate, streaks, and a bankroll trend (stored locally only).
 - **Background ingestion** — Apple Pay and DBS-email transactions captured automatically via iOS Shortcuts.
 
@@ -18,15 +18,7 @@ npm install
 npm run dev
 ```
 
-The dev server normally opens at `http://localhost:5173`. This serves the UI only — the `/api/*` functions are not running, so the app falls back to its `localStorage` cache.
-
-To run the app together with the backend functions and a local Blobs store, use the Netlify CLI:
-
-```bash
-npx netlify dev
-```
-
-Set `INGEST_TOKEN` first (e.g. `$env:INGEST_TOKEN = "devtoken"` in PowerShell, or `export INGEST_TOKEN=devtoken`). The combined dev server normally serves at `http://localhost:8888` with `/api/ingest` and `/api/entries` available.
+The dev server normally opens at `http://localhost:5173`. Copy `.env.example` to `.env.local` and provide the Supabase URL and anon key to use the configured backend; the user-scoped local cache still supports offline work.
 
 ## Running Tests
 
@@ -45,9 +37,11 @@ The preview server normally opens at `http://localhost:4173`.
 
 ## Deploying
 
-1. Run `npm run build`.
-2. Drag the generated `dist/` folder into Netlify's deploy drop zone, or connect the repo to Netlify/GitHub Pages.
-3. Use the deployed HTTPS URL as the app URL.
+1. Run `npm test`, `npm run lint`, and `npm run build`.
+2. Deploy with `npx vercel --prod`.
+3. Keep the Supabase and Sentry environment variables in Vercel; never redeploy the frozen Netlify fallback.
+
+Production: `https://budget-tracker-sooty-ten.vercel.app`
 
 ## iOS Install
 
@@ -64,7 +58,7 @@ The preview server normally opens at `http://localhost:4173`.
 3. Use your deployed URL with `?add=true`, for example:
 
 ```text
-https://your-site.netlify.app?add=true
+https://budget-tracker-sooty-ten.vercel.app?add=true
 ```
 
 4. Rename the shortcut to `Log Expense`.
@@ -118,7 +112,7 @@ purchase:
 
 ```bash
 npm run test:ingest         # the ingestHandler unit/integration tests (no network)
-# fire a real POST (the default still supports the frozen local Netlify fallback):
+# fire a real POST against the Supabase Edge Function:
 npm run test:ingest:live
 npm run test:ingest:live -- -Url https://<project>.supabase.co -Token <INGEST_TOKEN>
 # optional for non-Shortcuts clients with a true event id:
@@ -140,7 +134,8 @@ Common Shortcut errors:
   the backend is fine and the drop is on the device (Wallet automations fire mid-radio-handoff;
   iCloud Private Relay / a flaky network can also cause it). Note Shortcuts has **no try/catch**,
   so wrapping the request in *Repeat* does **not** retry on this error — the action aborts the
-  whole shortcut. The dedupe key makes a re-fired automation safe regardless.
+  whole shortcut. A re-fire within the same minute is normally deduplicated; a retry that crosses
+  a minute boundary can still create a second Apple Pay entry and should be reviewed in History.
 
 ## Budget Defaults
 
@@ -167,15 +162,15 @@ Transactions are stored per user in Supabase and cached in a user-scoped browser
 Shared budgets let friends or family spend from a common pot with live updates.
 Personal and shared budget data both use Supabase with separate RLS-protected tables.
 
-One-time setup:
+One-time setup for a new Supabase project:
 
 1. Create a free project at https://supabase.com.
-2. In the SQL editor, run `supabase/migrations/001_shared_budgets.sql`.
+2. Link the Supabase CLI and run `supabase db push` to apply the complete migration history.
 3. In Auth > Email Templates > Magic Link, make sure the body contains
    `{{ .Token }}` so sign-in emails include the 6-digit code the app asks for.
 4. Copy `.env.example` to `.env.local` and fill in the Project URL and anon key
-   from Settings > API. Add the same two vars in Netlify > Site > Environment
-   variables, then redeploy.
+   from Settings > API. Add the same public client variables in Vercel for Preview
+   and Production, then redeploy.
 
 Sign in on the Shared tab with your email and the emailed code. Create a budget,
 then share its invite code; anyone who signs in and enters the code joins.

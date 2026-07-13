@@ -11,26 +11,24 @@ Guidance for coding agents (Codex, Claude Code) working in this repo.
 
 ## What this is
 
-A personal, iPhone-friendly **budget tracker**: a React 19 + Vite PWA backed by a small **Netlify
-Functions / Netlify Blobs** serverless API. It tracks a S$1,200/month budget across categories (lunch,
+A personal, iPhone-friendly **budget tracker**: a React 19 + Vite PWA hosted on **Vercel** with
+**Supabase** for personal entries, shared budgets and background ingestion. It tracks a S$1,200/month budget across categories (lunch,
 transport, savings, investments, others; a *buffer* is computed, not stored), captures transactions
 automatically in the background from iOS Shortcuts, and includes a poker-session tracker + spending
 insights.
 
-## Planned direction — Supabase migration (App Store plan ON HOLD)
+## Current direction — Supabase/Vercel PWA (App Store plan ON HOLD)
 
 **The PWA is the product.** The App Store / SwiftUI rewrite plan (`docs/APP_STORE.md`) was put
 **on hold on 2026-07-10** — the owner has no macOS hardware to build/sign/submit iOS apps. Its task
 IDs (`T-01`–`T-35`) and gates are dormant; don't block PWA work on them or pick up `T-` tasks unless
 the hold is explicitly lifted.
 
-The active plan of record is **migrating the personal-data backend (entries CRUD, ingest) from
-Netlify Functions/Blobs to Supabase**, joining `src/sharedBudgets/` which already runs on Supabase.
-Spec: `docs/superpowers/specs/2026-07-11-supabase-migration.md` — read it before touching backend,
-sync, or storage code. Hard constraints:
+The personal-data backend migration (entries CRUD and ingest) from Netlify Functions/Blobs to
+Supabase is implemented in production, joining `src/sharedBudgets/`. Hosting runs on Vercel and the
+Netlify site is a frozen fallback. Spec: `docs/superpowers/specs/2026-07-11-supabase-migration.md` —
+read it before touching backend, sync, or storage code. Hard constraints:
 
-- **The app's URL must not change** until every user's localStorage data has migrated —
-  localStorage is origin-scoped and is the only copy of non-owner users' data.
 - **Never clear localStorage**; it remains the offline cache after migration.
 - The user-side migration is a one-time idempotent upload (preserve `id` + `dedupeKey`) behind a
   **new** flag key (`migration_done` is already taken by the old localStorage→Netlify migration).
@@ -59,7 +57,8 @@ npm run lint       # eslint
 - **Client state/sync** (offline-first EntriesContext, sync queue, API client) → vault `Components/Client State & Sync.md`
 - **Domain math** (`compute.ts`, poker analytics; nothing derived is persisted) → `Components/Client Domain Logic.md`
 - **Shared client+server helpers** (`src/shared/`: DBS email parsing, dedupeKey, SGT dates) → `Components/Shared Domain Helpers.md`
-- **Netlify Functions backend** (`entries` CRUD over Blobs, idempotent `ingest`) → `Components/Serverless Backend.md`
+- **Supabase backend** (`entries` CRUD with RLS, idempotent Edge Function ingest) → `Components/Serverless Backend.md`
+- **Legacy fallback** (`netlify/functions/`) is frozen and must not be deployed
 - **UI shell + screens** → `Components/UI Layer.md`
 - **Background ingestion**: two iOS Shortcuts POST to `/api/ingest` — Apple Pay (Wallet trigger) and DBS
   transaction-alert emails (no native PayNow trigger). Full Shortcut setup in `README.md`.

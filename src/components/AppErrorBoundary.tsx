@@ -1,12 +1,11 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { AlertTriangle, Download, RefreshCw } from 'lucide-react'
-import { downloadJsonBackup } from '../dataTransfer'
 
 interface Props {
   children: ReactNode
   onError?: (error: Error, info: ErrorInfo) => void
-  onReload?: () => void
-  onBackup?: () => void
+  onReload: () => void
+  onBackup: () => void
 }
 
 interface State {
@@ -30,19 +29,11 @@ export default class AppErrorBoundary extends Component<Props, State> {
   }
 
   private reload = (): void => {
-    if (this.props.onReload) {
-      this.props.onReload()
-      return
-    }
-    window.location.reload()
+    this.props.onReload()
   }
 
   private downloadBackup = (): void => {
-    if (this.props.onBackup) {
-      this.props.onBackup()
-      return
-    }
-    downloadJsonBackup()
+    this.props.onBackup()
   }
 
   render(): ReactNode {

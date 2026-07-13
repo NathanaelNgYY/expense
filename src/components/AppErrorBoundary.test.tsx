@@ -6,10 +6,15 @@ function CrashingScreen(): never {
   throw new Error('private technical details')
 }
 
+const recoveryActions = {
+  onReload: () => undefined,
+  onBackup: () => undefined,
+}
+
 describe('AppErrorBoundary', () => {
   it('renders children normally when nothing crashes', () => {
     render(
-      <AppErrorBoundary>
+      <AppErrorBoundary {...recoveryActions}>
         <p>Budget is ready</p>
       </AppErrorBoundary>,
     )
@@ -20,7 +25,7 @@ describe('AppErrorBoundary', () => {
   it('replaces a crashed screen with friendly recovery actions and no technical details', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     render(
-      <AppErrorBoundary>
+      <AppErrorBoundary {...recoveryActions}>
         <CrashingScreen />
       </AppErrorBoundary>,
     )
@@ -53,7 +58,7 @@ describe('AppErrorBoundary', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const onError = vi.fn()
     render(
-      <AppErrorBoundary onError={onError}>
+      <AppErrorBoundary {...recoveryActions} onError={onError}>
         <CrashingScreen />
       </AppErrorBoundary>,
     )

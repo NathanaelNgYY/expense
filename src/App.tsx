@@ -10,6 +10,7 @@ import { EntriesProvider, useEntries } from './EntriesContext'
 import { SharedBudgetsProvider } from './sharedBudgets/SharedBudgetsContext'
 import { ThemeProvider } from './theme/ThemeContext'
 import AppErrorBoundary from './components/AppErrorBoundary'
+import { downloadJsonBackup } from './dataTransfer'
 
 const History = lazy(() => import('./screens/History'))
 const Settings = lazy(() => import('./screens/Settings'))
@@ -83,7 +84,7 @@ function AppShell() {
 
 export default function App() {
   return (
-    <AppErrorBoundary>
+    <AppErrorBoundary onReload={() => window.location.reload()} onBackup={downloadJsonBackup}>
       <ThemeProvider>
         <EntriesProvider>
           <SharedBudgetsProvider>

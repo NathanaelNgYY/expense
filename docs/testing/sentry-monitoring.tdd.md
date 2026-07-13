@@ -40,4 +40,4 @@
 
 ## External boundary
 
-The local integration is complete. A real Sentry project, DSN and build auth token still require the owner's authenticated Sentry account. No Vercel variables were changed and no deployment was performed during this TDD run.
+The EU Sentry project `nee-x7/budget-tracker` now exists. `VITE_SENTRY_DSN`, `SENTRY_ORG`, `SENTRY_PROJECT` and the sensitive `SENTRY_AUTH_TOKEN` are configured in both Vercel Production and Preview. The token has only the organization `org:ci` scope used for source-map upload. No deployment was performed, so live event delivery and source-map upload remain to be verified after the next approved deploy.

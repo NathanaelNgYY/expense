@@ -49,4 +49,3 @@ by that pool.
 
 - RED checkpoint: `97bc214 test: reproduce duplicated Others and Buffer money`
 - GREEN checkpoint: `3a7ae6b fix: present Others spending through Buffer`
-

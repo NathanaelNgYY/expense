@@ -48,7 +48,7 @@ export function getSupabase(): SupabaseClient {
   if (!isSupabaseConfigured()) throw new Error('Supabase is not configured')
   if (!client) {
     const { url, anonKey, expectedProjectRef } = env()
-    // The expected ref is public environment identity, not a credential. Netlify staging sets
+    // The expected ref is public environment identity, not a credential. Staging deployments set
     // it so a production URL cannot silently be baked into a staging bundle.
     validateSupabaseEnvironment(url, expectedProjectRef, console.info, import.meta.env.PROD)
     client = createClient(url, anonKey)

@@ -1,6 +1,4 @@
-// Pure ingest logic for the Supabase Edge Function — a port of
-// netlify/functions/lib/ingestHandler.ts with the same request/response contract, kept
-// separate so `netlify/` can be deleted at the end of the migration without breaking this.
+// Pure ingest logic for the Supabase Edge Function, kept separate from transport and storage.
 // Everything domain-y still comes from src/shared/ (single source of truth).
 import type { Entry } from '../../../src/types.ts'
 import { buildEntryFromIngest, type IngestInput } from '../../../src/shared/entry.ts'

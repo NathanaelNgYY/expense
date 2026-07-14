@@ -39,7 +39,7 @@ The preview server normally opens at `http://localhost:4173`.
 
 1. Run `npm test`, `npm run lint`, and `npm run build`.
 2. Deploy with `npx vercel --prod`.
-3. Keep the Supabase and Sentry environment variables in Vercel; never redeploy the frozen Netlify fallback.
+3. Keep the Supabase and Sentry environment variables in Vercel.
 
 Production: `https://budget-tracker-sooty-ten.vercel.app`
 
@@ -113,6 +113,8 @@ purchase:
 ```bash
 npm run test:ingest         # the ingestHandler unit/integration tests (no network)
 # fire a real POST against the Supabase Edge Function:
+$env:SUPABASE_URL = 'https://<project>.supabase.co'
+$env:INGEST_TOKEN = '<raw-token>'
 npm run test:ingest:live
 npm run test:ingest:live -- -Url https://<project>.supabase.co -Token <INGEST_TOKEN>
 # optional for non-Shortcuts clients with a true event id:

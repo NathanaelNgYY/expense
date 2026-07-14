@@ -38,8 +38,6 @@ def classify(node) -> str:
         return "ui"
     if d == "src/shared":
         return "shared"
-    if d.startswith("netlify/functions"):
-        return "backend"
     if d == "src":
         if base in ("compute.ts", "pokerCompute.ts", "pokerDisplay.ts", "csvEntries.ts"):
             return "domain"

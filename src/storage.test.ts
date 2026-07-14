@@ -1,6 +1,26 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { activateUserStorage, getEntries, saveEntries, updateEntry, getCachedEntries, setCachedEntries, getCustomCategories, saveCustomCategories, makeCustomCategoryId, getCategoryOverrides, saveCategoryOverrides, getPokerSessions, savePokerSessions } from './storage'
-import type { Entry, CustomCategory, PokerSession } from './types'
+import {
+  activateUserStorage,
+  addEntry,
+  getEntries,
+  saveEntries,
+  updateEntry,
+  getBudgetConfig,
+  getCachedEntries,
+  setCachedEntries,
+  getCustomCategories,
+  saveCustomCategories,
+  makeCustomCategoryId,
+  getCategoryOverrides,
+  saveCategoryOverrides,
+  getPokerSessions,
+  savePokerSession,
+  savePokerSessions,
+  getCustomStakes,
+  saveCustomStakes,
+} from './storage'
+import { userStorageKey } from './userStorage'
+import { DEFAULT_BUDGET, type Entry, type CustomCategory, type PokerSession } from './types'
 
 function entry(overrides: Partial<Entry> = {}): Entry {
   return {
@@ -109,6 +129,12 @@ describe('category overrides storage', () => {
 })
 
 describe('entries cache', () => {
+  it('appends an entry without replacing the existing cache', () => {
+    setCachedEntries([entry({ id: 'first' })])
+    addEntry(entry({ id: 'second' }))
+    expect(getCachedEntries().map(item => item.id)).toEqual(['first', 'second'])
+  })
+
   it('round-trips cached entries', () => {
     setCachedEntries([{ id: '1', amount: 2, category: 'lunch', note: '', date: '2026-06-09' }])
     expect(getCachedEntries()).toHaveLength(1)
@@ -117,10 +143,26 @@ describe('entries cache', () => {
     localStorage.clear()
     expect(getCachedEntries()).toEqual([])
   })
+
+  it('recovers from a corrupt entries cache', () => {
+    localStorage.setItem('budget_entries', '{not json')
+    expect(getCachedEntries()).toEqual([])
+  })
+
+  it('recovers from a corrupt budget configuration', () => {
+    localStorage.setItem('budget_config', '{not json')
+    expect(getBudgetConfig()).toEqual(DEFAULT_BUDGET)
+  })
 })
 
 describe('user-scoped storage', () => {
   beforeEach(() => localStorage.clear())
+
+  it('builds unscoped and active-user storage keys', () => {
+    expect(userStorageKey('budget_entries')).toBe('budget_entries')
+    activateUserStorage('user-a')
+    expect(userStorageKey('budget_entries')).toBe('budget_entries:user-a')
+  })
 
   it('copies the legacy cache only into the user recorded by the migration flag', () => {
     const ownerEntry = entry({ id: 'owner-entry' })
@@ -150,10 +192,33 @@ describe('user-scoped storage', () => {
 })
 
 describe('savePokerSessions', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('appends one poker session without replacing existing sessions', () => {
+    const first: PokerSession = { id: 'p1', date: '2026-07-01', startTime: '20:00', endTime: '21:00', stakes: '0.1/0.2', buyIn: 20, result: 'win', amount: 5 }
+    const second: PokerSession = { ...first, id: 'p2' }
+    savePokerSessions([first])
+    savePokerSession(second)
+    expect(getPokerSessions()).toEqual([first, second])
+  })
+
   it('replaces the stored poker session list', () => {
     const a: PokerSession = { id: 'p1', date: '2026-07-01', startTime: '20:00', endTime: '21:00', stakes: '0.1/0.2', buyIn: 20, result: 'win', amount: 5 }
     const b: PokerSession = { ...a, id: 'p2' }
     savePokerSessions([a, b])
     expect(getPokerSessions()).toEqual([a, b])
+  })
+
+  it('recovers from corrupt poker sessions', () => {
+    localStorage.setItem('poker_sessions', '{not json')
+    expect(getPokerSessions()).toEqual([])
+  })
+
+  it('round-trips custom stakes and recovers from corrupt data', () => {
+    saveCustomStakes(['0.5/1'])
+    expect(getCustomStakes()).toEqual(['0.5/1'])
+
+    localStorage.setItem('poker_custom_stakes', '{not json')
+    expect(getCustomStakes()).toEqual([])
   })
 })

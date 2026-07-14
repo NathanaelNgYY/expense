@@ -1,18 +1,16 @@
 <#
 .SYNOPSIS
-  Fire a fake transaction at /api/ingest - test the ingestion feature without using Apple Pay.
+  Send a fake transaction to the Supabase ingest Edge Function without using Apple Pay.
 
 .DESCRIPTION
-  The iOS Shortcut is just an HTTP POST, so "does tapping my card create an entry?" is the same
-  as "does POST /api/ingest with this body create an entry?". This script sends that POST so you
-  can test end-to-end (local `netlify dev` or production) with no phone and no real purchase.
+  The iOS Shortcut is an HTTP POST to /functions/v1/ingest. This script exercises that same
+  production contract with a custom bearer token and either an Apple Pay or DBS email payload.
 
 .PARAMETER Url
-  Base site URL. Default http://localhost:8888 (netlify dev). For prod pass
-  https://your-site.netlify.app
+  Supabase project URL or the full ingest function URL. Defaults to $env:SUPABASE_URL.
 
 .PARAMETER Token
-  INGEST_TOKEN. Defaults to $env:INGEST_TOKEN, then "devtoken".
+  Raw ingest token issued by scripts/mint-ingest-token.mjs. Defaults to $env:INGEST_TOKEN.
 
 .PARAMETER Kind
   apple_pay (default) or dbs_email.
@@ -34,22 +32,20 @@
   matching iOS Wallet transaction automations.
 
 .EXAMPLE
-  ./scripts/test-ingest.ps1
-  # fires a 12.50 apple_pay "Test Cafe" at local netlify dev
+  $env:SUPABASE_URL = 'https://your-project.supabase.co'
+  $env:INGEST_TOKEN = '<raw-token>'
+  npm run test:ingest:live
 
 .EXAMPLE
-  ./scripts/test-ingest.ps1 -Amount 4.50 -Merchant "Ya Kun"
-
-.EXAMPLE
-  ./scripts/test-ingest.ps1 -Url https://your-site.netlify.app -Token $env:INGEST_TOKEN
+  ./scripts/test-ingest.ps1 -Url https://your-project.supabase.co -Token $env:INGEST_TOKEN -Amount 4.50 -Merchant "Ya Kun"
 
 .EXAMPLE
   ./scripts/test-ingest.ps1 -Kind dbs_email -RawBody "Amount: SGD 12.00`nTo: NTUC FAIRPRICE"
 #>
 [CmdletBinding()]
 param(
-  [string]$Url = 'http://localhost:8888',
-  [string]$Token = $(if ($env:INGEST_TOKEN) { $env:INGEST_TOKEN } else { 'devtoken' }),
+  [string]$Url = $env:SUPABASE_URL,
+  [string]$Token = $env:INGEST_TOKEN,
   [ValidateSet('apple_pay', 'dbs_email')]
   [string]$Kind = 'apple_pay',
   [double]$Amount = 12.50,
@@ -59,17 +55,25 @@ param(
   [string]$IdempotencyKey = ''
 )
 
+if ([string]::IsNullOrWhiteSpace($Url)) {
+  throw 'Pass -Url or set $env:SUPABASE_URL to the Supabase project URL.'
+}
+if ([string]::IsNullOrWhiteSpace($Token)) {
+  throw 'Pass -Token or set $env:INGEST_TOKEN to the raw ingest token.'
+}
+
 $baseUrl = $Url.TrimEnd('/')
-if ($baseUrl -match '/(api/ingest|functions/v1/ingest)$') {
+if ($baseUrl -match '/functions/v1/ingest$') {
   $endpoint = $baseUrl
 }
-elseif ($baseUrl -match '\.supabase\.co$') {
+elseif ($baseUrl -match '^https://[a-z0-9]+\.supabase\.co$') {
   $endpoint = "$baseUrl/functions/v1/ingest"
 }
 else {
-  $endpoint = "$baseUrl/api/ingest"
+  throw 'Url must be an https://<project>.supabase.co project URL or its full /functions/v1/ingest URL.'
 }
-$occurredAt = (Get-Date).ToString('o')  # ISO 8601 with offset, like the Shortcut sends
+
+$occurredAt = (Get-Date).ToString('o')
 
 if ($Kind -eq 'apple_pay') {
   $payload = [ordered]@{
@@ -112,12 +116,12 @@ catch {
     $text = $reader.ReadToEnd()
     Write-Host "`n-> HTTP $status" -ForegroundColor Red
     if ($text) { Write-Host $text }
-    if ($status -eq 401) { Write-Host "Token mismatch - pass -Token or set `$env:INGEST_TOKEN to match the server." -ForegroundColor Yellow }
+    if ($status -eq 401) { Write-Host 'Token mismatch - pass -Token or set $env:INGEST_TOKEN to the issued raw token.' -ForegroundColor Yellow }
   }
   else {
     Write-Host "`n-> request failed (no HTTP response)" -ForegroundColor Red
     Write-Host $_.Exception.Message
-    Write-Host "Is the server running? Start it with: npx netlify dev (and set `$env:INGEST_TOKEN first)." -ForegroundColor Yellow
+    Write-Host 'Check the Supabase project URL, deployed ingest function, and network connection.' -ForegroundColor Yellow
   }
   exit 1
 }

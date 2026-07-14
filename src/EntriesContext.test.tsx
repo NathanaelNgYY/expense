@@ -164,33 +164,6 @@ describe('EntriesContext', () => {
     expect(queue).toHaveLength(1)
   })
 
-  it('keeps a just-added entry visible while the server list is briefly stale', async () => {
-    let created: Entry | null = null
-    createEntryMock.mockImplementation(async input => {
-      created = { ...(input as Entry), source: 'manual' }
-      return created
-    })
-    let staleGetsRemaining = 1 // the fetch fired by the post-create refresh still sees the stale list
-    fetchEntriesMock.mockImplementation(async () => {
-      if (!created) return []
-      if (staleGetsRemaining > 0) {
-        staleGetsRemaining--
-        return [] // list hasn't propagated the create yet
-      }
-      return [created]
-    })
-
-    render(<EntriesProvider><Probe /></EntriesProvider>)
-    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('0'))
-
-    await act(async () => {
-      screen.getByText('add').click()
-    })
-
-    // The optimistic create must not be wiped by the stale (still-empty) refresh list.
-    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('1'))
-  })
-
   it('migrates cached entries to Supabase, then shows the migrated entries', async () => {
     const cachedEntry = { id: 'c1', amount: 7, category: 'lunch', note: 'old', date: '2026-06-01' }
     localStorage.setItem('budget_entries', JSON.stringify([cachedEntry]))
@@ -258,32 +231,6 @@ describe('EntriesContext', () => {
     expect(screen.getByTestId('migration-missing').textContent).toBe('')
   })
 
-  it('keeps a deleted entry gone even when the server list is briefly stale', async () => {
-    const e1 = { id: 's1', amount: 2, category: 'lunch', note: '', date: '2026-06-09' }
-    let deleted = false
-    let staleGetsRemaining = 1
-    deleteEntryMock.mockImplementation(async () => { deleted = true })
-    fetchEntriesMock.mockImplementation(async () => {
-      if (!deleted) return [e1]
-      if (staleGetsRemaining > 0) {
-        staleGetsRemaining--
-        return [e1] // list hasn't propagated the delete yet
-      }
-      return []
-    })
-
-    render(<EntriesProvider><DeleteProbe /></EntriesProvider>)
-    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('1'))
-
-    await act(async () => {
-      screen.getByText('del').click()
-    })
-
-    // The optimistic delete must not be undone by the stale refresh list.
-    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('0'))
-    expect(JSON.parse(localStorage.getItem('deleted_ids') as string)).toEqual(['s1'])
-  })
-
   it('removes optimistically without blocking on the network DELETE', async () => {
     const e1 = { id: 's1', amount: 2, category: 'lunch', note: '', date: '2026-06-09' }
     let rejectNet: (err: Error) => void = () => {}
@@ -299,9 +246,8 @@ describe('EntriesContext', () => {
       screen.getByText('del').click()
     })
 
-    // Optimistic delete + tombstone happen immediately, even though the DELETE never resolved.
+    // The optimistic delete happens immediately, even though the DELETE never resolved.
     expect(screen.getByTestId('count').textContent).toBe('0')
-    expect(JSON.parse(localStorage.getItem('deleted_ids') as string)).toEqual(['s1'])
 
     // Settle the background flush so the in-flight guard resets for the next test.
     await act(async () => { rejectNet(new TypeError('offline')) })
@@ -328,37 +274,7 @@ describe('EntriesContext', () => {
     await act(async () => { rejectNet(new TypeError('offline')) })
   })
 
-  it('prunes a tombstone once the server stops returning the deleted id', async () => {
-    const e1 = { id: 's1', amount: 2, category: 'lunch', note: '', date: '2026-06-09' }
-    let deleted = false
-    let staleGetsRemaining = 1
-    deleteEntryMock.mockImplementation(async () => { deleted = true })
-    fetchEntriesMock.mockImplementation(async () => {
-      if (!deleted) return [e1]
-      if (staleGetsRemaining > 0) {
-        staleGetsRemaining--
-        return [e1]
-      }
-      return []
-    })
-
-    render(<EntriesProvider><DeleteProbe /></EntriesProvider>)
-    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('1'))
-
-    await act(async () => {
-      screen.getByText('del').click()
-    })
-    await waitFor(() => expect(JSON.parse(localStorage.getItem('deleted_ids') as string)).toEqual(['s1']))
-
-    // A later refresh sees the server caught up (no s1) → tombstone is pruned.
-    await act(async () => {
-      screen.getByText('refresh').click()
-    })
-    await waitFor(() => expect(JSON.parse(localStorage.getItem('deleted_ids') as string)).toEqual([]))
-    expect(screen.getByTestId('count').textContent).toBe('0')
-  })
-
-  it('clears the tombstone when restoring an entry and preserves its identity metadata', async () => {
+  it('restores an entry optimistically and preserves its identity metadata', async () => {
     const restored: Entry = {
       id: 's1',
       amount: 2,
@@ -368,7 +284,6 @@ describe('EntriesContext', () => {
       source: 'apple-pay',
       dedupeKey: 'apple-pay:transaction-1',
     }
-    localStorage.setItem('deleted_ids', JSON.stringify(['s1']))
     fetchEntriesMock.mockResolvedValue([])
     createEntryMock.mockImplementation(async input => input as Entry)
 
@@ -379,7 +294,6 @@ describe('EntriesContext', () => {
     })
 
     expect(JSON.parse(screen.getByTestId('restored-entry').textContent ?? 'null')).toEqual(restored)
-    expect(JSON.parse(localStorage.getItem('deleted_ids') ?? '[]')).toEqual([])
   })
 
   it('resolves refresh() to true when it reaches the successful commit path', async () => {

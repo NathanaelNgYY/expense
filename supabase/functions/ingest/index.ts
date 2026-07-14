@@ -1,8 +1,7 @@
 // Supabase Edge Function: POST /functions/v1/ingest
-// Same contract as the Netlify /api/ingest it replaces — the iOS Shortcuts keep their
-// `Authorization: Bearer <token>` header and only change the URL. The bearer token is
-// hashed (sha256) and looked up in ingest_tokens to find whose entries it writes; deploy
-// with --no-verify-jwt so this custom scheme (not a Supabase JWT) is allowed through.
+// iOS Shortcuts authenticate with `Authorization: Bearer <token>`. The bearer token is
+// hashed (sha256) and looked up in ingest_tokens to find whose entries it writes;
+// supabase/config.toml disables JWT verification for this custom authentication scheme.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { handleIngest, type IngestBody, type IngestStore } from './handler.ts'
 import type { Entry } from '../../../src/types.ts'

@@ -382,6 +382,11 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+# iOS Shortcuts authenticate with app-issued bearer tokens, which the function hashes and
+# resolves through ingest_tokens. Supabase JWT verification must stay disabled for this function.
+[functions.ingest]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

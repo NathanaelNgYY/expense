@@ -367,8 +367,10 @@ export default function Dashboard({ onSettings, onAddEntry }: Props) {
         const spent = spend[cat]
         const deficit = deficits[cat]
         const budget = budgets[cat]
+        const usesBuffer = cat === 'others'
         const hasBudget = budget > 0
-        const over = hasBudget && deficit < 0
+        const over = !usesBuffer && hasBudget && deficit < 0
+        const bufferExhausted = usesBuffer && buffer <= 0
         const committed = COMMITTED_CATEGORY_SET.has(cat as Category)
         const expanded = expandedCategory === cat
         const categoryEntries = currentMonthEntries
@@ -380,14 +382,22 @@ export default function Dashboard({ onSettings, onAddEntry }: Props) {
           )
           .sort(entrySort)
         const categoryLabel = labelFor(cat)
-        const pct = hasBudget ? Math.min(100, (spent / budget) * 100) : 0
-        const statusLabel = committed
-          ? spent >= budget
-            ? 'Committed'
-            : `${formatSGD(deficit)} to commit`
-          : !hasBudget
-            ? ''
-            : formatRemaining(deficit)
+        const pct = usesBuffer
+          ? config.buffer > 0
+            ? Math.min(100, (spent / config.buffer) * 100)
+            : 0
+          : hasBudget
+            ? Math.min(100, (spent / budget) * 100)
+            : 0
+        const statusLabel = usesBuffer
+          ? 'spent from Buffer'
+          : committed
+            ? spent >= budget
+              ? 'Committed'
+              : `${formatSGD(deficit)} to commit`
+            : !hasBudget
+              ? ''
+              : formatRemaining(deficit)
 
         return (
           <article
@@ -417,7 +427,7 @@ export default function Dashboard({ onSettings, onAddEntry }: Props) {
                   </span>
                   <span
                     className={
-                      over
+                      over || bufferExhausted
                         ? 'cat-status cat-status--over'
                         : committed
                           ? 'cat-status cat-status--committed'
@@ -433,13 +443,21 @@ export default function Dashboard({ onSettings, onAddEntry }: Props) {
                   className="progress-fill"
                   style={{
                     width: `${pct}%`,
-                    background: over ? 'var(--red)' : committed ? 'var(--blue)' : 'var(--green)',
+                    background: over || bufferExhausted
+                      ? 'var(--red)'
+                      : usesBuffer
+                        ? 'var(--yellow)'
+                        : committed
+                          ? 'var(--blue)'
+                          : 'var(--green)',
                   }}
                 />
               </span>
               <span className="cat-row-bottom">
                 <span className="muted">
-                  {hasBudget
+                  {usesBuffer
+                    ? 'Uses monthly Buffer'
+                    : hasBudget
                     ? `${committed ? 'Monthly commitment' : 'Budget'} ${formatSGDWhole(budget)}`
                     : 'No budget set'}
                 </span>

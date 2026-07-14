@@ -83,6 +83,15 @@ function clickCategory(container: HTMLElement, label: string): void {
   })
 }
 
+function categoryCard(container: HTMLElement, label: string): HTMLElement {
+  const card = [...container.querySelectorAll<HTMLElement>('.category-row-card')].find(element =>
+    element.textContent?.includes(label),
+  )
+
+  if (!card) throw new Error(`Category card ${label} was not found`)
+  return card
+}
+
 function clickButton(container: HTMLElement, predicate: (b: HTMLButtonElement) => boolean): void {
   const button = [...container.querySelectorAll('button')].find(predicate)
   if (!button) throw new Error('Button not found')
@@ -151,6 +160,33 @@ describe('Dashboard category expense history', () => {
     expect(list).toHaveTextContent('Others Expenses')
     expect(list).toHaveTextContent('clothes')
     expect(list).toHaveTextContent('S$100.00')
+  })
+
+  it('presents Others spending as usage of the single monthly Buffer', () => {
+    const rendered = renderWithEntries([
+      entry({ amount: 100, category: 'others', date: '2026-05-06' }),
+    ])
+    root = rendered.root
+
+    const others = categoryCard(rendered.container, 'Others')
+    expect(others).toHaveTextContent('S$100.00')
+    expect(others).toHaveTextContent('spent from Buffer')
+    expect(others).toHaveTextContent('Uses monthly Buffer')
+    expect(others).not.toHaveTextContent('S$136.00 left')
+    expect(others).not.toHaveTextContent('Budget S$236')
+  })
+
+  it('does not present Others overspending as a second category overage', () => {
+    const rendered = renderWithEntries([
+      entry({ amount: 300, category: 'others', date: '2026-05-06' }),
+    ])
+    root = rendered.root
+
+    const others = categoryCard(rendered.container, 'Others')
+    expect(others).toHaveTextContent('S$300.00')
+    expect(others).toHaveTextContent('spent from Buffer')
+    expect(others).not.toHaveTextContent('S$64.00 over')
+    expect(rendered.container.querySelector('.buffer-card')).toHaveTextContent('S$64.00 over')
   })
 
   it('limits category dropdown expenses to the past two weeks', () => {

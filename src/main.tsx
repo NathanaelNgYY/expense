@@ -7,7 +7,7 @@ import App from './App'
 import { initializeMonitoring } from './monitoring'
 import { readStoredTheme } from './theme/themeRegistry'
 
-initializeMonitoring({
+void initializeMonitoring({
   dsn: import.meta.env.VITE_SENTRY_DSN,
   environment: import.meta.env.MODE,
 })

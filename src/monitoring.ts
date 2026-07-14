@@ -1,25 +1,44 @@
 import type { ErrorInfo } from 'react'
-import * as Sentry from '@sentry/react'
+
+type SentryModule = typeof import('./monitoringSentry')
 
 interface MonitoringConfig {
   dsn?: string
   environment: string
 }
 
-export function initializeMonitoring({ dsn, environment }: MonitoringConfig): boolean {
+let initialization: Promise<SentryModule | null> | null = null
+
+export async function initializeMonitoring({ dsn, environment }: MonitoringConfig): Promise<boolean> {
   const normalizedDsn = dsn?.trim()
   if (!normalizedDsn) return false
 
-  Sentry.init({
-    dsn: normalizedDsn,
-    environment,
-    sendDefaultPii: false,
-    tracesSampleRate: 0,
-  })
-  return true
+  if (!initialization) {
+    initialization = import('./monitoringSentry')
+      .then(Sentry => {
+        Sentry.init({
+          dsn: normalizedDsn,
+          environment,
+          sendDefaultPii: false,
+          tracesSampleRate: 0,
+        })
+        return Sentry
+      })
+      .catch(error => {
+        console.error('Error monitoring could not start', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        })
+        return null
+      })
+  }
+
+  return (await initialization) !== null
 }
 
-export function reportReactError(error: Error, info: ErrorInfo): void {
+export async function reportReactError(error: Error, info: ErrorInfo): Promise<void> {
+  const Sentry = await initialization
+  if (!Sentry) return
+
   Sentry.captureException(error, {
     contexts: {
       react: { componentStack: info.componentStack ?? '' },

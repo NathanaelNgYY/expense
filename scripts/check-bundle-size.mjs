@@ -4,7 +4,7 @@
 // This includes modulepreload dependencies, which the browser eagerly downloads
 // on a first visit, while still excluding lazy route chunks.
 //
-// Budgets are gzipped KiB, set ~4% above the 2026-07-14 measurement (164.2 / 11.2).
+// Budgets are gzipped KiB, set ~4% above the 2026-07-14 measurement (137.2 / 11.2).
 // Lower them as H11/M14 bundle work lands; raise them only with a deliberate reason.
 // Note these read lower than Vite's build log, which prints kB (1000 bytes), not KiB.
 import { gzipSync } from 'node:zlib'
@@ -17,7 +17,7 @@ const ASSETS_DIR = join(process.cwd(), 'dist', 'assets')
 const KB = 1024
 
 const BUDGETS = [
-  { label: 'initial JS', kind: 'js', budgetKb: 172 },
+  { label: 'initial JS', kind: 'js', budgetKb: 143 },
   { label: 'CSS', kind: 'css', budgetKb: 12 },
 ]
 

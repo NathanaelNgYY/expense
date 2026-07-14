@@ -97,6 +97,18 @@ button {
   display: none;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* iOS navigation title / section identifier */
 .screen-title {
   color: var(--text-secondary);
@@ -549,17 +561,13 @@ input:focus-visible {
 
 /* ─── Touch targets ──────────────────────────────────────── */
 
-/* WCAG 2.5.5 / HIG both want ~44px. These controls are deliberately small visually
-   (a 34px gear, a 24px pencil), so grow the *hit area* with a pseudo-element instead
-   of the button, leaving the composition untouched. */
-.settings-icon-btn,
-.month-nav-btn,
+/* WCAG 2.5.5 / HIG both want ~44px. The edit icon remains visually compact, so its
+   pseudo-element expands the hit area. Navigation controls use a real 44px box so
+   browser accessibility checks and assistive technology see the same target. */
 .category-edit-btn {
   position: relative;
 }
 
-.settings-icon-btn::before,
-.month-nav-btn::before,
 .category-edit-btn::before {
   content: '';
   position: absolute;
@@ -653,8 +661,8 @@ input:focus-visible {
 }
 
 .settings-icon-btn {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1208,8 +1216,8 @@ input:focus-visible {
 }
 
 .month-nav-btn {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

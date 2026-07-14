@@ -131,7 +131,7 @@ export default function AddEntry({ initialDate, onSave }: Props) {
 
   return (
     <div className="screen add-entry theme-screen theme-screen--add">
-      <p className="screen-title">ADD ENTRY</p>
+      <h1 className="screen-title">Add entry</h1>
 
       {shared.budgets.length > 0 && (
         <div className="scope-switch" role="group" aria-label="Expense destination">

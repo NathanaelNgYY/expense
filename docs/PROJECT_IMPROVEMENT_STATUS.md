@@ -8,7 +8,7 @@
 
 ## Current position
 
-The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, and live RLS isolation work is implemented and deployed. H6 is complete locally and awaiting review, push, and production verification.
+The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, H6 presentation, and live RLS isolation work is implemented and deployed. M17 browser and accessibility gates are complete locally and awaiting review and deployment.
 
 ## Completed or materially addressed
 
@@ -21,24 +21,23 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 | H7 — bulk month reset | Complete and deployed | Confirmation shows the affected count; Undo restores all entries with original ids and dedupe keys; restore clears stale tombstones. | `docs/testing/h7-bulk-reset-undo.tdd.md` |
 | H8 / M11 — blank crashes and no monitoring | Complete and deployed | Root error fallback offers Reload and backup; production errors report to the EU Sentry project with source maps. A controlled event was received as `BUDGET-TRACKER-1`. | `docs/testing/error-boundary.tdd.md`, `docs/testing/sentry-monitoring.tdd.md`, `docs/SENTRY.md` |
 | H1–H3 — incorrect month analytics | Complete and deployed | Highest day uses total daily spend, custom categories can rank as Most expensive, and Day pattern is scoped to the selected month. | `docs/testing/h1-h3-month-analytics.tdd.md` |
-| H6 — Others and Buffer present the same money twice | Complete locally | Others remains a transaction category but now identifies its spending as coming from the single monthly Buffer; only Buffer reports exhaustion or overage. | `docs/testing/h6-others-buffer.tdd.md` |
+| H6 — Others and Buffer present the same money twice | Complete and deployed | Others remains a transaction category but now identifies its spending as coming from the single monthly Buffer; only Buffer reports exhaustion or overage. | `docs/testing/h6-others-buffer.tdd.md` |
 | H9 — CI | Partially complete | GitHub Actions runs lint, Deno typecheck of the ingest Edge Function, tests with enforced coverage thresholds, build, an initial-bundle size budget, `npm audit` (non-blocking), and a gitleaks history scan — on pushes, pull requests, and a weekly schedule. Required checks still cannot be enforced on this private repository's current GitHub plan. | `.github/workflows/ci.yml`, `scripts/check-bundle-size.mjs` |
-| M17 — live RLS isolation tests | Partially complete | `entries`, `poker_sessions`, `ingest_tokens`, `ingest_status`, the five shared-budget tables, and the `join_budget` / `regenerate_invite_code` SECURITY DEFINER RPCs are tested against a real Postgres with every migration applied. The parallel `rls` CI job is green on `main`. Browser E2E and accessibility checks remain. | `supabase/tests/rls/`, `.github/workflows/ci.yml` |
-| H10 — unpushed work | Complete | Earlier work, live RLS tests, and database-advisor improvements are merged and deployed; only the active H6 branch awaits review. | `git status --branch` |
+| M17 — live isolation, browser E2E, and accessibility | Complete locally | Live Postgres proves isolation across 9 tables and 2 SECURITY DEFINER RPCs. Mobile Chromium covers four critical journeys, page headings, keyboard focus, named controls, 44px targets, and Axe WCAG A/AA scans in a parallel CI job. | `supabase/tests/rls/`, `tests/e2e/`, `docs/testing/m17-browser-e2e.tdd.md`, `.github/workflows/ci.yml` |
+| H10 — unpushed work | Complete | Earlier work, live RLS tests, database-advisor improvements, and H6 are merged and deployed. | `git status --branch` |
 | M10 — no identity linking | Complete | Google identity linking is implemented as part of C1. | `src/sharedBudgets/sharedApi.ts` |
 | M18 — stale architecture docs | Partially complete | README now describes Vercel, Supabase, the production URL, and the current Shortcut contract. Frozen Netlify function code remains as a fallback and should be removed only in a separate code-cleanup change. | `README.md`, `AGENTS.md` |
 
 ## Next recommended work
 
-1. Review, push, and deploy H6; verify the Others and Buffer presentation on the production PWA.
-2. Add M17 browser E2E and accessibility checks. (Live RLS isolation tests are done.)
-3. Remove the frozen Netlify fallback and dependencies in a dedicated M18 cleanup.
-4. Address H11/M14 performance: batch CSV imports and reduce the initial bundle.
+1. Review and deploy the M17 browser E2E and accessibility gate.
+2. Remove the frozen Netlify fallback and dependencies in a dedicated M18 cleanup.
+3. Address H11/M14 performance: batch CSV imports and reduce the initial bundle.
 
 ## Remaining audit items
 
 - H4–H5, H9 enforcement, H11.
-- M1–M9 and M12–M17, except where a later implementation or product decision explicitly retires an item.
+- M1–M9 and M12–M16, except where a later implementation or product decision explicitly retires an item.
 - C3's perfect Apple Pay dedupe guarantee remains impossible without a stable transaction identifier from iOS; the current fallback is deliberately documented rather than overstated.
 
 ## Verification baseline
@@ -47,6 +46,7 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 - Lint and production build pass.
 - Whole-project coverage: 84.45% statements, 77.09% branches, 82.94% functions, 88% lines. These are now enforced as CI thresholds and may only be raised.
 - Live RLS: 48 isolation tests across 9 tables and 2 SECURITY DEFINER RPCs pass against a real Postgres locally and in the parallel `rls` CI job. These replaced `supabase/tests/ingest_visibility.test.ts`, which asserted that migration files *contained* policy substrings and would have stayed green if a policy were later dropped.
+- Browser E2E: 7 mobile Chromium checks pass across four critical journeys, Axe WCAG A/AA scans, keyboard focus, accessible names, and measured 44px targets. They run in a parallel `e2e` CI job without contacting deployed Supabase.
 - Initial payload: 159.6 KiB gzip entry JS, 11.2 KiB gzip CSS, against CI budgets of 166 and 12.
 - `deno check` of the ingest Edge Function passes. It previously did not: `IngestInput.learnedCategory` was typed `Category` while `categoryFromHistory` returns `string | null` (custom categories), and nothing typechecked `supabase/functions/`, so CI never saw it.
 - gitleaks: 218 commits scanned, no leaks.

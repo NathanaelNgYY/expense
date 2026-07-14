@@ -101,11 +101,11 @@ describe('AddEntry', () => {
     ])
   })
 
-  it('renders the ADD ENTRY title', async () => {
+  it('renders the Add entry page heading', async () => {
     await act(async () => {
       renderWithEntries()
     })
-    expect(screen.getByText('ADD ENTRY')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Add entry' })).toBeInTheDocument()
   })
 
   it('save button is disabled when amount is zero', async () => {

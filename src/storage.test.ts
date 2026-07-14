@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { activateUserStorage, getEntries, saveEntries, updateEntry, getCachedEntries, setCachedEntries, getCustomCategories, saveCustomCategories, makeCustomCategoryId, getCategoryOverrides, saveCategoryOverrides, getPokerSessions, savePokerSessions } from './storage'
+import { userStorageKey } from './userStorage'
 import type { Entry, CustomCategory, PokerSession } from './types'
 
 function entry(overrides: Partial<Entry> = {}): Entry {
@@ -121,6 +122,12 @@ describe('entries cache', () => {
 
 describe('user-scoped storage', () => {
   beforeEach(() => localStorage.clear())
+
+  it('builds unscoped and active-user storage keys', () => {
+    expect(userStorageKey('budget_entries')).toBe('budget_entries')
+    activateUserStorage('user-a')
+    expect(userStorageKey('budget_entries')).toBe('budget_entries:user-a')
+  })
 
   it('copies the legacy cache only into the user recorded by the migration flag', () => {
     const ownerEntry = entry({ id: 'owner-entry' })

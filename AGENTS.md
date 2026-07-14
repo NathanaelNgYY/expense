@@ -24,33 +24,31 @@ insights.
 IDs (`T-01`–`T-35`) and gates are dormant; don't block PWA work on them or pick up `T-` tasks unless
 the hold is explicitly lifted.
 
-The personal-data backend migration (entries CRUD and ingest) from Netlify Functions/Blobs to
-Supabase is implemented in production, joining `src/sharedBudgets/`. Hosting runs on Vercel and the
-Netlify site is a frozen fallback. Spec: `docs/superpowers/specs/2026-07-11-supabase-migration.md` —
-read it before touching backend, sync, or storage code. Hard constraints:
+The personal-data backend migration (entries CRUD and ingest) to Supabase is complete in production,
+joining `src/sharedBudgets/`. Hosting runs on Vercel, and the retired serverless runtime has been
+removed. The point-in-time migration design remains at
+`docs/superpowers/specs/2026-07-11-supabase-migration.md`; read it before touching backend, sync, or
+storage code. Hard constraints:
 
 - **Never clear localStorage**; it remains the offline cache after migration.
 - The user-side migration is a one-time idempotent upload (preserve `id` + `dedupeKey`) behind a
   **new** flag key (`migration_done` is already taken by the old localStorage→Netlify migration).
 - iOS Shortcuts keep the same `Bearer` token auth; only the ingest URL changes.
 
-Hosting moved to Vercel per `docs/superpowers/specs/2026-07-12-vercel-prod-cutover-design.md`; the
-Netlify site is a frozen fallback and must never be redeployed.
+Hosting moved to Vercel per the historical design in
+`docs/superpowers/specs/2026-07-12-vercel-prod-cutover-design.md`.
 
 ## Commands
 
 ```bash
 npm install
-npm run dev        # Vite UI only, http://localhost:5173 — /api/* not running, app uses localStorage cache
-npx netlify dev    # legacy fallback development only; the production backend is now Supabase
+npm run dev        # Vite UI, http://localhost:5173; backend calls use the configured Supabase project
 npm test           # vitest run (unit + integration tests live next to source as *.test.ts[x])
 npm run build      # tsc -b && vite build  → dist/
 npm run preview    # serve the production build, http://localhost:4173
-npx vercel --prod  # deploy to Vercel (production). Never deploy to Netlify — no deploys remain.
+npx vercel --prod  # deploy to Vercel production
 npm run lint       # eslint
 ```
-
-`netlify dev` needs an ingest token: PowerShell `$env:INGEST_TOKEN = "devtoken"` (or `export INGEST_TOKEN=devtoken`).
 
 ## Architecture (skeleton — file maps are in the vault Component notes)
 
@@ -58,7 +56,6 @@ npm run lint       # eslint
 - **Domain math** (`compute.ts`, poker analytics; nothing derived is persisted) → `Components/Client Domain Logic.md`
 - **Shared client+server helpers** (`src/shared/`: DBS email parsing, dedupeKey, SGT dates) → `Components/Shared Domain Helpers.md`
 - **Supabase backend** (`entries` CRUD with RLS, idempotent Edge Function ingest) → `Components/Serverless Backend.md`
-- **Legacy fallback** (`netlify/functions/`) is frozen and must not be deployed
 - **UI shell + screens** → `Components/UI Layer.md`
 - **Background ingestion**: two iOS Shortcuts POST to the Supabase `ingest` Edge Function — Apple Pay (Wallet trigger) and DBS
   transaction-alert emails (no native PayNow trigger). Full Shortcut setup in `README.md`.

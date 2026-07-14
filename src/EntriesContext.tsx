@@ -11,14 +11,7 @@ import {
   isPermanentFailure,
   type NewManualEntry,
 } from './api'
-import {
-  getQueue,
-  setQueue,
-  getTombstones,
-  setTombstones,
-  getPendingCreates,
-  setPendingCreates,
-} from './syncQueue'
+import { getQueue, setQueue } from './syncQueue'
 import { migrateEntriesIfNeeded, syncPokerSessionsIfNeeded } from './supabaseSync'
 
 /**
@@ -165,27 +158,7 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
         return false
       }
       const fresh = outcome === 'migrated' || hadQueuedMutations ? await fetchEntries() : server
-      // Netlify Blobs list() is eventually consistent, so the refreshed server list can
-      // briefly lag a local mutation in BOTH directions. Reconcile both:
-      //  - hide just-deleted ids the stale list still returns (tombstones), and
-      //  - keep showing just-created ids the stale list doesn't return yet (pending
-      //    creates), pulling the entry from local state until the server catches up.
-      const serverIds = new Set(fresh.map(e => e.id))
-
-      const tombstones = getTombstones()
-      const stillTombstoned = tombstones.filter(id => serverIds.has(id))
-      if (stillTombstoned.length !== tombstones.length) setTombstones(stillTombstoned)
-      const hidden = new Set(stillTombstoned)
-
-      const localById = new Map(entriesRef.current.map(e => [e.id, e]))
-      const pendingCreates = getPendingCreates()
-      const stillUnseen = pendingCreates.filter(
-        id => !serverIds.has(id) && !hidden.has(id) && localById.has(id),
-      )
-      if (stillUnseen.length !== pendingCreates.length) setPendingCreates(stillUnseen)
-      const extras = stillUnseen.map(id => localById.get(id)!)
-
-      commit([...fresh.filter(e => !hidden.has(e.id)), ...extras])
+      commit(fresh)
       reportSync()
       // Poker backup rides along with every successful refresh; a failure here doesn't
       // affect entries and is retried on the next refresh, so it never surfaces as a sync error.
@@ -237,9 +210,6 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
       source: 'manual',
     }
     commit([...entriesRef.current, optimistic])
-    // Mark the id pending so the post-create refresh (which may run before Blobs' list()
-    // has propagated the write) keeps showing it instead of dropping it.
-    setPendingCreates([...new Set([...getPendingCreates(), optimistic.id])])
     setQueue([...getQueue(), { op: 'create', entry: optimistic }])
     bumpPending()
     // The entry is already locally durable (state + cache + queue); flush and reconcile in the
@@ -255,11 +225,7 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
   }, [bumpPending, commit, refresh])
 
   const restoreEntry = useCallback(async (entry: Entry) => {
-    // A restore supersedes the local deletion immediately. Leaving this id tombstoned would
-    // hide the restored server row during the next reconciliation pass.
-    setTombstones(getTombstones().filter(id => id !== entry.id))
     commit([...entriesRef.current.filter(candidate => candidate.id !== entry.id), entry])
-    setPendingCreates([...new Set([...getPendingCreates(), entry.id])])
     setQueue([...getQueue(), { op: 'create', entry }])
     bumpPending()
     void refresh()
@@ -267,8 +233,6 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
 
   const removeEntry = useCallback(async (id: string) => {
     commit(entriesRef.current.filter(e => e.id !== id))
-    // Tombstone the id so an eventually-consistent server refresh can't resurrect it.
-    setTombstones([...new Set([...getTombstones(), id])])
     setQueue([...getQueue(), { op: 'delete', id }])
     bumpPending()
     void refresh() // background flush + reconcile; the delete is already locally durable

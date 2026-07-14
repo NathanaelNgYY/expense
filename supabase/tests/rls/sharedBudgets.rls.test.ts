@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { deleteUser, serviceClient, signedInUser, type TestUser } from './harness'
+import { anonClient, deleteUser, serviceClient, signedInUser, type TestUser } from './harness'
 
 let alice: TestUser
 let bob: TestUser
@@ -183,5 +183,71 @@ describe('shared budgets — the owner can use her own budget', () => {
       .eq('budget_id', budgetId)
     expect(members.data).toHaveLength(1)
     expect(members.data![0].user_id).toBe(alice.id)
+  })
+})
+
+describe('shared budgets — the SECURITY DEFINER RPCs', () => {
+  it('rejects join_budget with a guessed invite code and creates no membership', async () => {
+    const { error } = await bob.client.rpc('join_budget', { p_code: 'ZZZZZZ' })
+    expect(error).not.toBeNull()
+    expect(error!.message).toContain('invalid_code')
+
+    const { count } = await oracle
+      .from('budget_members')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('user_id', bob.id)
+    expect(count).toBe(0)
+  })
+
+  it('denies an anonymous caller from executing join_budget', async () => {
+    const { error } = await anonClient().rpc('join_budget', { p_code: inviteCode })
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('42501')
+  })
+
+  it('denies an anonymous caller from executing regenerate_invite_code', async () => {
+    const { error } = await anonClient().rpc('regenerate_invite_code', { p_budget_id: budgetId })
+    expect(error).not.toBeNull()
+    expect(error!.code).toBe('42501')
+  })
+
+  it("refuses to regenerate a non-member's invite code and leaves it unchanged", async () => {
+    const { error } = await bob.client.rpc('regenerate_invite_code', { p_budget_id: budgetId })
+    expect(error).not.toBeNull()
+    expect(error!.message).toContain('not_owner')
+
+    const { data } = await oracle
+      .from('budgets')
+      .select('invite_code')
+      .eq('id', budgetId)
+      .single()
+    expect(data!.invite_code).toBe(inviteCode)
+  })
+
+  it('lets Bob join with the real code, and only then see the budget and Alice', async () => {
+    const { error } = await bob.client.rpc('join_budget', { p_code: inviteCode })
+    expect(error).toBeNull()
+
+    const budget = await bob.client.from('budgets').select('id').eq('id', budgetId)
+    expect(budget.data).toHaveLength(1)
+
+    const entries = await bob.client.from('shared_entries').select('id').eq('budget_id', budgetId)
+    expect(entries.data).toHaveLength(1)
+
+    const profile = await bob.client.from('profiles').select('id').eq('id', alice.id)
+    expect(profile.data).toHaveLength(1)
+  })
+
+  it("still refuses to let a mere member regenerate the owner's invite code", async () => {
+    const { error } = await bob.client.rpc('regenerate_invite_code', { p_budget_id: budgetId })
+    expect(error).not.toBeNull()
+    expect(error!.message).toContain('not_owner')
+
+    const { data } = await oracle
+      .from('budgets')
+      .select('invite_code')
+      .eq('id', budgetId)
+      .single()
+    expect(data!.invite_code).toBe(inviteCode)
   })
 })

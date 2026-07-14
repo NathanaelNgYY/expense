@@ -7,6 +7,7 @@ import { formatSGD, formatSGDWhole } from '../format'
 import {
   entriesForMonth,
   lunchWeeklySpend,
+  weeklyBudgetTarget,
   weeklyTotal,
   weeksInMonth,
 } from '../compute'
@@ -167,8 +168,6 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
     Number(Boolean(dateFrom)) +
     Number(Boolean(dateTo))
   const monthTotal = monthEntries.reduce((sum, entry) => sum + entry.amount, 0)
-  const weeklyBudget = config.monthlyIncome / 4
-  const lunchWeeklyAvg = config.lunch / 4
   const dateMin = minDateForMonth(year, month)
   const dateMax = maxDateForMonth(year, month)
 
@@ -687,19 +686,34 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
         <h3 className="section-title">Weekly Spending</h3>
 
         {weeks.map(weekStart => {
-          const total = weeklyTotal(entries, weekStart)
-          const lunch = lunchWeeklySpend(entries, weekStart)
+          const total = weeklyTotal(monthEntries, weekStart)
+          const lunch = lunchWeeklySpend(monthEntries, weekStart)
+          const weeklyBudget = weeklyBudgetTarget(config.monthlyIncome, year, month, weekStart)
+          const lunchWeeklyAvg = weeklyBudgetTarget(config.lunch, year, month, weekStart)
           const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
           const label = `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`
+          const labelId = `week-${format(weekStart, 'yyyy-MM-dd')}-label`
+          const summaryId = `week-${format(weekStart, 'yyyy-MM-dd')}-summary`
           const totalPct = progressPercent(total, weeklyBudget)
           const lunchPct = progressPercent(lunch, lunchWeeklyAvg)
 
           return (
-            <div key={weekStart.toISOString()} className="card week-bar">
+            <div
+              key={weekStart.toISOString()}
+              className="card week-bar"
+              role="group"
+              aria-labelledby={labelId}
+              aria-describedby={summaryId}
+            >
               <div className="week-bar-header">
-                <span className="week-bar-label">{label}</span>
-                <span className="week-bar-total">{formatSGD(total)}</span>
+                <span id={labelId} className="week-bar-label">{label}</span>
+                <span className="week-bar-total">
+                  {formatSGD(total)} / ~{formatSGDWhole(weeklyBudget)}
+                </span>
               </div>
+              <span id={summaryId} className="sr-only">
+                Total {formatSGD(total)} of {formatSGD(weeklyBudget)} target. Lunch {formatSGD(lunch)} of {formatSGD(lunchWeeklyAvg)} target.
+              </span>
               <div className="progress-bar" style={{ marginTop: 6 }}>
                 <div
                   className="progress-fill"

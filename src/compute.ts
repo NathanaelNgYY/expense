@@ -1,5 +1,15 @@
 // src/compute.ts
-import { startOfWeek, endOfWeek, isWithinInterval, parseISO, addWeeks } from 'date-fns'
+import {
+  addWeeks,
+  differenceInCalendarDays,
+  endOfWeek,
+  getDaysInMonth,
+  isWithinInterval,
+  max,
+  min,
+  parseISO,
+  startOfWeek,
+} from 'date-fns'
 import type { Entry, BudgetConfig, Category, CustomCategory } from './types'
 import { CATEGORIES } from './types'
 
@@ -140,6 +150,21 @@ export function weeksInMonth(year: number, month: number): Date[] {
     current = addWeeks(current, 1)
   }
   return weeks
+}
+
+export function weeklyBudgetTarget(
+  monthlyTarget: number,
+  year: number,
+  month: number,
+  referenceDate: Date,
+): number {
+  const monthStart = new Date(year, month, 1)
+  const monthEnd = new Date(year, month + 1, 0)
+  const overlapStart = max([monthStart, startOfWeek(referenceDate, { weekStartsOn: 1 })])
+  const overlapEnd = min([monthEnd, endOfWeek(referenceDate, { weekStartsOn: 1 })])
+  const selectedMonthDays = Math.max(0, differenceInCalendarDays(overlapEnd, overlapStart) + 1)
+
+  return monthlyTarget * selectedMonthDays / getDaysInMonth(monthStart)
 }
 
 export function mostExpensiveCategory(

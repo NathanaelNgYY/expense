@@ -41,9 +41,9 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 
 ## Verification baseline
 
-- Current suite: 51 test files, 442 tests passed.
+- Current suite: 52 test files, 453 tests passed.
 - Lint and production build pass.
-- Whole-project coverage: 84.02% statements, 76.91% branches, 82.12% functions, 87.55% lines. The existing CI thresholds remain enforced and were not lowered.
+- Whole-project coverage: 84.51% statements, 77.08% branches, 83.13% functions, 88.12% lines. The existing CI thresholds remain enforced and were not lowered.
 - Live RLS: 48 isolation tests across 9 tables and 2 SECURITY DEFINER RPCs pass against a real Postgres locally and in the parallel `rls` CI job. These replaced `supabase/tests/ingest_visibility.test.ts`, which asserted that migration files *contained* policy substrings and would have stayed green if a policy were later dropped.
 - Browser E2E: 7 mobile Chromium checks pass across four critical journeys, Axe WCAG A/AA scans, keyboard focus, accessible names, and measured 44px targets. They run in a parallel `e2e` CI job without contacting deployed Supabase.
 - Initial payload check: 106.5 KiB gzip entry JS, 11.2 KiB gzip CSS, against CI budgets of 166 and 12. The patched Vite dependency graph emits the Supabase client as a separate chunk.

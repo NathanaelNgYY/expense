@@ -30,7 +30,7 @@ Checkpoint commit: `9d47529 test: require retirement of Netlify fallback`.
 | --- | --- | --- |
 | Retirement contract | `npm test -- src/m18NetlifyCleanup.test.ts src/EntriesContext.test.tsx` | 2 files, 19 tests passed |
 | Ingest contract | `npm run test:ingest` | 16 tests passed |
-| Full coverage | `npm run test:coverage` | 51 files, 442 tests passed; 84.02% statements, 76.91% branches, 82.12% functions, 87.55% lines |
+| Full coverage | `npm run test:coverage` | 52 files, 453 tests passed; 84.51% statements, 77.08% branches, 83.13% functions, 88.12% lines |
 | Static checks | `npm run lint`; `npm run typecheck:functions` | Passed |
 | Production artifact | `npm run build`; `npm run size` | Passed; 106.5 KiB gzip entry JS and 11.2 KiB gzip CSS |
 | Browser/accessibility | `npm run test:e2e` | 7 mobile Chromium checks passed |
@@ -45,3 +45,7 @@ The PowerShell parser also accepts `scripts/test-ingest.ps1`. Its URL validation
 - Removed tombstone and pending-create state that existed only to reconcile eventually consistent object-store listings. The optimistic UI and durable mutation queue are unchanged; a successful refresh now commits the authoritative Postgres result.
 - Added `[functions.ingest] verify_jwt = false` to `supabase/config.toml`. The Edge Function performs its own bearer-token hashing and `ingest_tokens` lookup, so platform JWT verification must not intercept Shortcut requests.
 - Updated current guidance and the live ingest script to describe and exercise only the active Vercel/Supabase architecture.
+
+## PR CI follow-up
+
+The first PR run passed all 442 tests but failed the Linux coverage gate at 83.71% statements and 81.39% functions. The thresholds were not lowered. Deterministic tests now exercise all five TabBar destinations, both storage append helpers, and corrupt-cache recovery paths; the expanded local suite passes with the coverage shown above.

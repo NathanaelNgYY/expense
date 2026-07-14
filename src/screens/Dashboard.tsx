@@ -390,7 +390,7 @@ export default function Dashboard({ onSettings, onAddEntry }: Props) {
             ? Math.min(100, (spent / budget) * 100)
             : 0
         const statusLabel = usesBuffer
-          ? ' spent from Buffer'
+          ? 'spent from Buffer'
           : committed
             ? spent >= budget
               ? 'Committed'

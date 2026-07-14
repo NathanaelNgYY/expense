@@ -169,7 +169,8 @@ describe('Dashboard category expense history', () => {
     root = rendered.root
 
     const others = categoryCard(rendered.container, 'Others')
-    expect(others).toHaveTextContent('S$100.00 spent from Buffer')
+    expect(others).toHaveTextContent('S$100.00')
+    expect(others).toHaveTextContent('spent from Buffer')
     expect(others).toHaveTextContent('Uses monthly Buffer')
     expect(others).not.toHaveTextContent('S$136.00 left')
     expect(others).not.toHaveTextContent('Budget S$236')
@@ -182,7 +183,8 @@ describe('Dashboard category expense history', () => {
     root = rendered.root
 
     const others = categoryCard(rendered.container, 'Others')
-    expect(others).toHaveTextContent('S$300.00 spent from Buffer')
+    expect(others).toHaveTextContent('S$300.00')
+    expect(others).toHaveTextContent('spent from Buffer')
     expect(others).not.toHaveTextContent('S$64.00 over')
     expect(rendered.container.querySelector('.buffer-card')).toHaveTextContent('S$64.00 over')
   })

@@ -47,7 +47,7 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 - Lint and production build pass.
 - Whole-project coverage: 84.45% statements, 77.09% branches, 82.94% functions, 88% lines. These are now enforced as CI thresholds and may only be raised.
 - Live RLS: 48 isolation tests across 9 tables and 2 SECURITY DEFINER RPCs pass against a real Postgres locally and in the parallel `rls` CI job. These replaced `supabase/tests/ingest_visibility.test.ts`, which asserted that migration files *contained* policy substrings and would have stayed green if a policy were later dropped.
-- Initial payload: 165.0 KiB gzip entry JS, 11.52 KiB gzip CSS, against CI budgets of 166 and 12.
+- Initial payload: 159.6 KiB gzip entry JS, 11.2 KiB gzip CSS, against CI budgets of 166 and 12.
 - `deno check` of the ingest Edge Function passes. It previously did not: `IngestInput.learnedCategory` was typed `Category` while `categoryFromHistory` returns `string | null` (custom categories), and nothing typechecked `supabase/functions/`, so CI never saw it.
 - gitleaks: 218 commits scanned, no leaks.
 - Targeted H7 coverage: 95.1% statements, 82.55% branches, 93.61% functions, 98.72% lines.

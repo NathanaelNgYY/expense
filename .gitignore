@@ -44,6 +44,8 @@ graphify-out/
 
 # Playwright CLI browser-verification evidence (screenshots, snapshots, logs)
 .playwright-cli/
+playwright-report/
+test-results/
 
 # Agent scratch directories (not project source)
 .agents/

@@ -62,6 +62,8 @@ export default defineConfig(({ mode }) => {
         '**/.claude/worktrees/**',
         // Live RLS tests need a running Postgres. They run via `npm run test:rls`.
         'supabase/tests/rls/**',
+        // Browser journeys are owned by Playwright and start a real Vite server.
+        'tests/e2e/**',
       ],
       coverage: {
         provider: 'v8',

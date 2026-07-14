@@ -8,7 +8,7 @@
 
 ## Current position
 
-The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, H6 presentation, and M17 isolation/browser/accessibility work is implemented and deployed. M18 runtime retirement is complete. H11 batch CSV imports and the first M14 bundle reduction are implemented locally.
+The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, H6 presentation, M17 isolation/browser/accessibility, H11 batch imports, and the first M14 bundle reduction are implemented and deployed. M18 runtime retirement is complete.
 
 ## Completed or materially addressed
 
@@ -27,13 +27,13 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 | H10 — unpushed work | Complete | Earlier work, live RLS tests, database-advisor improvements, and H6 are merged and deployed. | `git status --branch` |
 | M10 — no identity linking | Complete | Google identity linking is implemented as part of C1. | `src/sharedBudgets/sharedApi.ts` |
 | M18 — retire stale backend architecture | Complete | The retired function runtime, configuration, tests, and packages are deleted; Blobs-era reconciliation is removed; current guidance and the live ingest test are Supabase-only; `verify_jwt = false` is committed for the custom-token ingest contract. | `docs/testing/m18-netlify-retirement.tdd.md`, `src/m18NetlifyCleanup.test.ts`, `supabase/config.toml` |
-| H11 — row-at-a-time CSV imports | Complete locally | CSV rows are fully parsed and validated before writes, duplicate ids are removed against both existing entries and the same file, and new rows use one bulk upsert followed by one context refresh. | `docs/testing/h11-csv-batch-m14.tdd.md`, `src/csvEntries.test.ts`, `src/EntriesContext.test.tsx`, `src/screens/settings/DataSettings.test.tsx` |
-| M14 — initial bundle performance | Materially improved locally | Sentry now loads through a tree-shaken dynamic boundary, removing it from the first-render path while preserving early error capture. Initial JavaScript fell from 164.2 to 137.2 KiB gzip (−27.0 KiB / 16.4%); the CI budget tightened from 172 to 143 KiB. | `docs/testing/m14-bundle-reduction.tdd.md`, `src/monitoring.ts`, `src/monitoringSentry.ts`, `scripts/check-bundle-size.mjs` |
+| H11 — row-at-a-time CSV imports | Complete and deployed | CSV rows are fully parsed and validated before writes, duplicate ids are removed against both existing entries and the same file, and new rows use one bulk upsert followed by one context refresh. | `docs/testing/h11-csv-batch-m14.tdd.md`, `src/csvEntries.test.ts`, `src/EntriesContext.test.tsx`, `src/screens/settings/DataSettings.test.tsx` |
+| M14 — initial bundle performance | Materially improved and deployed | Sentry now loads through a tree-shaken dynamic boundary, removing it from the first-render path while preserving early error capture. Initial JavaScript fell from 164.2 to 137.2 KiB gzip (−27.0 KiB / 16.4%); the CI budget tightened from 172 to 143 KiB. | `docs/testing/m14-bundle-reduction.tdd.md`, `src/monitoring.ts`, `src/monitoringSentry.ts`, `scripts/check-bundle-size.mjs` |
 
 ## Next recommended work
 
-1. Review and deploy H11 CSV batching and the M14 Sentry split.
-2. Measure production Core Web Vitals on representative iPhones before another M14 pass. The remaining eager payload is dominated by required React rendering and Supabase, which stays eager because entries sync starts at launch.
+1. Measure production Core Web Vitals on representative iPhones before another M14 pass. The remaining eager payload is dominated by required React rendering and Supabase, which stays eager because entries sync starts at launch.
+2. Resume H4–H5 or H9 enforcement based on product priority.
 
 ## Remaining audit items
 

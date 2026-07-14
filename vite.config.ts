@@ -60,7 +60,21 @@ export default defineConfig(({ mode }) => {
         '**/.git/**',
         '**/.worktrees/**',
         '**/.claude/worktrees/**',
+        // Live RLS tests need a running Postgres. They run via `npm run test:rls`.
+        'supabase/tests/rls/**',
       ],
+      coverage: {
+        provider: 'v8',
+        reporter: ['text-summary'],
+        // Set to the 2026-07-13 baseline so coverage can only go up. Raise these
+        // when a change lifts them; never lower them to make a red run pass.
+        thresholds: {
+          statements: 84,
+          branches: 76,
+          functions: 82,
+          lines: 87,
+        },
+      },
     },
   }
 })

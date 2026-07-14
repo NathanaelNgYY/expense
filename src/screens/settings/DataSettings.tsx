@@ -2,7 +2,7 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { Braces, Clipboard, Download, FileText, Upload } from 'lucide-react'
 import SettingsHeader from './SettingsHeader'
-import { entriesToCsv, parseEntriesCsv } from '../../csvEntries'
+import { entriesToCsv, mergeImportedEntries, parseEntriesCsv } from '../../csvEntries'
 import { downloadJsonBackup, parseImportPayload, applyImport } from '../../dataTransfer'
 import { useEntries } from '../../EntriesContext'
 
@@ -40,7 +40,7 @@ export default function DataSettings({ onDone }: Props) {
   const [jsonBusy, setJsonBusy] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
   const jsonFileInputRef = useRef<HTMLInputElement>(null)
-  const { entries, addEntry, refresh } = useEntries()
+  const { entries, importEntries, refresh } = useEntries()
 
   function handleExport() {
     const blob = new Blob([entriesToCsv(entries)], { type: 'text/csv;charset=utf-8' })
@@ -60,19 +60,15 @@ export default function DataSettings({ onDone }: Props) {
 
     try {
       const importedEntries = parseEntriesCsv(await file.text())
-      const existingIds = new Set(entries.map(e => e.id))
-      const newEntries = importedEntries.filter(e => !existingIds.has(e.id))
-      const duplicateCount = importedEntries.length - newEntries.length
-
-      for (const e of newEntries) {
-        await addEntry({ id: e.id, amount: e.amount, category: e.category, note: e.note, date: e.date })
-      }
+      const { entries: mergedEntries, importedCount, duplicateCount } = mergeImportedEntries(entries, importedEntries)
+      const newEntries = mergedEntries.slice(entries.length)
+      await importEntries(newEntries)
 
       setImportError(false)
       setImportMessage(
-        newEntries.length === 0
+        importedCount === 0
           ? `No new entries imported. ${duplicateCount} duplicate${duplicateCount === 1 ? '' : 's'} skipped.`
-          : `Imported ${newEntries.length} entr${newEntries.length === 1 ? 'y' : 'ies'}.`,
+          : `Imported ${importedCount} entr${importedCount === 1 ? 'y' : 'ies'}.`,
       )
     } catch (error) {
       setImportError(true)

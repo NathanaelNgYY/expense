@@ -7,6 +7,7 @@ import {
   createEntryApi,
   updateEntryApi,
   deleteEntryApi,
+  bulkUpsertEntries,
   isAuthFailure,
   isPermanentFailure,
   type NewManualEntry,
@@ -34,6 +35,8 @@ export type SyncFailureReason = 'offline' | 'auth' | 'migration'
 interface EntriesContextValue {
   entries: Entry[]
   addEntry: (input: NewManualEntry) => Promise<void>
+  /** Persists a pre-validated, deduplicated import in one batch, then refreshes local state once. */
+  importEntries: (entries: Entry[]) => Promise<boolean>
   restoreEntry: (entry: Entry) => Promise<void>
   editEntry: (id: string, patch: Partial<Entry>) => Promise<void>
   removeEntry: (id: string) => Promise<void>
@@ -217,6 +220,12 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
     void refresh()
   }, [bumpPending, commit, refresh])
 
+  const importEntries = useCallback(async (importedEntries: Entry[]): Promise<boolean> => {
+    if (importedEntries.length === 0) return true
+    await bulkUpsertEntries(importedEntries)
+    return refresh()
+  }, [refresh])
+
   const editEntry = useCallback(async (id: string, patch: Partial<Entry>) => {
     commit(entriesRef.current.map(e => (e.id === id ? { ...e, ...patch } : e)))
     setQueue([...getQueue(), { op: 'update', id, patch }])
@@ -239,7 +248,7 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
   }, [bumpPending, commit, refresh])
 
   return (
-    <EntriesContext.Provider value={{ entries, addEntry, restoreEntry, editEntry, removeEntry, refresh, sync }}>
+    <EntriesContext.Provider value={{ entries, addEntry, importEntries, restoreEntry, editEntry, removeEntry, refresh, sync }}>
       {children}
     </EntriesContext.Provider>
   )

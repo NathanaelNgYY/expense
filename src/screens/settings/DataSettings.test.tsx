@@ -4,15 +4,33 @@ import { createRoot, type Root } from 'react-dom/client'
 import DataSettings from './DataSettings'
 import { EntriesProvider } from '../../EntriesContext'
 import * as dataTransfer from '../../dataTransfer'
+import { bulkUpsertEntries, ensureUserId, fetchEntries } from '../../api'
+import type { Entry } from '../../types'
 
 vi.mock('../../dataTransfer', async importOriginal => {
   const actual = await importOriginal<typeof import('../../dataTransfer')>()
   return { ...actual, applyImport: vi.fn().mockResolvedValue({ newEntries: 2, newPokerSessions: 1 }) }
 })
 
+vi.mock('../../api', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../api')>()
+  return {
+    ...actual,
+    ensureUserId: vi.fn(),
+    fetchEntries: vi.fn(),
+    bulkUpsertEntries: vi.fn(),
+    fetchEntryIds: vi.fn(),
+    bulkUpsertPokerSessions: vi.fn(),
+  }
+})
+
 function renderData(entries: unknown[] = []) {
   localStorage.setItem('budget_entries', JSON.stringify(entries))
-  localStorage.setItem('api_token', 'tok')
+  localStorage.setItem('budget_legacy_storage_owner', 'u1')
+  localStorage.setItem('supabase_migration_done:u1', '1')
+  vi.mocked(ensureUserId).mockResolvedValue('u1')
+  vi.mocked(fetchEntries).mockResolvedValue(entries as Entry[])
+  vi.mocked(bulkUpsertEntries).mockResolvedValue(undefined)
   // Default stub: returns the seeded entries for fetchEntries (GET /api/entries)
   // and echoes back a created entry for POST (createEntryApi)
   vi.stubGlobal(
@@ -141,6 +159,10 @@ describe('DataSettings', () => {
     // The import deduplicates entry-1 (already exists) and adds entry-2. Unlike the
     // old flat Settings screen, success stays on this screen and reports in place.
     expect(rendered.container).toHaveTextContent('Imported 1 entr')
+    expect(bulkUpsertEntries).toHaveBeenCalledTimes(1)
+    expect(bulkUpsertEntries).toHaveBeenCalledWith([
+      { id: 'entry-2', amount: 12.5, category: 'lunch', note: 'Chicken rice', date: '2026-05-11' },
+    ])
   })
 
   it('downloads a JSON export from the JSON — full backup row', () => {
@@ -198,7 +220,7 @@ describe('DataSettings', () => {
     // failure path instead of its success path. The data is still safely upserted by applyImport
     // (mocked above to succeed) — only the post-import refresh is made to fail.
     await waitForText(container, 'Export')
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    vi.mocked(fetchEntries).mockRejectedValue(new TypeError('Failed to fetch'))
 
     clickButton(container, b => b.textContent?.includes('Paste from clipboard') ?? false)
     const box = container.querySelector<HTMLTextAreaElement>('#paste-import-box')

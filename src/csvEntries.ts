@@ -153,8 +153,12 @@ export function parseEntriesCsv(text: string): Entry[] {
 }
 
 export function mergeImportedEntries(existingEntries: Entry[], importedEntries: Entry[]): MergeResult {
-  const existingIds = new Set(existingEntries.map(entry => entry.id))
-  const newEntries = importedEntries.filter(entry => !existingIds.has(entry.id))
+  const seenIds = new Set(existingEntries.map(entry => entry.id))
+  const newEntries = importedEntries.filter(entry => {
+    if (seenIds.has(entry.id)) return false
+    seenIds.add(entry.id)
+    return true
+  })
 
   return {
     entries: [...existingEntries, ...newEntries],

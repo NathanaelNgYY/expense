@@ -1,6 +1,6 @@
 # Project improvement status
 
-**Last updated:** 2026-07-13
+**Last updated:** 2026-07-14
 
 **Source:** the July 2026 production, finance, decision, audit, and productivity review.
 
@@ -8,7 +8,7 @@
 
 ## Current position
 
-The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, and month-analytics correctness work is implemented. H8 is live in production. H7, H1–H3, and the documentation cleanup are complete locally but are not pushed or deployed yet.
+The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, and live RLS isolation work is implemented and deployed. H6 is complete locally and awaiting review, push, and production verification.
 
 ## Completed or materially addressed
 
@@ -18,35 +18,36 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 | C2 — ingest account visibility | Complete | Settings shows the receiving account and last capture, and warns when the app and Shortcut accounts differ. | `docs/testing/ingest-visibility.tdd.md` |
 | C3 — duplicate ingestion | Mitigated with an iOS limitation | Stable external idempotency keys are honored; DBS mail uses a stable body fingerprint; Apple Pay uses a one-minute merchant/amount fallback because Wallet Shortcuts expose no documented stable transaction id. | `docs/testing/ingest-idempotency.tdd.md`, `README.md` |
 | C4 — migration dead end | Complete | Dedupe collisions recover deterministically, incomplete uploads remain recoverable, and migration failures no longer masquerade as offline errors. | `docs/testing/migration-recovery.tdd.md` |
-| H7 — bulk month reset | Complete locally | Confirmation shows the affected count; Undo restores all entries with original ids and dedupe keys; restore clears stale tombstones. | `docs/testing/h7-bulk-reset-undo.tdd.md` |
+| H7 — bulk month reset | Complete and deployed | Confirmation shows the affected count; Undo restores all entries with original ids and dedupe keys; restore clears stale tombstones. | `docs/testing/h7-bulk-reset-undo.tdd.md` |
 | H8 / M11 — blank crashes and no monitoring | Complete and deployed | Root error fallback offers Reload and backup; production errors report to the EU Sentry project with source maps. A controlled event was received as `BUDGET-TRACKER-1`. | `docs/testing/error-boundary.tdd.md`, `docs/testing/sentry-monitoring.tdd.md`, `docs/SENTRY.md` |
-| H1–H3 — incorrect month analytics | Complete locally | Highest day uses total daily spend, custom categories can rank as Most expensive, and Day pattern is scoped to the selected month. | `docs/testing/h1-h3-month-analytics.tdd.md` |
+| H1–H3 — incorrect month analytics | Complete and deployed | Highest day uses total daily spend, custom categories can rank as Most expensive, and Day pattern is scoped to the selected month. | `docs/testing/h1-h3-month-analytics.tdd.md` |
+| H6 — Others and Buffer present the same money twice | Complete locally | Others remains a transaction category but now identifies its spending as coming from the single monthly Buffer; only Buffer reports exhaustion or overage. | `docs/testing/h6-others-buffer.tdd.md` |
 | H9 — CI | Partially complete | GitHub Actions runs lint, Deno typecheck of the ingest Edge Function, tests with enforced coverage thresholds, build, an initial-bundle size budget, `npm audit` (non-blocking), and a gitleaks history scan — on pushes, pull requests, and a weekly schedule. Required checks still cannot be enforced on this private repository's current GitHub plan. | `.github/workflows/ci.yml`, `scripts/check-bundle-size.mjs` |
 | M17 — live RLS isolation tests | Partially complete | `entries`, `poker_sessions`, `ingest_tokens`, `ingest_status`, the five shared-budget tables, and the `join_budget` / `regenerate_invite_code` SECURITY DEFINER RPCs are tested against a real Postgres with every migration applied. The parallel `rls` CI job is green on `main`. Browser E2E and accessibility checks remain. | `supabase/tests/rls/`, `.github/workflows/ci.yml` |
-| H10 — unpushed work | Reopened | Earlier work was pushed, but H7 and this documentation cleanup are currently local commits. Push after review. | `git status --branch` |
+| H10 — unpushed work | Complete | Earlier work, live RLS tests, and database-advisor improvements are merged and deployed; only the active H6 branch awaits review. | `git status --branch` |
 | M10 — no identity linking | Complete | Google identity linking is implemented as part of C1. | `src/sharedBudgets/sharedApi.ts` |
 | M18 — stale architecture docs | Partially complete | README now describes Vercel, Supabase, the production URL, and the current Shortcut contract. Frozen Netlify function code remains as a fallback and should be removed only in a separate code-cleanup change. | `README.md`, `AGENTS.md` |
 
 ## Next recommended work
 
-1. Push and deploy H7, H1–H3, and the documentation cleanup; verify Month Review and Undo on the production PWA.
-2. Resolve H6: stop presenting Others and Buffer as the same money twice.
-3. Add M17 browser E2E and accessibility checks. (Live RLS isolation tests are done.)
+1. Review, push, and deploy H6; verify the Others and Buffer presentation on the production PWA.
+2. Add M17 browser E2E and accessibility checks. (Live RLS isolation tests are done.)
+3. Remove the frozen Netlify fallback and dependencies in a dedicated M18 cleanup.
 4. Address H11/M14 performance: batch CSV imports and reduce the initial bundle.
 
 ## Remaining audit items
 
-- H4–H6, H9 enforcement, H11.
+- H4–H5, H9 enforcement, H11.
 - M1–M9 and M12–M17, except where a later implementation or product decision explicitly retires an item.
 - C3's perfect Apple Pay dedupe guarantee remains impossible without a stable transaction identifier from iOS; the current fallback is deliberately documented rather than overstated.
 
 ## Verification baseline
 
-- Current suite: 56 test files, 477 tests passed.
+- Current suite: 56 test files, 479 tests passed.
 - Lint and production build pass.
-- Whole-project coverage: 84.44% statements, 76.66% branches, 82.94% functions, 87.99% lines. These are now enforced as CI thresholds and may only be raised.
+- Whole-project coverage: 84.45% statements, 77.09% branches, 82.94% functions, 88% lines. These are now enforced as CI thresholds and may only be raised.
 - Live RLS: 48 isolation tests across 9 tables and 2 SECURITY DEFINER RPCs pass against a real Postgres locally and in the parallel `rls` CI job. These replaced `supabase/tests/ingest_visibility.test.ts`, which asserted that migration files *contained* policy substrings and would have stayed green if a policy were later dropped.
-- Initial payload: 159.6 KiB gzip entry JS, 11.2 KiB gzip CSS, against CI budgets of 166 and 12.
+- Initial payload: 165.0 KiB gzip entry JS, 11.52 KiB gzip CSS, against CI budgets of 166 and 12.
 - `deno check` of the ingest Edge Function passes. It previously did not: `IngestInput.learnedCategory` was typed `Category` while `categoryFromHistory` returns `string | null` (custom categories), and nothing typechecked `supabase/functions/`, so CI never saw it.
 - gitleaks: 218 commits scanned, no leaks.
 - Targeted H7 coverage: 95.1% statements, 82.55% branches, 93.61% functions, 98.72% lines.

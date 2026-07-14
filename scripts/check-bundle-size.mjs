@@ -1,44 +1,46 @@
 // Fails the build when the *initial* payload grows past its budget.
 //
-// Only the entry chunk and the stylesheet are measured: those are what every
-// visitor downloads before the app renders. Route chunks (Poker, Settings,
-// History, ...) are deliberately excluded, so moving code behind a dynamic
-// import is rewarded here rather than penalised.
+// Measure every JavaScript and stylesheet asset referenced by the built HTML.
+// This includes modulepreload dependencies, which the browser eagerly downloads
+// on a first visit, while still excluding lazy route chunks.
 //
-// Budgets are gzipped KiB, set ~4% above the 2026-07-13 measurement (159.6 / 11.2).
+// Budgets are gzipped KiB, set ~4% above the 2026-07-14 measurement (164.2 / 11.2).
 // Lower them as H11/M14 bundle work lands; raise them only with a deliberate reason.
 // Note these read lower than Vite's build log, which prints kB (1000 bytes), not KiB.
 import { gzipSync } from 'node:zlib'
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { initialAssetNames } from './bundle-size.mjs'
 
+const DIST_DIR = join(process.cwd(), 'dist')
 const ASSETS_DIR = join(process.cwd(), 'dist', 'assets')
 const KB = 1024
 
 const BUDGETS = [
-  { label: 'entry JS', pattern: /^index-.*\.js$/, budgetKb: 166 },
-  { label: 'CSS', pattern: /^index-.*\.css$/, budgetKb: 12 },
+  { label: 'initial JS', kind: 'js', budgetKb: 172 },
+  { label: 'CSS', kind: 'css', budgetKb: 12 },
 ]
 
-const files = readdirSync(ASSETS_DIR)
-const results = BUDGETS.map(({ label, pattern, budgetKb }) => {
-  const matches = files.filter(file => pattern.test(file))
-  if (matches.length === 0) {
+const html = readFileSync(join(DIST_DIR, 'index.html'), 'utf8')
+const results = BUDGETS.map(({ label, kind, budgetKb }) => {
+  const assets = initialAssetNames(html, kind)
+  if (assets.length === 0) {
     throw new Error(
-      `No ${label} asset matched ${pattern} in dist/assets. ` +
-        `Did the build output naming change? Update BUDGETS in this script.`,
+      `No initial ${kind.toUpperCase()} assets were found in dist/index.html. ` +
+        'Did the build output format change?',
     )
   }
 
   const gzippedKb =
-    matches.reduce((total, file) => total + gzipSync(readFileSync(join(ASSETS_DIR, file))).length, 0) / KB
+    assets.reduce((total, file) => total + gzipSync(readFileSync(join(ASSETS_DIR, file))).length, 0) / KB
 
-  return { label, gzippedKb, budgetKb, overBudget: gzippedKb > budgetKb }
+  return { label, assets, gzippedKb, budgetKb, overBudget: gzippedKb > budgetKb }
 })
 
-for (const { label, gzippedKb, budgetKb, overBudget } of results) {
+for (const { label, assets, gzippedKb, budgetKb, overBudget } of results) {
   const status = overBudget ? 'OVER BUDGET' : 'ok'
   console.log(`${label.padEnd(9)} ${gzippedKb.toFixed(1).padStart(6)} KB gzip  (budget ${budgetKb} KB)  ${status}`)
+  console.log(`           ${assets.join(', ')}`)
 }
 
 if (results.some(result => result.overBudget)) {

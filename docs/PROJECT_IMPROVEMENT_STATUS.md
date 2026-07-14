@@ -8,7 +8,7 @@
 
 ## Current position
 
-The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, H6 presentation, and M17 isolation/browser/accessibility work is implemented and deployed. M18 runtime retirement is complete locally and awaiting review and deployment.
+The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, H6 presentation, and M17 isolation/browser/accessibility work is implemented and deployed. M18 runtime retirement is complete. H11 batch CSV imports are implemented locally, and M14 has been remeasured against the browser's full eager payload.
 
 ## Completed or materially addressed
 
@@ -26,27 +26,29 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 | M17 — live isolation, browser E2E, and accessibility | Complete and deployed | Live Postgres proves isolation across 9 tables and 2 SECURITY DEFINER RPCs. Mobile Chromium covers four critical journeys, page headings, keyboard focus, named controls, 44px targets, and Axe WCAG A/AA scans in parallel CI jobs. | `supabase/tests/rls/`, `tests/e2e/`, `docs/testing/m17-browser-e2e.tdd.md`, `.github/workflows/ci.yml` |
 | H10 — unpushed work | Complete | Earlier work, live RLS tests, database-advisor improvements, and H6 are merged and deployed. | `git status --branch` |
 | M10 — no identity linking | Complete | Google identity linking is implemented as part of C1. | `src/sharedBudgets/sharedApi.ts` |
-| M18 — retire stale backend architecture | Complete locally | The retired function runtime, configuration, tests, and packages are deleted; Blobs-era reconciliation is removed; current guidance and the live ingest test are Supabase-only; `verify_jwt = false` is committed for the custom-token ingest contract. | `docs/testing/m18-netlify-retirement.tdd.md`, `src/m18NetlifyCleanup.test.ts`, `supabase/config.toml` |
+| M18 — retire stale backend architecture | Complete | The retired function runtime, configuration, tests, and packages are deleted; Blobs-era reconciliation is removed; current guidance and the live ingest test are Supabase-only; `verify_jwt = false` is committed for the custom-token ingest contract. | `docs/testing/m18-netlify-retirement.tdd.md`, `src/m18NetlifyCleanup.test.ts`, `supabase/config.toml` |
+| H11 — row-at-a-time CSV imports | Complete locally | CSV rows are fully parsed and validated before writes, duplicate ids are removed against both existing entries and the same file, and new rows use one bulk upsert followed by one context refresh. | `docs/testing/h11-csv-batch-m14.tdd.md`, `src/csvEntries.test.ts`, `src/EntriesContext.test.tsx`, `src/screens/settings/DataSettings.test.tsx` |
+| M14 — initial bundle performance | Reassessed; reduction remains | The size gate now counts the entry module and eager `modulepreload` dependencies from built HTML. The honest initial payload is 164.2 KiB gzip JS plus 11.2 KiB CSS; lazy History, Settings, Poker, and Shared routes remain excluded. | `scripts/check-bundle-size.mjs`, `scripts/bundle-size.test.ts`, `docs/testing/h11-csv-batch-m14.tdd.md` |
 
 ## Next recommended work
 
-1. Review and deploy the M18 backend-retirement cleanup.
-2. Address H11/M14 performance: batch CSV imports and continue reducing the initial bundle.
+1. Review and deploy the H11 CSV batching and corrected M14 size gate.
+2. Continue M14 reduction using the 164.2 KiB eager-JS baseline; Supabase is intentionally eager because entries sync starts at app launch, so prioritize optional entry-path dependencies before deferring data sync.
 
 ## Remaining audit items
 
-- H4–H5, H9 enforcement, H11.
+- H4–H5 and H9 enforcement.
 - M1–M9 and M12–M16, except where a later implementation or product decision explicitly retires an item.
 - C3's perfect Apple Pay dedupe guarantee remains impossible without a stable transaction identifier from iOS; the current fallback is deliberately documented rather than overstated.
 
 ## Verification baseline
 
-- Current suite: 52 test files, 453 tests passed.
+- Current suite: 53 test files, 457 tests passed.
 - Lint and production build pass.
-- Whole-project coverage: 84.51% statements, 77.08% branches, 83.13% functions, 88.12% lines. The existing CI thresholds remain enforced and were not lowered.
+- Whole-project coverage: 84.61% statements, 77.03% branches, 83.21% functions, 88.23% lines. The existing CI thresholds remain enforced and were not lowered.
 - Live RLS: 48 isolation tests across 9 tables and 2 SECURITY DEFINER RPCs pass against a real Postgres locally and in the parallel `rls` CI job. These replaced `supabase/tests/ingest_visibility.test.ts`, which asserted that migration files *contained* policy substrings and would have stayed green if a policy were later dropped.
 - Browser E2E: 7 mobile Chromium checks pass across four critical journeys, Axe WCAG A/AA scans, keyboard focus, accessible names, and measured 44px targets. They run in a parallel `e2e` CI job without contacting deployed Supabase.
-- Initial payload check: 106.5 KiB gzip entry JS, 11.2 KiB gzip CSS, against CI budgets of 166 and 12. The patched Vite dependency graph emits the Supabase client as a separate chunk.
+- Initial payload check: 164.2 KiB gzip JavaScript and 11.2 KiB gzip CSS, against CI budgets of 172 and 12. JavaScript includes the entry file plus the eagerly preloaded date-format and Supabase chunks; lazy route chunks are excluded.
 - `deno check` of the ingest Edge Function passes. It previously did not: `IngestInput.learnedCategory` was typed `Category` while `categoryFromHistory` returns `string | null` (custom categories), and nothing typechecked `supabase/functions/`, so CI never saw it.
 - gitleaks: 218 commits scanned, no leaks.
 - Targeted H7 coverage: 95.1% statements, 82.55% branches, 93.61% functions, 98.72% lines.

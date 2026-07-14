@@ -1,7 +1,9 @@
 # M17 browser E2E and accessibility — TDD evidence
 
-**Date:** 2026-07-14  
-**Runner:** Playwright 1.61.1, mobile Chromium using the iPhone 13 device profile  
+**Date:** 2026-07-14
+
+**Runner:** Playwright 1.61.1, mobile Chromium using the iPhone 13 device profile
+
 **Accessibility engine:** axe-core 4.12.1, WCAG A/AA tags
 
 ## Scope

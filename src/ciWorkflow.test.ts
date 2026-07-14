@@ -29,6 +29,6 @@ describe('CI enforcement', () => {
   })
 
   it('runs for pull requests targeting main', () => {
-    expect(workflow).toMatch(/pull_request:\n    branches: \[main\]/)
+    expect(workflow).toMatch(/pull_request:\n[ ]{4}branches: \[main\]/)
   })
 })

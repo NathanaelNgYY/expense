@@ -7,6 +7,7 @@ import {
   bufferRemaining,
   weeklyTotal,
   lunchWeeklySpend,
+  weeklyBudgetTarget,
   weeksInMonth,
   mostExpensiveCategory,
   averageLunchPerEntry,
@@ -326,6 +327,22 @@ describe('highestSpendingDay', () => {
     ]
 
     expect(highestSpendingDay(entries, 2026, 4)).toEqual({ date: '2026-05-05', amount: 1010 })
+  })
+})
+
+describe('weeklyBudgetTarget', () => {
+  it('prorates a boundary week by the selected-month days it contains', () => {
+    const firstMayWeek = weeksInMonth(2026, 4)[0]
+
+    expect(weeklyBudgetTarget(1200, 2026, 4, firstMayWeek)).toBeCloseTo(1200 * 3 / 31)
+  })
+
+  it('allocates the complete monthly target across the displayed week rows', () => {
+    const targets = weeksInMonth(2026, 4).map(weekStart =>
+      weeklyBudgetTarget(1200, 2026, 4, weekStart),
+    )
+
+    expect(targets.reduce((sum, target) => sum + target, 0)).toBeCloseTo(1200)
   })
 })
 

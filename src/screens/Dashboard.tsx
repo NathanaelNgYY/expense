@@ -226,7 +226,7 @@ export default function Dashboard({ onSettings, onAddEntry }: Props) {
     <div className="screen dashboard theme-screen theme-screen--home">
       <header className="dashboard-header">
         <div>
-          <div className="month-label">{monthLabel}</div>
+          <h1 className="month-label"><span className="sr-only">Dashboard: </span>{monthLabel}</h1>
           <div className="income-label">{formatSGDWhole(monthlyIncome)} / month</div>
         </div>
         <button className="settings-icon-btn" type="button" onClick={onSettings} aria-label="Settings">

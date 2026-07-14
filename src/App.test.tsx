@@ -32,8 +32,7 @@ describe('App', () => {
     await act(async () => {
       render(<App />)
     })
-    // AddEntry screen renders the title ADD ENTRY
-    expect(screen.getByText('ADD ENTRY')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Add entry' })).toBeInTheDocument()
   })
 
   it('restores the selected theme on app startup', async () => {

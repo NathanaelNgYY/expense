@@ -327,7 +327,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
         <button className="month-nav-btn" type="button" onClick={prevMonth} aria-label="Previous month">
           <ChevronLeft aria-hidden="true" size={22} strokeWidth={2.4} />
         </button>
-        <span className="month-nav-label">{monthLabel}</span>
+        <h1 className="month-nav-label"><span className="sr-only">History: </span>{monthLabel}</h1>
         <button
           className="month-nav-btn"
           type="button"

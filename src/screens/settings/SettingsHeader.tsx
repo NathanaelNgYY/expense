@@ -13,7 +13,7 @@ export default function SettingsHeader({ title, backLabel, onBack }: Props) {
         <ChevronLeft aria-hidden="true" size={21} strokeWidth={2.4} />
         {backLabel}
       </button>
-      <h2 className="settings-title">{title}</h2>
+      <h1 className="settings-title">{title}</h1>
       <div className="settings-header-spacer" />
     </div>
   )

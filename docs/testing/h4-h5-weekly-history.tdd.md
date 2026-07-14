@@ -40,4 +40,8 @@ This mapping was treated as an explicit implementation assumption and kept narro
 - `npm audit --audit-level=high`: 0 vulnerabilities.
 - Secret-pattern scan across `src`, `scripts`, and `supabase`: no matches.
 
-The change has not been pushed or deployed in this TDD run.
+## Deployment
+
+- Release `7e7634191cab617e092537c313644afce63b8383` built successfully on Vercel and was aliased to `https://budget-tracker-sooty-ten.vercel.app`.
+- The live HTML and entry asset returned HTTP 200; the corresponding public source-map URL returned 404.
+- A physical-iPhone VoiceOver walkthrough remains the final manual check because desktop automation cannot reproduce Safari's spoken output exactly.

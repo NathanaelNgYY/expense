@@ -113,6 +113,11 @@ function RefreshResultProbe() {
   )
 }
 
+function CsvImportProbe({ entries }: { entries: Entry[] }) {
+  const { importEntries } = useEntries()
+  return <button onClick={() => void importEntries(entries)}>import csv</button>
+}
+
 beforeEach(() => {
   localStorage.clear()
   localStorage.setItem('budget_legacy_storage_owner', 'u1')
@@ -316,6 +321,27 @@ describe('EntriesContext', () => {
       screen.getByText('refresh').click()
     })
     await waitFor(() => expect(lastRefreshResult).toBe(false))
+  })
+
+  it('bulk-upserts a validated CSV batch once and refreshes local entries once', async () => {
+    const imported = [
+      { id: 'csv-1', amount: 5, category: 'lunch', note: 'Rice', date: '2026-07-14' },
+      { id: 'csv-2', amount: 3, category: 'transport', note: 'Bus', date: '2026-07-14' },
+    ] satisfies Entry[]
+    localStorage.setItem('supabase_migration_done:u1', '1')
+    fetchEntriesMock.mockResolvedValueOnce([]).mockResolvedValue(imported)
+
+    render(<EntriesProvider><CsvImportProbe entries={imported} /></EntriesProvider>)
+    await waitFor(() => expect(fetchEntriesMock).toHaveBeenCalledTimes(1))
+
+    await act(async () => {
+      screen.getByText('import csv').click()
+    })
+
+    await waitFor(() => expect(fetchEntriesMock).toHaveBeenCalledTimes(2))
+    expect(bulkUpsertEntriesMock).toHaveBeenCalledTimes(1)
+    expect(bulkUpsertEntriesMock).toHaveBeenCalledWith(imported)
+    expect(fetchEntriesMock).toHaveBeenCalledTimes(2)
   })
 })
 

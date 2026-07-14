@@ -60,6 +60,22 @@ describe('CSV entry import and export', () => {
     })
   })
 
+  it('deduplicates repeated ids within the imported CSV before any write', () => {
+    const repeated: Entry = {
+      id: 'entry-2',
+      amount: 8.75,
+      category: 'others',
+      note: 'Notebook',
+      date: '2026-05-11',
+    }
+
+    expect(mergeImportedEntries([], [repeated, { ...repeated, note: 'Duplicate row' }])).toEqual({
+      entries: [repeated],
+      importedCount: 1,
+      duplicateCount: 1,
+    })
+  })
+
   it('rejects rows with invalid entry data', () => {
     const csv = [
       '"id","amount","category","note","date"',

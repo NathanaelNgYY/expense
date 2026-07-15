@@ -21,7 +21,7 @@ describe('App', () => {
       render(<App />)
     })
 
-    expect(screen.getByRole('heading', { name: 'Make your monthly money plan yours.' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Make your monthly money plan yours.' })).toBeInTheDocument()
     expect(screen.getByText('Welcome — let’s start with your plan')).toBeInTheDocument()
     expect(screen.getByText('Budget')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Use defaults' })).toBeInTheDocument()
@@ -33,7 +33,7 @@ describe('App', () => {
       render(<App />)
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Set up my budget' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Set up my budget' }))
     expect(screen.getByRole('heading', { name: 'Your pockets' })).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Total monthly plan'), { target: { value: '1400' } })
@@ -56,12 +56,25 @@ describe('App', () => {
     })
   })
 
+  it('prevents an overallocated plan from being saved', async () => {
+    await act(async () => {
+      render(<App />)
+    })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Set up my budget' }))
+    fireEvent.change(screen.getByLabelText('Total monthly plan'), { target: { value: '100' } })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Your targets are over the monthly plan')
+    expect(screen.getByRole('button', { name: 'Close my wallet' })).toBeDisabled()
+    expect(localStorage.getItem('budget_config')).toBeNull()
+  })
+
   it('uses defaults and completes onboarding into Add entry', async () => {
     await act(async () => {
       render(<App />)
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Use defaults' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Use defaults' }))
     expect(screen.getByText('Ready for this month')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Add my first expense' }))

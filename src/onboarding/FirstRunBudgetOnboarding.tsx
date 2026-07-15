@@ -5,6 +5,7 @@ import { formatSGDWhole } from '../format'
 import { saveBudgetConfig } from '../storage'
 import { DEFAULT_BUDGET, type BudgetConfig } from '../types'
 import { completeBudgetOnboarding } from './onboardingState'
+import './FirstRunBudgetOnboarding.css'
 
 type Step = 'welcome' | 'budget' | 'ready'
 type Destination = 'home' | 'add'

@@ -13,7 +13,6 @@ import AppErrorBoundary from './components/AppErrorBoundary'
 import SettingsHeader from './screens/settings/SettingsHeader'
 import { downloadJsonBackup } from './dataTransfer'
 import { reportReactError } from './monitoring'
-import FirstRunBudgetOnboarding from './onboarding/FirstRunBudgetOnboarding'
 import { shouldShowBudgetOnboarding } from './onboarding/onboardingState'
 
 const History = lazy(() => import('./screens/History'))
@@ -21,6 +20,7 @@ const Insights = lazy(() => import('./screens/Insights'))
 const Settings = lazy(() => import('./screens/Settings'))
 const Poker = lazy(() => import('./screens/Poker'))
 const SharedScreen = lazy(() => import('./sharedBudgets/SharedScreen'))
+const FirstRunBudgetOnboarding = lazy(() => import('./onboarding/FirstRunBudgetOnboarding'))
 
 function initialTab(): Tab {
   const params = new URLSearchParams(window.location.search)
@@ -73,7 +73,9 @@ function AppShell() {
     return (
       <div className="app app--onboarding">
         <main>
-          <FirstRunBudgetOnboarding onFinish={handleOnboardingFinish} />
+          <Suspense fallback={null}>
+            <FirstRunBudgetOnboarding onFinish={handleOnboardingFinish} />
+          </Suspense>
         </main>
       </div>
     )

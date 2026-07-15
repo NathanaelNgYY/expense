@@ -497,7 +497,6 @@ body,
 
 [data-theme='deep-sea'] .pass {
   border-color: var(--separator);
-  background: linear-gradient(150deg, #0f3435, var(--bg-elev));
 }
 
 [data-theme='deep-sea'] .category-row-card,
@@ -538,7 +537,6 @@ body,
 [data-theme='copper-current'] .pass {
   border-color: var(--separator);
   border-radius: 4px;
-  background: linear-gradient(150deg, #2b1a0f, var(--bg-elev));
   box-shadow: none;
 }
 
@@ -705,7 +703,6 @@ body,
 [data-theme='berry-circuit'] .pass {
   border-color: var(--separator);
   border-radius: 16px;
-  background: linear-gradient(150deg, #421846, var(--bg-elev));
   box-shadow: none;
 }
 

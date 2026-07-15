@@ -2,6 +2,10 @@ import type { Entry, PokerSession } from './types'
 import { getSupabase, isSupabaseConfigured } from './lib/supabaseClient'
 import { buildDedupeKey } from './shared/dedupe'
 import type { IngestSourceKind, IngestStatus } from './ingestVisibility'
+import {
+  isAutomaticCategoryRuleList,
+  type AutomaticCategoryRule,
+} from './shared/automaticCategoryRules'
 
 export class ApiError extends Error {
   status: number
@@ -91,6 +95,41 @@ export async function fetchIngestStatus(): Promise<IngestStatus | null> {
     lastCapturedAt: row.last_captured_at,
     lastSource: row.last_source,
   }
+}
+
+// ---------- automatic category preferences ----------
+
+interface AutomaticCategoryPreferencesRow {
+  food_time_rules: unknown
+}
+
+export async function fetchAutomaticCategoryRules(): Promise<AutomaticCategoryRule[]> {
+  await ensureUserId()
+  const { data, error, status } = await getSupabase()
+    .from('automatic_category_preferences')
+    .select('food_time_rules')
+    .maybeSingle()
+  if (error) throwFrom(error, status)
+  if (!data) return []
+  const rules = (data as AutomaticCategoryPreferencesRow).food_time_rules
+  if (!isAutomaticCategoryRuleList(rules)) {
+    throw new ApiError(500, 'Automatic category preferences are invalid')
+  }
+  return rules
+}
+
+export async function saveAutomaticCategoryRules(rules: AutomaticCategoryRule[]): Promise<void> {
+  if (!isAutomaticCategoryRuleList(rules)) {
+    throw new TypeError('Automatic category rules are invalid')
+  }
+  const userId = await ensureUserId()
+  const { error, status } = await getSupabase()
+    .from('automatic_category_preferences')
+    .upsert(
+      { user_id: userId, food_time_rules: rules },
+      { onConflict: 'user_id' },
+    )
+  if (error) throwFrom(error, status)
 }
 
 // ---------- row mapping ----------

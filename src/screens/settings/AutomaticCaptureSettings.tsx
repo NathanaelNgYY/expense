@@ -3,6 +3,9 @@ import { Copy, ExternalLink, Mail, ShieldCheck, WalletCards } from 'lucide-react
 import { getConfiguredIngestEndpoint } from '../../automaticCapture'
 import IngestStatusCard from './IngestStatusCard'
 import SettingsHeader from './SettingsHeader'
+import MealTimeRulesSettings from './MealTimeRulesSettings'
+import { buildCategoryOptions } from '../../categoryDisplay'
+import { getCategoryOverrides, getCustomCategories } from '../../storage'
 
 interface Props {
   onDone: () => void
@@ -18,6 +21,7 @@ export default function AutomaticCaptureSettings({
   ingestEndpoint = getConfiguredIngestEndpoint() ?? '',
 }: Props) {
   const [copyState, setCopyState] = useState<CopyState>('idle')
+  const categoryOptions = buildCategoryOptions(getCategoryOverrides(), getCustomCategories())
 
   async function copyEndpoint() {
     if (!ingestEndpoint) return
@@ -137,6 +141,8 @@ export default function AutomaticCaptureSettings({
           </div>
         </li>
       </ol>
+
+      <MealTimeRulesSettings categoryOptions={categoryOptions} />
 
       <IngestStatusCard refreshable />
     </div>

@@ -30,6 +30,12 @@ class CaptureAwareStore extends InMemoryStore {
   }
 }
 
+class BrokenPreferencesStore extends InMemoryStore {
+  async listAutomaticCategoryRules(): Promise<AutomaticCategoryRule[]> {
+    throw new Error('preferences unavailable')
+  }
+}
+
 const makeId = () => 'fixed-id'
 
 describe('edge ingest handler', () => {
@@ -290,5 +296,15 @@ describe('edge ingest handler', () => {
     )
     expect(result.status).toBe('saved')
     if (result.status === 'saved') expect(result.entry.category).toBe('cat_dinner')
+  })
+
+  it('still captures when automatic category preferences cannot be loaded', async () => {
+    const result = await handleIngest(
+      { sourceKind: 'apple_pay', amount: 8, merchant: 'Koufu', occurredAt: '2026-07-11T11:30:00Z' },
+      new BrokenPreferencesStore(),
+      makeId,
+    )
+    expect(result.status).toBe('saved')
+    if (result.status === 'saved') expect(result.entry.category).toBe('lunch')
   })
 })

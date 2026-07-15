@@ -1,6 +1,6 @@
 # Five-tab navigation restructure — TDD record
 
-**Date:** 2026-07-15  
+**Date:** 2026-07-15
 **Scope:** Promote History, Insights, and Settings to primary navigation while retaining Poker and Shared budgets as secondary tools.
 
 ## Acceptance criteria

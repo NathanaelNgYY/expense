@@ -8,7 +8,7 @@ const CATEGORY_RULES: Array<{ category: Category; keywords: string[] }> = [
   },
   {
     category: 'lunch',
-    keywords: ['coffee', 'cafe', 'kopi', 'toast', 'restaurant', 'food', 'mcdonald', 'kfc', 'subway', 'hawker', 'kopitiam', 'foodcourt', 'food court', 'canteen', 'meal', 'lunch'],
+    keywords: ['coffee', 'cafe', 'kopi', 'toast', 'restaurant', 'food', 'mcdonald', 'kfc', 'subway', 'hawker', 'kopitiam', 'koufu', 'foodcourt', 'food court', 'canteen', 'meal', 'lunch'],
   },
   {
     category: 'others',

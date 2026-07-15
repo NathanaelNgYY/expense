@@ -13,6 +13,8 @@ import AppErrorBoundary from './components/AppErrorBoundary'
 import SettingsHeader from './screens/settings/SettingsHeader'
 import { downloadJsonBackup } from './dataTransfer'
 import { reportReactError } from './monitoring'
+import FirstRunBudgetOnboarding from './onboarding/FirstRunBudgetOnboarding'
+import { shouldShowBudgetOnboarding } from './onboarding/onboardingState'
 
 const History = lazy(() => import('./screens/History'))
 const Insights = lazy(() => import('./screens/Insights'))
@@ -27,6 +29,9 @@ function initialTab(): Tab {
 
 function AppShell() {
   const [tab, setTab] = useState<Tab>(initialTab)
+  const [showOnboarding, setShowOnboarding] = useState(() =>
+    shouldShowBudgetOnboarding(initialTab() === 'add'),
+  )
   const [addEntryDate, setAddEntryDate] = useState<string | undefined>()
   const [settingsTool, setSettingsTool] = useState<'poker' | 'shared' | null>(null)
   // Lives in the shell, not in AddEntry: the confirmation has to outlive the screen that
@@ -57,6 +62,21 @@ function AppShell() {
   function handleUndo() {
     if (toast) void removeEntry(toast.id)
     setToast(null)
+  }
+
+  function handleOnboardingFinish(destination: 'home' | 'add') {
+    setShowOnboarding(false)
+    setTab(destination)
+  }
+
+  if (showOnboarding) {
+    return (
+      <div className="app app--onboarding">
+        <main>
+          <FirstRunBudgetOnboarding onFinish={handleOnboardingFinish} />
+        </main>
+      </div>
+    )
   }
 
   return (

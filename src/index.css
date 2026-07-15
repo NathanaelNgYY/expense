@@ -404,7 +404,9 @@ input:focus-visible {
 
 .add-entry-date__trigger {
   position: relative;
-  min-height: 44px;
+  /* The native input is inset by the pill's 1px border, so a 46px shell preserves
+     a measured 44px interactive surface for touch and accessibility tooling. */
+  min-height: 46px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

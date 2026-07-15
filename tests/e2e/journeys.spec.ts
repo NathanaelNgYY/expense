@@ -38,11 +38,15 @@ test('Others spending is presented as monthly Buffer usage', async ({ page }) =>
 })
 
 test('Add entry accepts a past expense date without visiting History', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 })
   await prepareApp(page, [])
   await page.goto('/')
   await page.getByRole('button', { name: 'Add entry' }).click()
 
   const expenseDate = page.getByLabel('Expense date')
+  const dateBox = await expenseDate.boundingBox()
+  expect(dateBox?.height).toBeGreaterThanOrEqual(44)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await expenseDate.fill('2026-05-17')
   await page.getByRole('button', { name: '5', exact: true }).click()
   await page.getByRole('button', { name: 'Add for May 17' }).click()

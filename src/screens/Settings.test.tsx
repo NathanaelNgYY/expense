@@ -51,7 +51,12 @@ interface Seed {
   dedupeKey?: string
 }
 
-function renderSettings(entries: Seed[] = [], onBack: () => void = () => undefined) {
+function renderSettings(
+  entries: Seed[] = [],
+  onBack?: () => void,
+  onOpenPoker: () => void = () => undefined,
+  onOpenShared: () => void = () => undefined,
+) {
   localStorage.setItem('budget_entries', JSON.stringify(entries))
   localStorage.setItem('api_token', 'tok')
   vi.stubGlobal(
@@ -66,7 +71,7 @@ function renderSettings(entries: Seed[] = [], onBack: () => void = () => undefin
     root.render(
       <ThemeProvider>
         <EntriesProvider>
-          <Settings onBack={onBack} />
+          <Settings onBack={onBack} onOpenPoker={onOpenPoker} onOpenShared={onOpenShared} />
         </EntriesProvider>
       </ThemeProvider>,
     )
@@ -134,7 +139,7 @@ describe('Settings hub', () => {
     localStorage.clear()
   })
 
-  it('shows four nav rows and the reset action, and no budget fields', () => {
+  it('shows configuration and More tools rows without budget fields', () => {
     const rendered = renderSettings()
     root = rendered.root
     const { container } = rendered
@@ -144,7 +149,10 @@ describe('Settings hub', () => {
     expect(container).toHaveTextContent('Data & Backup')
     expect(container).toHaveTextContent('Automatic Tracking')
     expect(container).toHaveTextContent('Reset This Month')
-    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(4)
+    expect(container).toHaveTextContent('More tools')
+    expect(container).toHaveTextContent('Poker tracker')
+    expect(container).toHaveTextContent('Shared budgets')
+    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(6)
     // The hub only navigates — the editable budget fields live one level down.
     expect(container.querySelector('#budget-monthly-income')).toBeNull()
   })
@@ -166,7 +174,7 @@ describe('Settings hub', () => {
     expect(container.querySelector('#budget-monthly-income')).not.toBeNull()
 
     goBack(container)
-    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(4)
+    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(6)
     expect(container.querySelector('#budget-monthly-income')).toBeNull()
   })
 
@@ -180,7 +188,7 @@ describe('Settings hub', () => {
     expect(container).toHaveTextContent('Applies immediately')
 
     goBack(container)
-    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(4)
+    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(6)
   })
 
   it('navigates to Data & Backup and back to the hub', () => {
@@ -192,7 +200,7 @@ describe('Settings hub', () => {
     expect(container).toHaveTextContent('CSV — entries only')
 
     goBack(container)
-    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(4)
+    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(6)
   })
 
   it('navigates to Automatic Tracking and back to the hub', () => {
@@ -205,7 +213,20 @@ describe('Settings hub', () => {
     expect(container.querySelector('a[href="shortcuts://"]')).toHaveTextContent('Open Shortcuts')
 
     goBack(container)
-    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(4)
+    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(6)
+  })
+
+  it('opens Poker and Shared budgets from More tools', () => {
+    const onOpenPoker = vi.fn()
+    const onOpenShared = vi.fn()
+    const rendered = renderSettings([], undefined, onOpenPoker, onOpenShared)
+    root = rendered.root
+
+    click(findButton(rendered.container, 'Poker tracker'))
+    click(findButton(rendered.container, 'Shared budgets'))
+
+    expect(onOpenPoker).toHaveBeenCalledOnce()
+    expect(onOpenShared).toHaveBeenCalledOnce()
   })
 
   it('exits Settings from the hub back button', () => {

@@ -340,7 +340,9 @@ describe('History entry editing', () => {
     clickButton(rendered.container, 'Clear day filter')
     expect(rendered.container.querySelectorAll('.entry-row-button')).toHaveLength(3)
     expect(rendered.container).not.toHaveTextContent('Add missed expense')
-    expect(rendered.container).toHaveTextContent('Calendar & insights')
+    expect(rendered.container).toHaveTextContent('Calendar')
+    expect(rendered.container).not.toHaveTextContent('Weekly Spending')
+    expect(rendered.container).not.toHaveTextContent('Month Review')
   })
 
   it('scopes boundary weeks to the selected month and exposes an accessible spending summary', async () => {

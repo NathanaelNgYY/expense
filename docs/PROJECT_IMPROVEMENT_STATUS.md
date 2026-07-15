@@ -8,7 +8,7 @@
 
 ## Current position
 
-The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, weekly-history correctness/accessibility, H6 presentation, M17 isolation/browser/accessibility, H11 batch imports, the first M14 bundle reduction, the five-tab navigation restructure, first-run budget onboarding, and time-based automatic categories are implemented and deployed. M18 runtime retirement and H9 repository enforcement are complete. Automatic Tracking setup and direct past-date entry are complete.
+The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, weekly-history correctness/accessibility, H6 presentation, M17 isolation/browser/accessibility, H11 batch imports, the first M14 bundle reduction, the five-tab navigation restructure, first-run budget onboarding, and time-based automatic categories are implemented and deployed. Dashboard pass visual restraint is implemented locally. M18 runtime retirement and H9 repository enforcement are complete. Automatic Tracking setup and direct past-date entry are complete.
 
 ## Completed or materially addressed
 
@@ -35,6 +35,7 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 | Five-tab navigation restructure | Complete and deployed | Primary navigation is now Home, History, Add, Insights, and Settings. History retains the transaction ledger and calendar; category, weekly, and monthly pattern analysis has a dedicated lazy screen. Poker and Shared budgets remain available under Settings → More tools while the Settings tab stays selected. | `docs/testing/navigation-restructure.tdd.md`, `src/components/TabBar.tsx`, `src/screens/Insights.tsx`, `src/screens/Settings.tsx` |
 | First-run budget onboarding | Complete and deployed | Fresh installs now open a compact welcome, can accept defaults or edit monthly envelope targets, see the computed Buffer, and finish into Add or Home. Existing users and direct Add launches are not interrupted; completion is user-scoped. | `docs/testing/first-run-budget-onboarding.tdd.md`, `src/onboarding/FirstRunBudgetOnboarding.tsx`, `src/onboarding/onboardingState.ts` |
 | Time-based automatic categories | Complete and deployed | Automatic Tracking can route recognized food merchants into SGT meal windows targeting any built-in or custom category. Same-window merchant corrections remain strongest; transport/unknown merchants are unaffected; preferences are user-owned and capture degrades safely if preference loading fails. | `docs/testing/time-based-auto-categories.tdd.md`, `src/shared/automaticCategoryRules.ts`, `src/screens/settings/MealTimeRulesSettings.tsx`, `supabase/migrations/20260715060749_automatic_category_preferences.sql` |
+| Dashboard pass visual restraint | Complete | Personal and shared budget passes now use the active theme's flat elevated surface instead of four decorative gradients. Theme-specific shape and shadow treatments remain, while amount and budget-state colors keep the hierarchy. | `docs/testing/pass-card-visual-restraint.tdd.md`, `src/passCardStyle.test.ts`, `src/index.css`, `src/themes.css` |
 
 ## Next recommended work
 
@@ -49,7 +50,7 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 
 ## Verification baseline
 
-- Current suite: 59 test files, 502 tests passed.
+- Current suite: 60 test files, 503 tests passed.
 - Lint and production build pass.
 - Whole-project coverage: 84.50% statements, 77.34% branches, 83.14% functions, 88.09% lines. The existing CI thresholds remain enforced and were not lowered.
 - Live RLS: 53 isolation tests across 10 tables and 2 SECURITY DEFINER RPCs pass against a real Postgres locally and in the parallel `rls` CI job. These replaced `supabase/tests/ingest_visibility.test.ts`, which asserted that migration files *contained* policy substrings and would have stayed green if a policy were later dropped.

@@ -21,4 +21,4 @@
 
 ## GitHub enforcement boundary
 
-The authenticated GitHub API rejected both the branch-protection and repository-rulesets endpoints with HTTP 403: “Upgrade to GitHub Pro or make this repository public to enable this feature.” The CI jobs therefore enforce failures on every push and pull request, but GitHub cannot make those checks merge-required on this private repository under the current account plan.
+The authenticated GitHub API initially rejected both the branch-protection and repository-rulesets endpoints with HTTP 403 while the repository was private. After the owner made the repository public on 2026-07-15, `main` branch protection was enabled with strict required `verify`, `rls`, and `e2e` checks, administrator enforcement, force-push protection, and deletion protection.

@@ -9,6 +9,10 @@ vi.mock('./IngestStatusCard', () => ({
   ),
 }))
 
+vi.mock('./MealTimeRulesSettings', () => ({
+  default: () => <div>Meal timing settings</div>,
+}))
+
 function renderSettings(endpoint = 'https://project-ref.supabase.co/functions/v1/ingest') {
   const container = document.createElement('div')
   document.body.appendChild(container)
@@ -49,6 +53,7 @@ describe('AutomaticCaptureSettings', () => {
     expect(rendered.container).toHaveTextContent('DBS transaction alerts')
     expect(rendered.container).toHaveTextContent('PayNow has no native Shortcuts trigger')
     expect(rendered.container).toHaveTextContent('Status refresh: available')
+    expect(rendered.container).toHaveTextContent('Meal timing settings')
     expect(rendered.container.querySelector('a[href="shortcuts://"]')).toHaveTextContent('Open Shortcuts')
   })
 

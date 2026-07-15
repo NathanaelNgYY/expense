@@ -3,14 +3,34 @@
 import type { Entry } from '../../../src/types.ts'
 import { buildEntryFromIngest, type IngestInput } from '../../../src/shared/entry.ts'
 import { parseDbsEmail } from '../../../src/shared/dbsEmail.ts'
-import { categoryFromHistory } from '../../../src/shared/category.ts'
+import {
+  resolveAutomaticCategory,
+  type AutomaticCategoryRule,
+} from '../../../src/shared/automaticCategoryRules.ts'
 import { fingerprintIngestEvent } from '../../../src/shared/dedupe.ts'
 
 export interface IngestStore {
   list(): Promise<Entry[]>
+  listAutomaticCategoryRules?(): Promise<AutomaticCategoryRule[]>
   has(dedupeKey: string): Promise<boolean>
   put(entry: Entry): Promise<void>
   recordCapture?(sourceKind: IngestBody['sourceKind']): Promise<void>
+}
+
+async function automaticCategory(
+  store: IngestStore,
+  merchant: string,
+  occurredAt: string | undefined,
+): Promise<string | null> {
+  const history = await store.list()
+  let rules: AutomaticCategoryRule[] = []
+  try {
+    rules = await store.listAutomaticCategoryRules?.() ?? []
+  } catch {
+    // Preference visibility must never make capture fail. The merchant pack
+    // and correction history still provide a safe degraded path.
+  }
+  return resolveAutomaticCategory(history, rules, merchant, occurredAt)
 }
 
 export type IngestBody =
@@ -52,7 +72,7 @@ export async function handleIngest(
       sourceKind: 'apple_pay',
       amount: Math.round(body.amount * 100) / 100,
       merchant,
-      learnedCategory: categoryFromHistory(await store.list(), merchant),
+      learnedCategory: await automaticCategory(store, merchant, body.occurredAt),
       occurredAt: body.occurredAt,
       currency: body.currency,
       ...(idempotencyKey
@@ -69,7 +89,7 @@ export async function handleIngest(
       amount: parsed.amount,
       merchant: parsed.merchant,
       channel: parsed.channel,
-      learnedCategory: categoryFromHistory(await store.list(), parsed.merchant),
+      learnedCategory: await automaticCategory(store, parsed.merchant, body.occurredAt),
       occurredAt: body.occurredAt,
       currency: body.currency,
       eventFingerprint: await fingerprintIngestEvent(body.idempotencyKey?.trim() ?? body.rawBody),

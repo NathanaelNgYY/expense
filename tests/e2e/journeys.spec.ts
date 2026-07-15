@@ -135,3 +135,18 @@ test('five-tab navigation keeps secondary tools under Settings', async ({ page }
   )
   expect(targets.every(target => target.width >= 44 && target.height >= 44)).toBe(true)
 })
+
+test('automatic tracking meal timing degrades safely when preferences are offline', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await prepareApp(page)
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('button', { name: /Automatic Tracking/ }).click()
+
+  await expect(page.getByRole('heading', { level: 2, name: 'Meal timing' })).toBeVisible()
+  await expect(page.getByText('Could not load meal timing')).toBeVisible()
+  const retry = page.getByRole('button', { name: 'Try again' })
+  const box = await retry.boundingBox()
+  expect(box?.height).toBeGreaterThanOrEqual(44)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+})

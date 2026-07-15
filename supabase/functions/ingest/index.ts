@@ -6,6 +6,10 @@ import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { handleIngest, type IngestBody, type IngestStore } from './handler.ts'
 import type { Entry } from '../../../src/types.ts'
 import {
+  isAutomaticCategoryRuleList,
+  type AutomaticCategoryRule,
+} from '../../../src/shared/automaticCategoryRules.ts'
+import {
   API_RATE_LIMIT,
   AUTH_FAILURE_RATE_LIMIT,
   checkRateLimit,
@@ -56,6 +60,20 @@ class SupabaseEntryStore implements IngestStore {
       ...(row.currency ? { currency: row.currency } : {}),
       dedupeKey: row.dedupe_key,
     }))
+  }
+
+  async listAutomaticCategoryRules(): Promise<AutomaticCategoryRule[]> {
+    const { data, error } = await this.client
+      .from('automatic_category_preferences')
+      .select('food_time_rules')
+      .eq('user_id', this.userId)
+      .maybeSingle()
+    if (error) {
+      console.error('Failed to load automatic category preferences:', error.message)
+      return []
+    }
+    const rules = data?.food_time_rules
+    return isAutomaticCategoryRuleList(rules) ? rules : []
   }
 
   async has(dedupeKey: string): Promise<boolean> {

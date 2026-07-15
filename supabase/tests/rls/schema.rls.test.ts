@@ -6,6 +6,7 @@ const TABLES = [
   'poker_sessions',
   'ingest_tokens',
   'ingest_status',
+  'automatic_category_preferences',
   'profiles',
   'budgets',
   'budget_members',

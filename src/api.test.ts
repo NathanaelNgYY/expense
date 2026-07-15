@@ -19,6 +19,8 @@ import {
   isPermanentFailure,
   isAuthFailure,
   isUniqueViolation,
+  fetchAutomaticCategoryRules,
+  saveAutomaticCategoryRules,
 } from './api'
 
 interface FakeResult {
@@ -88,6 +90,29 @@ beforeEach(() => {
 })
 
 describe('api client', () => {
+  it('fetches automatic category rules for the signed-in user', async () => {
+    const { fake, builder } = stubSupabase({
+      data: { food_time_rules: [{ id: 'dinner', categoryId: 'cat_dinner', startMinute: 990, endMinute: 1440 }] },
+      error: null,
+      status: 200,
+    })
+    await expect(fetchAutomaticCategoryRules()).resolves.toEqual([
+      { id: 'dinner', categoryId: 'cat_dinner', startMinute: 990, endMinute: 1440 },
+    ])
+    expect(fake.from).toHaveBeenCalledWith('automatic_category_preferences')
+    expect(builder.select).toHaveBeenCalledWith('food_time_rules')
+  })
+
+  it('atomically upserts automatic category rules with the current user id', async () => {
+    const { builder } = stubSupabase({ data: null, error: null, status: 200 })
+    const rules = [{ id: 'dinner', categoryId: 'cat_dinner', startMinute: 990, endMinute: 1440 }]
+    await saveAutomaticCategoryRules(rules)
+    expect(builder.upsert).toHaveBeenCalledWith(
+      { user_id: 'u1', food_time_rules: rules },
+      { onConflict: 'user_id' },
+    )
+  })
+
   it('fetches only non-secret ingest status for the current user', async () => {
     const { fake, builder } = stubSupabase({
       data: {

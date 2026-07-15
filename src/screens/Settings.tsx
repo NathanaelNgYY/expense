@@ -1,6 +1,6 @@
 // src/screens/Settings.tsx
 import { useState, type ReactNode } from 'react'
-import { ChevronRight, Database, Palette, Trash2, Undo2, Wallet } from 'lucide-react'
+import { ChevronRight, Database, Palette, Radio, Trash2, Undo2, Wallet } from 'lucide-react'
 import SettingsHeader from './settings/SettingsHeader'
 import BudgetSettings from './settings/BudgetSettings'
 import AppearanceSettings from './settings/AppearanceSettings'
@@ -9,6 +9,7 @@ import { useEntries } from '../EntriesContext'
 import { useTheme } from '../theme/ThemeContext'
 import { THEMES } from '../theme/themeRegistry'
 import IngestStatusCard from './settings/IngestStatusCard'
+import AutomaticCaptureSettings from './settings/AutomaticCaptureSettings'
 import type { Entry } from '../types'
 
 interface Props {
@@ -18,7 +19,7 @@ interface Props {
 // Two levels, no router: the hub pushes one subscreen at a time and every subscreen comes
 // straight back here. Each subscreen owns its own state and reads its own contexts, so the
 // shell passes navigation callbacks and nothing else.
-type SettingsSubscreen = 'hub' | 'budget' | 'appearance' | 'data'
+type SettingsSubscreen = 'hub' | 'automatic' | 'budget' | 'appearance' | 'data'
 
 function isEntryInMonth(date: string, year: number, month: number): boolean {
   const [entryYear, entryMonth] = date.split('-').map(Number)
@@ -91,6 +92,7 @@ export default function Settings({ onBack }: Props) {
   return (
     <div className="screen settings">
       {subscreen === 'budget' && <BudgetSettings onDone={goHub} />}
+      {subscreen === 'automatic' && <AutomaticCaptureSettings onDone={goHub} />}
       {subscreen === 'appearance' && <AppearanceSettings onDone={goHub} />}
       {subscreen === 'data' && <DataSettings onDone={goHub} />}
       {subscreen === 'hub' && (
@@ -100,6 +102,12 @@ export default function Settings({ onBack }: Props) {
           <IngestStatusCard />
 
           <div className="ios-list">
+            <NavRow
+              icon={<Radio className="ui-icon" aria-hidden="true" strokeWidth={2.2} />}
+              label="Automatic Tracking"
+              sub="Apple Pay, DBS alerts, connection status"
+              onClick={() => setSubscreen('automatic')}
+            />
             <NavRow
               icon={<Wallet className="ui-icon" aria-hidden="true" strokeWidth={2.2} />}
               label="Budget & Categories"

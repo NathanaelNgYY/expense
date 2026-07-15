@@ -37,6 +37,22 @@ test('Others spending is presented as monthly Buffer usage', async ({ page }) =>
   await expect(othersCard).not.toContainText('Budget S$236')
 })
 
+test('Add entry accepts a past expense date without visiting History', async ({ page }) => {
+  await prepareApp(page, [])
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Add entry' }).click()
+
+  const expenseDate = page.getByLabel('Expense date')
+  await expenseDate.fill('2026-05-17')
+  await page.getByRole('button', { name: '5', exact: true }).click()
+  await page.getByRole('button', { name: 'Add for May 17' }).click()
+
+  await expect.poll(async () => page.evaluate(() => {
+    const entries = JSON.parse(localStorage.getItem('budget_entries') ?? '[]')
+    return entries.some((entry: { amount: number; date: string }) => entry.amount === 5 && entry.date === '2026-05-17')
+  })).toBe(true)
+})
+
 test('History supports edit, delete, and undo', async ({ page }) => {
   await prepareApp(page, [{
     id: 'history-1',

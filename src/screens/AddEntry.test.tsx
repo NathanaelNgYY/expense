@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import AddEntry from './AddEntry'
 import { EntriesProvider } from '../EntriesContext'
 import { getEntries } from '../storage'
@@ -64,17 +64,19 @@ describe('AddEntry', () => {
     localStorage.clear()
   })
 
-  it('keeps the normal add flow free of date controls', async () => {
+  it('shows a labelled date control that defaults to today', async () => {
     await act(async () => {
       renderWithEntries()
     })
 
-    expect(screen.queryByRole('button', { name: /choose expense date/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Yesterday' })).not.toBeInTheDocument()
+    const dateInput = screen.getByLabelText('Expense date')
+    expect(dateInput).toHaveAttribute('type', 'date')
+    expect(dateInput).toHaveValue(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
+    expect(dateInput).toHaveAttribute('max', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
   })
 
-  it('uses a date selected from History without exposing Option A controls', async () => {
+  it('uses a date selected from History and exposes it in the date control', async () => {
     await act(async () => {
       localStorage.setItem('budget_entries', '[]')
       localStorage.setItem('api_token', 'tok')
@@ -86,7 +88,7 @@ describe('AddEntry', () => {
       )
     })
 
-    expect(screen.queryByRole('button', { name: /choose expense date/i })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Expense date')).toHaveValue('2026-05-18')
     expect(screen.getByRole('button', { name: 'Add for May 18' })).toBeInTheDocument()
     act(() => {
       screen.getByRole('button', { name: '5' }).click()
@@ -98,6 +100,26 @@ describe('AddEntry', () => {
 
     expect(getEntries()).toEqual([
       expect.objectContaining({ amount: 5, date: '2026-05-18' }),
+    ])
+  })
+
+  it('saves a past date selected directly on the Add screen', async () => {
+    await act(async () => {
+      renderWithEntries()
+    })
+
+    fireEvent.change(screen.getByLabelText('Expense date'), { target: { value: '2026-05-17' } })
+    expect(screen.getByRole('button', { name: 'Add for May 17' })).toBeInTheDocument()
+
+    act(() => {
+      screen.getByRole('button', { name: '5' }).click()
+    })
+    await act(async () => {
+      screen.getByRole('button', { name: 'Add for May 17' }).click()
+    })
+
+    expect(getEntries()).toEqual([
+      expect.objectContaining({ amount: 5, date: '2026-05-17' }),
     ])
   })
 

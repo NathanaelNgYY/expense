@@ -10,7 +10,7 @@ The app initializes `@sentry/react` before React renders and reports root-bounda
 - Vercel environments configured: Production and Preview
 - Source-map token: organization-scoped `org:ci`, stored only as a sensitive Vercel variable
 - Production alias: `https://budget-tracker-sooty-ten.vercel.app`
-- Production status: deployed and smoke-tested on 2026-07-13; source-map upload verified
+- Production status: deployed and smoke-tested on 2026-07-15; source-map upload and CSP ingestion path verified
 - CSP requirement: `connect-src` allows only the configured EU ingestion origin,
   `https://o4511727901736960.ingest.de.sentry.io`, in addition to the app and Supabase.
 

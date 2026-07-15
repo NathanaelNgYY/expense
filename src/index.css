@@ -2087,6 +2087,235 @@ input:focus-visible {
   font-weight: 600;
 }
 
+.ingest-status-card__refresh,
+.automatic-capture__copy,
+.automatic-capture__open-shortcuts {
+  min-height: 44px;
+  border-radius: 11px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.ingest-status-card__refresh,
+.automatic-capture__copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--separator));
+  background: color-mix(in srgb, var(--primary) 9%, var(--bg-elev-1));
+  color: var(--primary);
+  cursor: pointer;
+  padding: 8px 14px;
+}
+
+.ingest-status-card__refresh:disabled,
+.automatic-capture__copy:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ─── Automatic tracking setup ───────────────────────────── */
+
+.automatic-capture-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 12px;
+}
+
+.automatic-capture__intro {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0 4px;
+}
+
+.automatic-capture__steps {
+  display: grid;
+  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.automatic-capture__step {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 11px;
+  border: 1px solid var(--separator);
+  border-radius: 14px;
+  background: var(--bg-elev-1);
+  padding: 14px;
+}
+
+.automatic-capture__step-number {
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--bg);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.automatic-capture__step-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.automatic-capture__step-content h2,
+.automatic-capture__step-content h3,
+.automatic-capture__step-content p {
+  margin: 0;
+}
+
+.automatic-capture__step-content h2 {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.automatic-capture__step-content h3 {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.automatic-capture__step-content p,
+.automatic-capture__recipe li {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.automatic-capture__options {
+  display: grid;
+  gap: 10px;
+}
+
+.automatic-capture__options article {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.automatic-capture__options article > svg {
+  flex: 0 0 auto;
+  color: var(--primary);
+  margin-top: 1px;
+}
+
+.automatic-capture__callout,
+.automatic-capture__security-note {
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.automatic-capture__callout {
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+}
+
+.automatic-capture__callout strong {
+  color: var(--warning);
+}
+
+.automatic-capture__code {
+  display: block;
+  max-width: 100%;
+  border-radius: 9px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  padding: 10px;
+  user-select: all;
+}
+
+.automatic-capture__copy {
+  align-self: flex-start;
+}
+
+.automatic-capture__copy-feedback {
+  min-height: 18px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.automatic-capture__copy-feedback:empty {
+  display: none;
+}
+
+.automatic-capture__security-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: color-mix(in srgb, var(--green) 8%, transparent);
+}
+
+.automatic-capture__security-note > svg {
+  flex: 0 0 auto;
+  color: var(--green);
+  margin-top: 1px;
+}
+
+.automatic-capture__text-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.automatic-capture__recipe {
+  border-top: 1px solid var(--separator);
+}
+
+.automatic-capture__recipe summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.automatic-capture__recipe ol {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.automatic-capture__recipe code {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.automatic-capture__open-shortcuts {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  background: var(--primary);
+  color: var(--bg);
+  padding: 8px 16px;
+  text-decoration: none;
+}
+
+.automatic-capture__hint {
+  font-size: 12px !important;
+}
+
 .settings-total {
   color: var(--text-secondary);
   font-size: 13px;

@@ -16,11 +16,11 @@ const shared = vi.hoisted(() => ({
 vi.mock('../../api', () => ({ fetchIngestStatus: api.fetchIngestStatus }))
 vi.mock('../../sharedBudgets/SharedBudgetsContext', () => ({ useSharedBudgets: () => shared.value }))
 
-async function renderCard(): Promise<{ container: HTMLElement; root: Root }> {
+async function renderCard(props: { refreshable?: boolean } = {}): Promise<{ container: HTMLElement; root: Root }> {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
-  await act(async () => root.render(<IngestStatusCard />))
+  await act(async () => root.render(<IngestStatusCard {...props} />))
   await act(async () => new Promise(resolve => setTimeout(resolve, 0)))
   return { container, root }
 }
@@ -108,5 +108,28 @@ describe('IngestStatusCard', () => {
 
     expect(rendered.container).toHaveTextContent('DBS email')
     expect(rendered.container).toHaveTextContent('Linked via iOS Shortcut')
+  })
+
+  it('refreshes connection status with immediate inline progress', async () => {
+    let resolveRefresh: ((value: null) => void) | undefined
+    api.fetchIngestStatus
+      .mockResolvedValueOnce(null)
+      .mockImplementationOnce(() => new Promise(resolve => { resolveRefresh = resolve }))
+
+    const rendered = await renderCard({ refreshable: true })
+    root = rendered.root
+    const refresh = [...rendered.container.querySelectorAll('button')].find(candidate =>
+      candidate.textContent?.includes('Refresh status'),
+    )
+    if (!refresh) throw new Error('Refresh status button not found')
+
+    await act(async () => refresh.click())
+    expect(refresh).toBeDisabled()
+    expect(refresh).toHaveTextContent('Checking…')
+
+    await act(async () => resolveRefresh?.(null))
+    expect(api.fetchIngestStatus).toHaveBeenCalledTimes(2)
+    expect(refresh).toBeEnabled()
+    expect(refresh).toHaveTextContent('Refresh status')
   })
 })

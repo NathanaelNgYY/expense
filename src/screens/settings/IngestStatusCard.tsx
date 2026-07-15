@@ -27,10 +27,16 @@ function sourceLabel(source: IngestVisibility['lastSource']): string | null {
   return null
 }
 
-export default function IngestStatusCard() {
+interface Props {
+  refreshable?: boolean
+}
+
+export default function IngestStatusCard({ refreshable = false }: Props) {
   const { authReady, session, profile } = useSharedBudgets()
   const [visibility, setVisibility] = useState<IngestVisibility | null>(null)
   const [loadError, setLoadError] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshVersion, setRefreshVersion] = useState(0)
 
   const currentUserId = session?.user.id ?? null
   const currentAccountLabel = currentUserId
@@ -59,8 +65,17 @@ export default function IngestStatusCard() {
       .catch(() => {
         if (!cancelled) setLoadError(true)
       })
+      .finally(() => {
+        if (!cancelled) setRefreshing(false)
+      })
     return () => { cancelled = true }
-  }, [authReady, currentAccountLabel, currentUserId])
+  }, [authReady, currentAccountLabel, currentUserId, refreshVersion])
+
+  function refreshStatus() {
+    setRefreshing(true)
+    setLoadError(false)
+    setRefreshVersion(version => version + 1)
+  }
 
   const source = sourceLabel(visibility?.lastSource ?? null)
 
@@ -111,6 +126,16 @@ export default function IngestStatusCard() {
       )}
       {visibility?.state === 'linked' && (
         <p className="ingest-status-card__linked">Linked via {visibility.tokenLabel || 'iOS Shortcut'}</p>
+      )}
+      {refreshable && (
+        <button
+          type="button"
+          className="ingest-status-card__refresh"
+          onClick={refreshStatus}
+          disabled={!authReady || !currentUserId || refreshing}
+        >
+          {refreshing ? 'Checking…' : 'Refresh status'}
+        </button>
       )}
     </section>
   )

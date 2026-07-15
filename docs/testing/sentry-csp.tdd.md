@@ -35,9 +35,12 @@ As the app owner, I want production browser exceptions to reach the configured S
 | 2 | The connection allowlist cannot silently broaden beyond the four reviewed sources. | `src/vercelSecurityHeaders.test.ts` | Security boundary regression | PASS |
 | 3 | Other CSP directives remain unchanged by the implementation diff. | `git diff main...HEAD -- vercel.json` | Manual diff review | PASS |
 
-## Production acceptance
+## Production verification
 
-After deployment, read-only browser QA must confirm that the response CSP contains the exact Sentry origin and that the previous CSP refusal no longer appears in the console. A synthetic production exception is intentionally not generated; event-delivery verification should use the documented preview-only procedure.
+- PR [#16](https://github.com/NathanaelNgYY/expense/pull/16) merged as `7dd0e9b307a9edb7851c189e5f159e0dd4c8f616` and Vercel reported the production deployment successful.
+- Read-only browser QA returned HTTP 200 and confirmed the response CSP contains the exact configured Sentry origin.
+- The page issued one request to the EU Sentry ingestion host with zero console errors, request failures, or 4xx/5xx responses.
+- No synthetic production exception was generated; end-to-end event delivery remains covered by the documented preview-only verification procedure.
 
 ## Merge evidence
 

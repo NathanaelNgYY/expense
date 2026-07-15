@@ -58,3 +58,12 @@ No source plan was provided. The acceptance criteria were derived from the user 
 ## Deployment order
 
 The migration now applies cleanly from an empty local Supabase stack and the complete live RLS suite passes. For production, apply the migration first, deploy the ingest Edge Function, then deploy the PWA and test a Lunch/Dinner pair on a physical iPhone.
+
+## Production deployment
+
+- PR [#12](https://github.com/NathanaelNgYY/expense/pull/12) passed `verify`, `rls`, `e2e`, and Vercel checks and was squash-merged as `d74d1b5` on 2026-07-15.
+- Migration `20260715060749_automatic_category_preferences.sql` is present in the linked production migration history.
+- Supabase `ingest` version 4 is active with the existing custom bearer-token contract (`verify_jwt = false`).
+- Vercel deployment `dpl_86UwL9KjsGoQYcev5Ebutrbg4PxN` is `Ready` and aliased to `https://budget-tracker-sooty-ten.vercel.app`.
+- The production app shell, manifest, and service worker return HTTP 200; an unauthenticated ingest probe returns HTTP 401 without writing data.
+- Final acceptance still requires one real Lunch and one real Dinner Apple Pay capture on the owner's physical iPhone.

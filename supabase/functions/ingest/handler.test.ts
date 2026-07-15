@@ -1,9 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import type { Entry } from '../../../src/types'
+import type { AutomaticCategoryRule } from '../../../src/shared/automaticCategoryRules'
 import { handleIngest, type IngestStore } from './handler'
 
 class InMemoryStore implements IngestStore {
   private map = new Map<string, Entry>()
+
+  constructor(private rules: AutomaticCategoryRule[] = []) {}
 
   async list(): Promise<Entry[]> {
     return [...this.map.values()]
@@ -13,6 +16,9 @@ class InMemoryStore implements IngestStore {
   }
   async put(entry: Entry): Promise<void> {
     this.map.set(entry.dedupeKey as string, entry)
+  }
+  async listAutomaticCategoryRules(): Promise<AutomaticCategoryRule[]> {
+    return this.rules
   }
 }
 
@@ -271,5 +277,18 @@ describe('edge ingest handler', () => {
     expect(result.status).toBe('saved')
     if (result.status !== 'saved') return
     expect(result.entry.category).toBe('lunch')
+  })
+
+  it('uses a custom dinner category for a recognized food merchant in the configured SGT window', async () => {
+    const store = new InMemoryStore([
+      { id: 'dinner', categoryId: 'cat_dinner', startMinute: 16 * 60 + 30, endMinute: 24 * 60 },
+    ])
+    const result = await handleIngest(
+      { sourceKind: 'apple_pay', amount: 8, merchant: 'Koufu', occurredAt: '2026-07-11T11:30:00Z' },
+      store,
+      makeId,
+    )
+    expect(result.status).toBe('saved')
+    if (result.status === 'saved') expect(result.entry.category).toBe('cat_dinner')
   })
 })

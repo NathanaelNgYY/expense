@@ -6,16 +6,34 @@ describe('guessCategory', () => {
   it('classifies transport merchants', () => {
     expect(guessCategory('SimplyGo MRT')).toBe('transport')
     expect(guessCategory('Grab Ride')).toBe('transport')
+    expect(guessCategory('Transit Link')).toBe('transport')
   })
   it('classifies lunch merchants', () => {
     expect(guessCategory('Ya Kun Kaya Toast')).toBe('lunch')
     expect(guessCategory('McDonald\'s')).toBe('lunch')
   })
+  it('classifies Koufu merchant variants as lunch', () => {
+    expect(guessCategory('Koufu Pte Ltd')).toBe('lunch')
+    expect(guessCategory('KOUFU #234')).toBe('lunch')
+    expect(guessCategory('Koufu Foodcourt')).toBe('lunch')
+  })
+  it('classifies common Singapore food merchants from Wallet labels', () => {
+    expect(guessCategory('YoChi Asia Pte Ltd')).toBe('lunch')
+    expect(guessCategory('Guzman y Gomez SG 266105')).toBe('lunch')
+    expect(guessCategory('Tangled Fresh Pasta To Go')).toBe('lunch')
+    expect(guessCategory('Kopitiam Investment Pte L')).toBe('lunch')
+  })
+  it('distinguishes GrabFood from Grab transport captures', () => {
+    expect(guessCategory('GrabFood')).toBe('lunch')
+    expect(guessCategory('Grab Ride')).toBe('transport')
+  })
   it('classifies grocery as others', () => {
     expect(guessCategory('FairPrice Finest')).toBe('others')
+    expect(guessCategory('FairPrice')).toBe('others')
   })
   it('returns null for unknown merchants (no silent "others")', () => {
     expect(guessCategory('Some Random Shop')).toBeNull()
+    expect(guessCategory('Cray Ventures Private Limited')).toBeNull()
     expect(guessCategory('')).toBeNull()
   })
 })

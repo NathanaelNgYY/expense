@@ -1,0 +1,113 @@
+// Explicit .ts consumers include the Deno-bundled Supabase ingest function.
+import type { Category } from '../types.ts'
+
+type MerchantPackRule = {
+  category: Category
+  aliases: readonly string[]
+}
+
+// High-confidence aliases for merchant labels commonly emitted by Apple Wallet
+// in Singapore. Keep ambiguous legal entities out of this pack: the generic
+// classifier or the user's correction history can handle those safely.
+const SINGAPORE_MERCHANT_PACK: readonly MerchantPackRule[] = [
+  {
+    category: 'lunch',
+    aliases: [
+      'boost juice',
+      'breadtalk',
+      'burger king',
+      'coffee bean',
+      'din tai fung',
+      'encik tan',
+      'food republic',
+      'four leaves',
+      'genki sushi',
+      'grab food',
+      'grabfood',
+      'guzman y gomez',
+      'hawker chan',
+      'jollibee',
+      'kfc',
+      'koi the',
+      'kopitiam',
+      'koufu',
+      'liho',
+      'mcdonald',
+      'mcdonalds',
+      'mixue',
+      'mos burger',
+      'mr bean',
+      'old chang kee',
+      'paris baguette',
+      'pastamania',
+      'pepper lunch',
+      'saizeriya',
+      'shake shack',
+      'song fa',
+      'starbucks',
+      'stuffd',
+      'subway',
+      'sushi express',
+      'swee heng',
+      'swensens',
+      'tangled fresh pasta',
+      'tenderfresh',
+      'toast box',
+      'wok hey',
+      'ya kun',
+      'yo chi',
+      'yochi',
+    ],
+  },
+  {
+    category: 'transport',
+    aliases: [
+      'cdg zig',
+      'comfortdelgro',
+      'gojek',
+      'sbs transit',
+      'simplygo',
+      'smrt',
+      'transit link',
+      'transitlink',
+    ],
+  },
+  {
+    category: 'others',
+    aliases: [
+      '7 eleven',
+      'cheers',
+      'cold storage',
+      'daiso',
+      'decathlon',
+      'don don donki',
+      'fairprice',
+      'fairprice finest',
+      'guardian',
+      'ikea',
+      'miniso',
+      'muji',
+      'ntuc fairprice',
+      'popular bookstore',
+      'sheng siong',
+      'uniqlo',
+      'watsons',
+    ],
+  },
+]
+
+function containsAlias(normalizedMerchant: string, alias: string): boolean {
+  return ` ${normalizedMerchant} `.includes(` ${alias} `)
+}
+
+export function categoryFromSingaporeMerchantPack(normalizedMerchant: string): Category | null {
+  if (!normalizedMerchant) return null
+
+  for (const rule of SINGAPORE_MERCHANT_PACK) {
+    if (rule.aliases.some(alias => containsAlias(normalizedMerchant, alias))) {
+      return rule.category
+    }
+  }
+
+  return null
+}

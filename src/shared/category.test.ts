@@ -6,6 +6,7 @@ describe('guessCategory', () => {
   it('classifies transport merchants', () => {
     expect(guessCategory('SimplyGo MRT')).toBe('transport')
     expect(guessCategory('Grab Ride')).toBe('transport')
+    expect(guessCategory('Transit Link')).toBe('transport')
   })
   it('classifies lunch merchants', () => {
     expect(guessCategory('Ya Kun Kaya Toast')).toBe('lunch')
@@ -18,6 +19,7 @@ describe('guessCategory', () => {
   })
   it('classifies grocery as others', () => {
     expect(guessCategory('FairPrice Finest')).toBe('others')
+    expect(guessCategory('FairPrice')).toBe('others')
   })
   it('returns null for unknown merchants (no silent "others")', () => {
     expect(guessCategory('Some Random Shop')).toBeNull()

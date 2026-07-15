@@ -6,6 +6,8 @@ No source plan was provided. The journey was derived from a physical iPhone Appl
 
 > As a user, I want Koufu Apple Pay purchases to be categorized as Lunch automatically, so that I do not need to correct each capture in History.
 
+The same physical-Wallet review confirmed two existing classifier guarantees: `FairPrice` maps to Others and `Transit Link` maps to Transport.
+
 ## Task report
 
 The shared merchant classifier now recognizes `Koufu` after merchant normalization. Because the Supabase ingest function builds entries with this shared classifier, legal suffixes, case differences, and numbered outlet variants are covered.
@@ -21,6 +23,8 @@ The shared merchant classifier now recognizes `Koufu` after merchant normalizati
 | 1 | `Koufu Pte Ltd` is classified as Lunch | `src/shared/category.test.ts: classifies Koufu merchant variants as lunch` | Unit | PASS | Focused GREEN run |
 | 2 | Case and numbered outlet variants such as `KOUFU #234` are classified as Lunch | `src/shared/category.test.ts: classifies Koufu merchant variants as lunch` | Unit | PASS | Focused GREEN run |
 | 3 | The shared entry builder and Supabase ingest path retain their existing behavior | `src/shared/entry.test.ts`, `supabase/functions/ingest/handler.test.ts` | Unit/integration | PASS | 36 tests passed |
+| 4 | The exact Wallet merchant string `FairPrice` is classified as Others | `src/shared/category.test.ts: classifies grocery as others` | Unit | PASS | Focused category run |
+| 5 | The exact Wallet merchant string `Transit Link` is classified as Transport | `src/shared/category.test.ts: classifies transport merchants` | Unit | PASS | Focused category run |
 
 ## Coverage and known gaps
 

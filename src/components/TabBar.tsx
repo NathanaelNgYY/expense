@@ -1,7 +1,7 @@
 // src/components/TabBar.tsx
-import { ChartColumn, CirclePlus, House, Spade, Users } from 'lucide-react'
+import { ChartColumn, CirclePlus, House, Lightbulb, Settings } from 'lucide-react'
 
-export type Tab = 'home' | 'add' | 'history' | 'poker' | 'shared'
+export type Tab = 'home' | 'history' | 'add' | 'insights' | 'settings'
 
 interface Props {
   active: Tab
@@ -23,16 +23,6 @@ export default function TabBar({ active, onChange }: Props) {
       </button>
       <button
         type="button"
-        aria-label="Add entry"
-        aria-pressed={active === 'add'}
-        className={active === 'add' ? 'active' : ''}
-        onClick={() => onChange('add')}
-      >
-        <CirclePlus className="tab-icon" aria-hidden="true" strokeWidth={2.3} />
-        <span>Add</span>
-      </button>
-      <button
-        type="button"
         aria-label="History"
         aria-pressed={active === 'history'}
         className={active === 'history' ? 'active' : ''}
@@ -43,23 +33,33 @@ export default function TabBar({ active, onChange }: Props) {
       </button>
       <button
         type="button"
-        aria-label="Poker"
-        aria-pressed={active === 'poker'}
-        className={active === 'poker' ? 'active' : ''}
-        onClick={() => onChange('poker')}
+        aria-label="Add entry"
+        aria-pressed={active === 'add'}
+        className={`tab-add${active === 'add' ? ' active' : ''}`}
+        onClick={() => onChange('add')}
       >
-        <Spade className="tab-icon" aria-hidden="true" strokeWidth={2.3} />
-        <span>Poker</span>
+        <CirclePlus className="tab-icon" aria-hidden="true" strokeWidth={2.3} />
+        <span>Add</span>
       </button>
       <button
         type="button"
-        aria-label="Shared budgets"
-        aria-pressed={active === 'shared'}
-        className={active === 'shared' ? 'active' : ''}
-        onClick={() => onChange('shared')}
+        aria-label="Insights"
+        aria-pressed={active === 'insights'}
+        className={active === 'insights' ? 'active' : ''}
+        onClick={() => onChange('insights')}
       >
-        <Users className="tab-icon" aria-hidden="true" strokeWidth={2.3} />
-        <span>Shared</span>
+        <Lightbulb className="tab-icon" aria-hidden="true" strokeWidth={2.3} />
+        <span>Insights</span>
+      </button>
+      <button
+        type="button"
+        aria-label="Settings"
+        aria-pressed={active === 'settings'}
+        className={active === 'settings' ? 'active' : ''}
+        onClick={() => onChange('settings')}
+      >
+        <Settings className="tab-icon" aria-hidden="true" strokeWidth={2.3} />
+        <span>Settings</span>
       </button>
     </nav>
   )

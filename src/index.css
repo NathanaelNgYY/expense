@@ -201,6 +201,17 @@ button {
   height: 24px;
 }
 
+.tab-bar .tab-add .tab-icon {
+  color: var(--primary);
+}
+
+.settings-tool-shell > .screen {
+  flex: initial;
+  min-height: auto;
+  overflow: visible;
+  padding: 0;
+}
+
 /* ─── Progress bars ──────────────────────────────────────── */
 
 .progress-bar {

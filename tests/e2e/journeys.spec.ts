@@ -101,3 +101,37 @@ test('Settings month reset can be undone without losing entries', async ({ page 
   const entries = await page.evaluate(() => JSON.parse(localStorage.getItem('budget_entries') ?? '[]'))
   expect(entries.map((entry: { id: string }) => entry.id).sort()).toEqual(['reset-1', 'reset-2'])
 })
+
+test('five-tab navigation keeps secondary tools under Settings', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await prepareApp(page)
+  await page.goto('/')
+
+  const navigation = page.getByRole('navigation', { name: 'Main navigation' })
+  await expect(navigation.getByRole('button')).toHaveCount(5)
+  await expect(navigation.getByRole('button')).toHaveText(['Home', 'History', 'Add', 'Insights', 'Settings'])
+
+  await navigation.getByRole('button', { name: 'Insights' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: /Insights/ })).toBeVisible()
+  await expect(page.getByText('Category Breakdown')).toBeVisible()
+
+  await navigation.getByRole('button', { name: 'Settings' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
+  await page.getByRole('button', { name: /Poker tracker/ }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Poker tracker' })).toBeVisible()
+  await expect(navigation.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'Settings', exact: true }).first().click()
+
+  await page.getByRole('button', { name: /Shared budgets/ }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Shared budgets' })).toBeVisible()
+  await expect(navigation).toBeVisible()
+  await expect.poll(async () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+
+  const targets = await navigation.getByRole('button').evaluateAll(buttons =>
+    buttons.map(button => {
+      const rect = button.getBoundingClientRect()
+      return { width: rect.width, height: rect.height }
+    }),
+  )
+  expect(targets.every(target => target.width >= 44 && target.height >= 44)).toBe(true)
+})

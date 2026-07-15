@@ -5,6 +5,7 @@ import {
   saveAutomaticCategoryRules,
 } from '../../api'
 import type { AutomaticCategoryRule } from '../../shared/automaticCategoryRules'
+import './MealTimeRulesSettings.css'
 
 interface CategoryOption {
   id: string

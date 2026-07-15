@@ -7,7 +7,7 @@ Personal iPhone-friendly budget tracker built as a React 19 + Vite PWA, hosted o
 - **Dashboard** — per-category spend vs. budget, a computed buffer that absorbs overages, and a this-week strip.
 - **Add Entry** — fast custom numpad, category chips, optional note. Deep-linkable via `?add=true`.
 - **History** — weekly bars, lunch pace, monthly category breakdown, and spending insights.
-- **Settings** — edit monthly income + per-category budgets, check which account receives Shortcut transactions and when the last capture arrived, export/import CSV, and reset the month with Undo.
+- **Settings** — edit monthly income + per-category budgets, follow the guided Automatic Tracking setup, check which account receives Shortcut transactions and when the last capture arrived, export/import CSV, and reset the month with Undo.
 - **Poker tracker** — log sessions and see P&L, hourly rate, win rate, streaks, and a bankroll trend (stored locally only).
 - **Background ingestion** — Apple Pay and DBS-email transactions captured automatically via iOS Shortcuts.
 
@@ -68,7 +68,7 @@ https://budget-tracker-sooty-ten.vercel.app?add=true
 
 Transactions are captured automatically by two iOS Shortcuts that POST to the app's API in the background — no need to open the app. Apple Pay fires instantly via the Wallet trigger; PayNow and card spending are captured indirectly from the DBS transaction-alert email (iOS has no PayNow trigger). The server parses, categorises, and de-duplicates each transaction.
 
-Open **Settings → Automatic capture** to see the receiving account, the most recent capture time, and the source. The card warns when the app is signed into a different account from the account remembered for the iPhone Shortcut. The raw ingest token is never exposed to the browser.
+Open **Settings → Automatic Tracking** for a three-step Apple Pay and DBS-alert setup guide, the exact ingest endpoint, a link into Shortcuts, the receiving account, the most recent capture time, and the source. The status card warns when the app is signed into a different account from the account remembered for the iPhone Shortcut. The raw ingest token is never exposed to the browser; the guide links back to the trusted one-time server setup below.
 
 ### Server setup (one-time)
 

@@ -8,7 +8,7 @@
 
 ## Current position
 
-The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, weekly-history correctness/accessibility, H6 presentation, M17 isolation/browser/accessibility, H11 batch imports, and the first M14 bundle reduction are implemented and deployed. M18 runtime retirement is complete. H9 now blocks high-severity dependency regressions; repository-level required checks remain unavailable on the current GitHub plan.
+The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, weekly-history correctness/accessibility, H6 presentation, M17 isolation/browser/accessibility, H11 batch imports, and the first M14 bundle reduction are implemented and deployed. M18 runtime retirement and H9 repository enforcement are complete. Automatic Tracking setup is complete.
 
 ## Completed or materially addressed
 
@@ -30,6 +30,7 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 | H11 — row-at-a-time CSV imports | Complete and deployed | CSV rows are fully parsed and validated before writes, duplicate ids are removed against both existing entries and the same file, and new rows use one bulk upsert followed by one context refresh. | `docs/testing/h11-csv-batch-m14.tdd.md`, `src/csvEntries.test.ts`, `src/EntriesContext.test.tsx`, `src/screens/settings/DataSettings.test.tsx` |
 | M14 — initial bundle performance | Materially improved, deployed, and reassessed | Sentry now loads through a tree-shaken dynamic boundary, removing it from the first-render path while preserving early error capture. Initial JavaScript fell from 164.2 to 137.2 KiB gzip (−27.0 KiB / 16.4%); the CI budget tightened from 172 to 143 KiB. Three-run production Lighthouse medians are mobile 94 / LCP 2.505s / CLS 0 / TBT 121ms and desktop 100 / LCP 0.617s / CLS 0 / TBT 0ms. The borderline mobile result is within run-to-run noise, so another identity/sync loading refactor is deferred until field data shows a sustained problem. | `docs/testing/m14-bundle-reduction.tdd.md`, `docs/testing/m14-production-cwv-2026-07-15.md`, `src/monitoring.ts`, `src/monitoringSentry.ts`, `scripts/check-bundle-size.mjs` |
 | H4–H5 — weekly-history correctness and accessibility | Complete and deployed | Weekly total and lunch targets are prorated by selected-month days instead of dividing by four; boundary rows exclude adjacent-month entries; every weekly chart group exposes exact spend-versus-target text to assistive technology. | `docs/testing/h4-h5-weekly-history.tdd.md`, `src/compute.ts`, `src/screens/History.tsx` |
+| Automatic tracking onboarding | Complete | Settings now provides a three-step Apple Pay and DBS-alert setup flow, explains the native PayNow limitation and manual fallback, copies the public Edge Function endpoint, links to trusted token provisioning and Shortcuts, and refreshes the linked-account/last-capture status without exposing raw tokens to the browser. | `docs/testing/automatic-tracking-setup.tdd.md`, `src/screens/settings/AutomaticCaptureSettings.tsx`, `src/screens/settings/IngestStatusCard.tsx` |
 
 ## Next recommended work
 
@@ -43,13 +44,13 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 
 ## Verification baseline
 
-- Current suite: 54 test files, 465 tests passed.
+- Current suite: 56 test files, 475 tests passed.
 - Lint and production build pass.
-- Whole-project coverage: 84.59% statements, 76.94% branches, 83.14% functions, 88.23% lines. The existing CI thresholds remain enforced and were not lowered.
+- Whole-project coverage: 84.76% statements, 77.14% branches, 83.35% functions, 88.39% lines. The existing CI thresholds remain enforced and were not lowered.
 - Live RLS: 48 isolation tests across 9 tables and 2 SECURITY DEFINER RPCs pass against a real Postgres locally and in the parallel `rls` CI job. These replaced `supabase/tests/ingest_visibility.test.ts`, which asserted that migration files *contained* policy substrings and would have stayed green if a policy were later dropped.
 - Browser E2E: 7 mobile Chromium checks pass across four critical journeys, Axe WCAG A/AA scans, keyboard focus, accessible names, and measured 44px targets. They run in a parallel `e2e` CI job without contacting deployed Supabase.
 - Physical accessibility: the deployed weekly History rows passed an iPhone VoiceOver check on 2026-07-14.
-- Initial payload check: 137.4 KiB gzip JavaScript and 11.2 KiB gzip CSS, against tightened CI budgets of 143 and 12. JavaScript includes the entry file plus eagerly preloaded React, date-format, and Supabase chunks; Sentry and lazy route chunks are excluded from the first-render path.
+- Initial payload check: 137.4 KiB gzip JavaScript and 11.9 KiB gzip CSS, against tightened CI budgets of 143 and 12. JavaScript includes the entry file plus eagerly preloaded React, date-format, and Supabase chunks; Sentry and lazy route chunks are excluded from the first-render path. The Automatic Tracking flow remains inside the lazy Settings chunk.
 - Production performance lab baseline (three-run Lighthouse 13 medians): mobile score 94, FCP 1.934s, LCP 2.505s, TBT 121ms, CLS 0; desktop score 100, FCP 0.390s, LCP 0.617s, TBT 0ms, CLS 0. INP requires field/interaction data and was not inferred from TBT.
 - `deno check` of the ingest Edge Function passes. It previously did not: `IngestInput.learnedCategory` was typed `Category` while `categoryFromHistory` returns `string | null` (custom categories), and nothing typechecked `supabase/functions/`, so CI never saw it.
 - gitleaks: 218 commits scanned, no leaks.

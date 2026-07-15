@@ -2246,6 +2246,10 @@ input:focus-visible {
   font-size: 12px;
 }
 
+.automatic-capture__copy-feedback:empty {
+  display: none;
+}
+
 .automatic-capture__security-note {
   display: flex;
   align-items: flex-start;

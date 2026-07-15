@@ -20,9 +20,19 @@ test('primary screens have a page heading and no automated WCAG A/AA violations'
   await page.getByRole('button', { name: 'History' }).click()
   await expectAccessiblePage(page, 'History')
 
-  await page.getByRole('button', { name: 'Home' }).click()
+  await page.getByRole('button', { name: 'Insights' }).click()
+  await expectAccessiblePage(page, 'Insights')
+
   await page.getByRole('button', { name: 'Settings' }).click()
   await expectAccessiblePage(page, 'Settings')
+
+  await page.getByRole('button', { name: /Poker tracker/ }).click()
+  await expectAccessiblePage(page, 'Poker tracker')
+  await page.getByRole('button', { name: 'Settings', exact: true }).first().click()
+
+  await page.getByRole('button', { name: /Shared budgets/ }).click()
+  await expectAccessiblePage(page, 'Shared budgets')
+  await page.getByRole('button', { name: 'Settings', exact: true }).first().click()
 
   await page.getByRole('button', { name: /Automatic Tracking/ }).click()
   await expectAccessiblePage(page, 'Automatic tracking')
@@ -33,8 +43,10 @@ test('keyboard focus reaches named navigation and form controls', async ({ page 
   await prepareApp(page)
   await page.goto('/')
 
+  const navigation = page.getByRole('navigation', { name: 'Main navigation' })
+  await navigation.getByRole('button', { name: 'Home' }).focus()
   await page.keyboard.press('Tab')
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeFocused()
+  await expect(navigation.getByRole('button', { name: 'History' })).toBeFocused()
   await page.getByRole('button', { name: 'Add entry' }).click()
   await page.getByRole('button', { name: '1', exact: true }).focus()
   await page.keyboard.press('Tab')

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act } from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import App from './App'
 
 beforeEach(() => {
@@ -44,4 +44,19 @@ describe('App', () => {
 
     expect(document.documentElement).toHaveAttribute('data-theme', 'copper-current')
   })
+
+  it('keeps the five-tab shell visible on Insights and Settings', async () => {
+    await act(async () => {
+      render(<App />)
+    })
+
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Insights' })))
+    expect(await screen.findByRole('heading', { level: 1, name: /Insights/ }, { timeout: 10_000 })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument()
+
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Settings' })))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Settings' }, { timeout: 10_000 })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument()
+  }, 15_000)
 })

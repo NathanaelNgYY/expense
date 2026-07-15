@@ -1,6 +1,6 @@
 // src/screens/Settings.tsx
 import { useState, type ReactNode } from 'react'
-import { ChevronRight, Database, Palette, Radio, Trash2, Undo2, Wallet } from 'lucide-react'
+import { ChevronRight, Database, Palette, Radio, Spade, Trash2, Undo2, Users, Wallet } from 'lucide-react'
 import SettingsHeader from './settings/SettingsHeader'
 import BudgetSettings from './settings/BudgetSettings'
 import AppearanceSettings from './settings/AppearanceSettings'
@@ -13,7 +13,9 @@ import AutomaticCaptureSettings from './settings/AutomaticCaptureSettings'
 import type { Entry } from '../types'
 
 interface Props {
-  onBack: () => void
+  onBack?: () => void
+  onOpenPoker: () => void
+  onOpenShared: () => void
 }
 
 // Two levels, no router: the hub pushes one subscreen at a time and every subscreen comes
@@ -46,7 +48,7 @@ function NavRow({ icon, label, sub, onClick }: NavRowProps) {
   )
 }
 
-export default function Settings({ onBack }: Props) {
+export default function Settings({ onBack, onOpenPoker, onOpenShared }: Props) {
   const [subscreen, setSubscreen] = useState<SettingsSubscreen>('hub')
   const [resetSnapshot, setResetSnapshot] = useState<Entry[] | null>(null)
   const [resetMessage, setResetMessage] = useState<string | null>(null)
@@ -125,6 +127,22 @@ export default function Settings({ onBack }: Props) {
               label="Data & Backup"
               sub="Export, import, restore"
               onClick={() => setSubscreen('data')}
+            />
+          </div>
+
+          <h2 className="section-title">More tools</h2>
+          <div className="ios-list">
+            <NavRow
+              icon={<Spade className="ui-icon" aria-hidden="true" strokeWidth={2.2} />}
+              label="Poker tracker"
+              sub="Sessions, P&L, trends"
+              onClick={onOpenPoker}
+            />
+            <NavRow
+              icon={<Users className="ui-icon" aria-hidden="true" strokeWidth={2.2} />}
+              label="Shared budgets"
+              sub="Groups, members, shared expenses"
+              onClick={onOpenShared}
             />
           </div>
 

@@ -63,7 +63,7 @@ function renderWithEntries(entries: unknown[] = []) {
   act(() => {
     root.render(
       <EntriesProvider>
-        <Dashboard onSettings={() => undefined} onAddEntry={() => undefined} />
+        <Dashboard onAddEntry={() => undefined} />
       </EntriesProvider>,
     )
   })

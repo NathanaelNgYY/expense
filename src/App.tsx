@@ -10,10 +10,12 @@ import { EntriesProvider, useEntries } from './EntriesContext'
 import { SharedBudgetsProvider } from './sharedBudgets/SharedBudgetsContext'
 import { ThemeProvider } from './theme/ThemeContext'
 import AppErrorBoundary from './components/AppErrorBoundary'
+import SettingsHeader from './screens/settings/SettingsHeader'
 import { downloadJsonBackup } from './dataTransfer'
 import { reportReactError } from './monitoring'
 
 const History = lazy(() => import('./screens/History'))
+const Insights = lazy(() => import('./screens/Insights'))
 const Settings = lazy(() => import('./screens/Settings'))
 const Poker = lazy(() => import('./screens/Poker'))
 const SharedScreen = lazy(() => import('./sharedBudgets/SharedScreen'))
@@ -26,7 +28,7 @@ function initialTab(): Tab {
 function AppShell() {
   const [tab, setTab] = useState<Tab>(initialTab)
   const [addEntryDate, setAddEntryDate] = useState<string | undefined>()
-  const [showSettings, setShowSettings] = useState(false)
+  const [settingsTool, setSettingsTool] = useState<'poker' | 'shared' | null>(null)
   // Lives in the shell, not in AddEntry: the confirmation has to outlive the screen that
   // triggered it, because saving navigates straight home.
   const [toast, setToast] = useState<ToastEntry | null>(null)
@@ -43,6 +45,7 @@ function AppShell() {
 
   function handleTabChange(nextTab: Tab) {
     setAddEntryDate(undefined)
+    if (nextTab !== 'settings') setSettingsTool(null)
     setTab(nextTab)
   }
 
@@ -56,25 +59,29 @@ function AppShell() {
     setToast(null)
   }
 
-  if (showSettings) {
-    return (
-      <div className="app">
-        <main><Suspense fallback={null}><Settings onBack={() => setShowSettings(false)} /></Suspense></main>
-      </div>
-    )
-  }
-
   return (
     <div className="app">
       <main>
         <Suspense fallback={null}>
           {tab === 'home' && (
-            <Dashboard onSettings={() => setShowSettings(true)} onAddEntry={() => setTab('add')} />
+            <Dashboard onAddEntry={() => setTab('add')} />
           )}
           {tab === 'add' && <AddEntry initialDate={addEntryDate} onSave={handleSave} />}
           {tab === 'history' && <History onAddForDate={handleAddForDate} />}
-          {tab === 'poker' && <Poker />}
-          {tab === 'shared' && <SharedScreen />}
+          {tab === 'insights' && <Insights />}
+          {tab === 'settings' && settingsTool === null && (
+            <Settings onOpenPoker={() => setSettingsTool('poker')} onOpenShared={() => setSettingsTool('shared')} />
+          )}
+          {tab === 'settings' && settingsTool !== null && (
+            <div className="screen settings-tool-shell">
+              <SettingsHeader
+                title={settingsTool === 'poker' ? 'Poker tracker' : 'Shared budgets'}
+                backLabel="Settings"
+                onBack={() => setSettingsTool(null)}
+              />
+              {settingsTool === 'poker' ? <Poker /> : <SharedScreen />}
+            </div>
+          )}
         </Suspense>
       </main>
       {toast && <SaveToast entry={toast} onUndo={handleUndo} onDismiss={dismissToast} />}

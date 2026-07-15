@@ -1,23 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { endOfWeek, format } from 'date-fns'
+import { format } from 'date-fns'
 import { CalendarDays, ChevronLeft, ChevronRight, Copy, Plus, Search, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
-import InsightsSection from '../components/InsightsSection'
-import { formatSGD, formatSGDWhole } from '../format'
-import {
-  entriesForMonth,
-  lunchWeeklySpend,
-  weeklyBudgetTarget,
-  weeklyTotal,
-  weeksInMonth,
-} from '../compute'
+import { formatSGD } from '../format'
+import { entriesForMonth } from '../compute'
 import {
   clampDateString,
   fromLocalDateString,
   isFutureDateString,
   toLocalDateString,
 } from '../dates'
-import { getBudgetConfig, getCustomCategories, getCategoryOverrides } from '../storage'
+import { getCustomCategories, getCategoryOverrides } from '../storage'
 import { buildCategoryOptions, categoryIcon, categoryLabel } from '../categoryDisplay'
 import { useEntries } from '../EntriesContext'
 import type { Entry } from '../types'
@@ -54,11 +47,6 @@ function sourceLabel(entry: Entry): string {
     default:
       return 'Manual'
   }
-}
-
-function progressPercent(amount: number, budget: number): number {
-  if (budget <= 0) return amount > 0 ? 100 : 0
-  return Math.min(100, (amount / budget) * 100)
 }
 
 function minDateForMonth(year: number, month: number): string {
@@ -133,13 +121,11 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
   const [ledgerMessage, setLedgerMessage] = useState('')
   const dayFilterRef = useRef<HTMLElement>(null)
 
-  const config = getBudgetConfig()
   const customCategories = getCustomCategories()
   const overrides = getCategoryOverrides()
   const categoryOptions = buildCategoryOptions(overrides, customCategories)
   const labelForCategory = (id: string): string => categoryLabel(id, overrides, customCategories)
   const iconForCategory = (id: string): string => categoryIcon(id, overrides, customCategories)
-  const weeks = weeksInMonth(year, month)
   const monthEntries = entriesForMonth(entries, year, month).sort(entrySort)
   const normalizedQuery = searchQuery.trim().toLocaleLowerCase()
   const filteredEntries = monthEntries.filter(entry => {
@@ -654,7 +640,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
       {/* Analysis sits beneath the ledger: someone opening History wants the transaction
           list first. Calendar taps bring the chosen day back to that ledger. */}
       <details className="history-analysis">
-        <summary className="history-analysis__summary">Calendar &amp; insights</summary>
+        <summary className="history-analysis__summary">Calendar</summary>
         <div className="history-analysis__body">
         <div className="cal-grid history__calendar" role="grid" aria-label="Daily spending">
           {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
@@ -682,71 +668,6 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
           })}
         </div>
         <p className="cal-caption muted">lighter = heavier spend day &middot; ring = today &middot; tap a day to filter the ledger</p>
-
-        <h3 className="section-title">Weekly Spending</h3>
-
-        {weeks.map(weekStart => {
-          const total = weeklyTotal(monthEntries, weekStart)
-          const lunch = lunchWeeklySpend(monthEntries, weekStart)
-          const weeklyBudget = weeklyBudgetTarget(config.monthlyIncome, year, month, weekStart)
-          const lunchWeeklyAvg = weeklyBudgetTarget(config.lunch, year, month, weekStart)
-          const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
-          const label = `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d')}`
-          const labelId = `week-${format(weekStart, 'yyyy-MM-dd')}-label`
-          const summaryId = `week-${format(weekStart, 'yyyy-MM-dd')}-summary`
-          const totalPct = progressPercent(total, weeklyBudget)
-          const lunchPct = progressPercent(lunch, lunchWeeklyAvg)
-
-          return (
-            <div
-              key={weekStart.toISOString()}
-              className="card week-bar"
-              role="group"
-              aria-labelledby={labelId}
-              aria-describedby={summaryId}
-            >
-              <div className="week-bar-header">
-                <span id={labelId} className="week-bar-label">{label}</span>
-                <span className="week-bar-total">
-                  {formatSGD(total)} / ~{formatSGDWhole(weeklyBudget)}
-                </span>
-              </div>
-              <span id={summaryId} className="sr-only">
-                Total {formatSGD(total)} of {formatSGD(weeklyBudget)} target. Lunch {formatSGD(lunch)} of {formatSGD(lunchWeeklyAvg)} target.
-              </span>
-              <div className="progress-bar" style={{ marginTop: 6 }}>
-                <div
-                  className="progress-fill"
-                  style={{
-                    width: `${totalPct}%`,
-                    background: total > weeklyBudget ? 'var(--red)' : 'var(--green)',
-                  }}
-                />
-              </div>
-              <div className="week-bar-lunch">
-                <span className="muted">
-                  Lunch {formatSGD(lunch)} / ~{formatSGDWhole(lunchWeeklyAvg)}
-                </span>
-                <div className="progress-bar thin" style={{ marginTop: 4 }}>
-                  <div
-                    className="progress-fill"
-                    style={{
-                      width: `${lunchPct}%`,
-                      background: lunch > lunchWeeklyAvg ? 'var(--red)' : 'var(--blue)',
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          )
-        })}
-
-        <InsightsSection
-          entries={entries}
-          year={year}
-          month={month}
-          customCategories={customCategories}
-        />
 
         </div>
       </details>

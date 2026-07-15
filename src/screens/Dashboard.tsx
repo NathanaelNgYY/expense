@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, ChevronDown, ChevronUp, Minus, Settings as SettingsIcon, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp, Minus, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
 import BudgetUsageRing from '../components/BudgetUsageRing'
@@ -31,7 +31,6 @@ import {
 import type { SharedEntry } from '../sharedBudgets/types'
 
 interface Props {
-  onSettings: () => void
   onAddEntry: () => void
 }
 
@@ -51,7 +50,7 @@ function sharedEntrySort(a: SharedEntry, b: SharedEntry): number {
   return b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)
 }
 
-export default function Dashboard({ onSettings, onAddEntry }: Props) {
+export default function Dashboard({ onAddEntry }: Props) {
   const [expandedCategory, setExpandedCategory] = useState<ExpandKey | null>(null)
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
   const [viewScope, setViewScope] = useState<'personal' | 'shared'>('personal')
@@ -229,9 +228,6 @@ export default function Dashboard({ onSettings, onAddEntry }: Props) {
           <h1 className="month-label"><span className="sr-only">Dashboard: </span>{monthLabel}</h1>
           <div className="income-label">{formatSGDWhole(monthlyIncome)} / month</div>
         </div>
-        <button className="settings-icon-btn" type="button" onClick={onSettings} aria-label="Settings">
-          <SettingsIcon aria-hidden="true" size={19} strokeWidth={2} />
-        </button>
       </header>
 
       <SyncStatus sync={sync} onRetry={() => void refresh()} onBackup={downloadJsonBackup} />

@@ -1,0 +1,66 @@
+import { act } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { EntriesProvider } from '../EntriesContext'
+import Insights from './Insights'
+
+describe('Insights', () => {
+  let root: Root | null = null
+
+  beforeEach(() => {
+    ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    localStorage.clear()
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-19T12:00:00'))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 })))
+  })
+
+  afterEach(() => {
+    act(() => root?.unmount())
+    document.body.replaceChildren()
+    localStorage.clear()
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
+
+  it('owns the monthly category, weekly and pattern analysis', async () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+
+    await act(async () => {
+      root?.render(
+        <EntriesProvider>
+          <Insights />
+        </EntriesProvider>,
+      )
+    })
+
+    expect(container.querySelector('h1')).toHaveTextContent('Insights')
+    expect(container).toHaveTextContent('Category Breakdown')
+    expect(container).toHaveTextContent('Weekly Spending')
+    expect(container).toHaveTextContent('Month Review')
+  })
+
+  it('scopes boundary weeks to the selected month and exposes an accessible spending summary', async () => {
+    localStorage.setItem('budget_entries', JSON.stringify([
+      { id: 'april-lunch', amount: 100, category: 'lunch', note: '', date: '2026-04-30' },
+      { id: 'may-lunch', amount: 10, category: 'lunch', note: '', date: '2026-05-01' },
+    ]))
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+
+    await act(async () => {
+      root?.render(<EntriesProvider><Insights /></EntriesProvider>)
+    })
+
+    const firstWeek = container.querySelector<HTMLElement>('.week-bar')
+    if (!firstWeek) throw new Error('First weekly spending card was not found')
+    expect(firstWeek).toHaveTextContent('S$10.00')
+    expect(firstWeek).not.toHaveTextContent('S$110.00')
+    expect(firstWeek).toHaveAccessibleDescription(
+      'Total S$10.00 of S$116.13 target. Lunch S$10.00 of S$25.55 target.',
+    )
+  })
+})

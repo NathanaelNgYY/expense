@@ -4,10 +4,10 @@ import TabBar, { type Tab } from './TabBar'
 
 const destinations: Array<{ label: string; tab: Tab }> = [
   { label: 'Home', tab: 'home' },
-  { label: 'Add entry', tab: 'add' },
   { label: 'History', tab: 'history' },
-  { label: 'Poker', tab: 'poker' },
-  { label: 'Shared budgets', tab: 'shared' },
+  { label: 'Add entry', tab: 'add' },
+  { label: 'Insights', tab: 'insights' },
+  { label: 'Settings', tab: 'settings' },
 ]
 
 describe('TabBar', () => {
@@ -20,5 +20,12 @@ describe('TabBar', () => {
 
     fireEvent.click(button)
     expect(onChange).toHaveBeenCalledWith(tab)
+  })
+
+  it('keeps secondary tools out of primary navigation', () => {
+    render(<TabBar active="home" onChange={() => undefined} />)
+
+    expect(screen.queryByRole('button', { name: 'Poker' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Shared budgets' })).not.toBeInTheDocument()
   })
 })

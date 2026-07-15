@@ -340,24 +340,9 @@ describe('History entry editing', () => {
     clickButton(rendered.container, 'Clear day filter')
     expect(rendered.container.querySelectorAll('.entry-row-button')).toHaveLength(3)
     expect(rendered.container).not.toHaveTextContent('Add missed expense')
-    expect(rendered.container).toHaveTextContent('Calendar & insights')
+    expect(rendered.container).toHaveTextContent('Calendar')
+    expect(rendered.container).not.toHaveTextContent('Weekly Spending')
+    expect(rendered.container).not.toHaveTextContent('Month Review')
   })
 
-  it('scopes boundary weeks to the selected month and exposes an accessible spending summary', async () => {
-    const rendered = renderWithEntries([
-      entry({ id: 'april-lunch', amount: 100, date: '2026-04-30' }),
-      entry({ id: 'may-lunch', amount: 10, date: '2026-05-01' }),
-    ])
-    root = rendered.root
-    await act(async () => {})
-
-    const firstWeek = rendered.container.querySelector<HTMLElement>('.week-bar')
-    if (!firstWeek) throw new Error('First weekly spending card was not found')
-
-    expect(firstWeek).toHaveTextContent('S$10.00')
-    expect(firstWeek).not.toHaveTextContent('S$110.00')
-    expect(firstWeek).toHaveAccessibleDescription(
-      'Total S$10.00 of S$116.13 target. Lunch S$10.00 of S$25.55 target.',
-    )
-  })
 })

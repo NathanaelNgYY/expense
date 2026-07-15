@@ -1,0 +1,363 @@
+/* First-run budget onboarding: compact welcome + envelope setup. */
+.app--onboarding {
+  min-height: 100dvh;
+}
+
+.onboarding {
+  gap: 24px;
+  padding-top: calc(8px + env(safe-area-inset-top));
+}
+
+.onboarding__brand-bar,
+.onboarding__nav {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+}
+
+.onboarding__wordmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+.onboarding__brand-mark {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  color: var(--primary);
+}
+
+.onboarding__brand-mark svg,
+.onboarding__wordmark--plain svg {
+  width: 18px;
+  height: 18px;
+}
+
+.onboarding__wordmark--plain {
+  font-family: var(--font-body);
+  font-size: 16px;
+}
+
+.onboarding__wordmark--plain svg {
+  color: var(--primary);
+}
+
+.onboarding__quiet-action {
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  padding: 0 4px;
+}
+
+.onboarding__welcome-copy {
+  display: grid;
+  gap: 12px;
+}
+
+.onboarding__welcome-label {
+  color: var(--primary);
+  font-size: 13px;
+}
+
+.onboarding__welcome-copy h1 {
+  max-width: 12ch;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.onboarding__welcome-copy > p:last-child {
+  max-width: 38ch;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.onboarding__plan-summary {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--separator);
+  border-radius: 16px;
+  background: var(--bg-elev);
+  padding: 16px;
+}
+
+.onboarding__plan-summary span,
+.onboarding__plan-summary small {
+  color: var(--text-secondary);
+}
+
+.onboarding__plan-summary strong {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.onboarding__actions {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.onboarding__actions .save-btn,
+.onboarding__secondary-action {
+  min-height: 50px;
+  border-radius: 14px;
+}
+
+.onboarding__actions small {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  text-align: center;
+}
+
+.onboarding__secondary-action {
+  border: 1px solid var(--separator);
+  background: var(--bg-elev);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.onboarding__nav {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  text-align: center;
+}
+
+.onboarding__nav button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bg-elev-2);
+  color: var(--primary);
+}
+
+.onboarding__nav h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.onboarding__nav > span {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.onboarding__total {
+  display: grid;
+  gap: 6px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--separator);
+  color: var(--text-secondary);
+}
+
+.onboarding__money-input {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--primary);
+}
+
+.onboarding__money-input input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+}
+
+.onboarding__pockets {
+  display: grid;
+  gap: 8px;
+}
+
+.onboarding__pockets > label,
+.onboarding__buffer-row {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 12px;
+  background: var(--bg-elev);
+  padding: 8px 14px;
+}
+
+.onboarding__pocket-label {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.onboarding__pocket-label > .ui-icon {
+  color: var(--primary);
+}
+
+.onboarding__pocket-label > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.onboarding__pocket-label strong,
+.onboarding__buffer-row > strong {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.onboarding__pocket-label small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.onboarding__pocket-amount {
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+}
+
+.onboarding__pocket-amount input {
+  width: 64px;
+  min-height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.onboarding__buffer-row > strong {
+  color: var(--green);
+  font-variant-numeric: tabular-nums;
+}
+
+.onboarding__error {
+  color: var(--red);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.onboarding__receipt {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  background: var(--bg-elev);
+  padding: 18px;
+}
+
+.onboarding__receipt-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--primary);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.onboarding__receipt-head svg {
+  width: 18px;
+  height: 18px;
+}
+
+.onboarding__receipt h1 {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+.onboarding__receipt dl {
+  display: grid;
+}
+
+.onboarding__receipt dl > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px dashed var(--separator);
+}
+
+.onboarding__receipt dt {
+  color: var(--text-secondary);
+}
+
+.onboarding__receipt dd {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.onboarding__receipt > p {
+  padding-top: 2px;
+  color: var(--green);
+  font-size: 13px;
+  text-align: center;
+}
+
+.onboarding__ready-copy {
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-height: 720px) {
+  .onboarding {
+    gap: 16px;
+    padding-top: calc(4px + env(safe-area-inset-top));
+  }
+
+  .onboarding__pockets {
+    gap: 6px;
+  }
+
+  .onboarding__pockets > label,
+  .onboarding__buffer-row {
+    min-height: 56px;
+  }
+}
+
+@media (max-width: 360px) {
+  .onboarding {
+    padding-inline: 16px;
+  }
+
+  .onboarding__welcome-copy h1 {
+    font-size: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding * {
+    scroll-behavior: auto !important;
+  }
+}

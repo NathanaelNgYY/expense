@@ -8,7 +8,7 @@
 
 ## Current position
 
-The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, weekly-history correctness/accessibility, H6 presentation, M17 isolation/browser/accessibility, H11 batch imports, and the first M14 bundle reduction are implemented and deployed. M18 runtime retirement and H9 repository enforcement are complete. Automatic Tracking setup and direct past-date entry are complete. The five-tab navigation restructure is implemented locally and awaiting review/deployment.
+The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, weekly-history correctness/accessibility, H6 presentation, M17 isolation/browser/accessibility, H11 batch imports, the first M14 bundle reduction, and the five-tab navigation restructure are implemented and deployed. M18 runtime retirement and H9 repository enforcement are complete. Automatic Tracking setup and direct past-date entry are complete. First-run budget onboarding is implemented locally and awaiting review/deployment.
 
 ## Completed or materially addressed
 
@@ -32,12 +32,14 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 | H4–H5 — weekly-history correctness and accessibility | Complete and deployed | Weekly total and lunch targets are prorated by selected-month days instead of dividing by four; boundary rows exclude adjacent-month entries; every weekly chart group exposes exact spend-versus-target text to assistive technology. The presentation now lives on Insights. | `docs/testing/h4-h5-weekly-history.tdd.md`, `src/compute.ts`, `src/screens/Insights.tsx` |
 | Automatic tracking onboarding | Complete | Settings now provides a three-step Apple Pay and DBS-alert setup flow, explains the native PayNow limitation and manual fallback, copies the public Edge Function endpoint, links to trusted token provisioning and Shortcuts, and refreshes the linked-account/last-capture status without exposing raw tokens to the browser. | `docs/testing/automatic-tracking-setup.tdd.md`, `src/screens/settings/AutomaticCaptureSettings.tsx`, `src/screens/settings/IngestStatusCard.tsx` |
 | Direct past-date entry | Complete | Add now exposes a labelled native date picker that defaults to today, prevents future dates, accepts a past date directly or from History’s calendar shortcut, and preserves the existing optimistic save/undo path. Its interactive surface measures 44px at 375×667 without horizontal overflow. | `docs/testing/add-entry-date.tdd.md`, `src/screens/AddEntry.tsx`, `tests/e2e/journeys.spec.ts` |
-| Five-tab navigation restructure | Complete locally | Primary navigation is now Home, History, Add, Insights, and Settings. History retains the transaction ledger and calendar; category, weekly, and monthly pattern analysis has a dedicated lazy screen. Poker and Shared budgets remain available under Settings → More tools while the Settings tab stays selected. | `docs/testing/navigation-restructure.tdd.md`, `src/components/TabBar.tsx`, `src/screens/Insights.tsx`, `src/screens/Settings.tsx` |
+| Five-tab navigation restructure | Complete and deployed | Primary navigation is now Home, History, Add, Insights, and Settings. History retains the transaction ledger and calendar; category, weekly, and monthly pattern analysis has a dedicated lazy screen. Poker and Shared budgets remain available under Settings → More tools while the Settings tab stays selected. | `docs/testing/navigation-restructure.tdd.md`, `src/components/TabBar.tsx`, `src/screens/Insights.tsx`, `src/screens/Settings.tsx` |
+| First-run budget onboarding | Complete locally | Fresh installs now open a compact welcome, can accept defaults or edit monthly envelope targets, see the computed Buffer, and finish into Add or Home. Existing users and direct Add launches are not interrupted; completion is user-scoped. | `docs/testing/first-run-budget-onboarding.tdd.md`, `src/onboarding/FirstRunBudgetOnboarding.tsx`, `src/onboarding/onboardingState.ts` |
 
 ## Next recommended work
 
-1. Collect CrUX/real-user Core Web Vitals once the site has available field data; reopen M14 only if mobile LCP or INP fails consistently.
-2. Select the next product/audit item from M1–M9 or M12–M16.
+1. Review and deploy first-run budget onboarding, then verify the three-screen flow on a fresh physical-iPhone install.
+2. Collect CrUX/real-user Core Web Vitals once the site has available field data; reopen M14 only if mobile LCP or INP fails consistently.
+3. Select the next product/audit item from M1–M9 or M12–M16.
 
 ## Remaining audit items
 
@@ -46,13 +48,13 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 
 ## Verification baseline
 
-- Current suite: 57 test files, 480 tests passed.
+- Current suite: 57 test files, 486 tests passed.
 - Lint and production build pass.
-- Whole-project coverage: 84.8% statements, 76.91% branches, 83.4% functions, 88.33% lines. The existing CI thresholds remain enforced and were not lowered.
+- Whole-project coverage: 84.99% statements, 77.2% branches, 83.51% functions, 88.47% lines. The existing CI thresholds remain enforced and were not lowered.
 - Live RLS: 48 isolation tests across 9 tables and 2 SECURITY DEFINER RPCs pass against a real Postgres locally and in the parallel `rls` CI job. These replaced `supabase/tests/ingest_visibility.test.ts`, which asserted that migration files *contained* policy substrings and would have stayed green if a policy were later dropped.
 - Browser E2E: 9 mobile Chromium checks pass across six critical journeys, Axe WCAG A/AA scans on all primary screens and Settings tools, keyboard focus, accessible names, measured 44px targets, and no-overflow checks at 375×667 and 390×844. They run in a parallel `e2e` CI job without contacting deployed Supabase.
 - Physical accessibility: the deployed weekly History rows passed an iPhone VoiceOver check on 2026-07-14.
-- Initial payload check: 136.9 KiB gzip JavaScript and 12.0 KiB gzip CSS, against tightened CI budgets of 143 and 12. JavaScript includes the entry file plus eagerly preloaded React, date-format, and Supabase chunks; Sentry, Insights, and other lazy route chunks are excluded from the first-render path. The Automatic Tracking flow remains inside the lazy Settings chunk.
+- Initial payload check: 136.8 KiB gzip JavaScript and 12.0 KiB gzip CSS, against tightened CI budgets of 143 and 12. JavaScript includes the entry file plus eagerly preloaded React and Supabase chunks; Sentry, onboarding, Insights, and other lazy route chunks are excluded from the ordinary returning-user first-render path. The Automatic Tracking flow remains inside the lazy Settings chunk.
 - Production performance lab baseline (three-run Lighthouse 13 medians): mobile score 94, FCP 1.934s, LCP 2.505s, TBT 121ms, CLS 0; desktop score 100, FCP 0.390s, LCP 0.617s, TBT 0ms, CLS 0. INP requires field/interaction data and was not inferred from TBT.
 - `deno check` of the ingest Edge Function passes. It previously did not: `IngestInput.learnedCategory` was typed `Category` while `categoryFromHistory` returns `string | null` (custom categories), and nothing typechecked `supabase/functions/`, so CI never saw it.
 - gitleaks: 218 commits scanned, no leaks.

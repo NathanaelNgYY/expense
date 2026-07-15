@@ -13,12 +13,14 @@ import AppErrorBoundary from './components/AppErrorBoundary'
 import SettingsHeader from './screens/settings/SettingsHeader'
 import { downloadJsonBackup } from './dataTransfer'
 import { reportReactError } from './monitoring'
+import { shouldShowBudgetOnboarding } from './onboarding/onboardingState'
 
 const History = lazy(() => import('./screens/History'))
 const Insights = lazy(() => import('./screens/Insights'))
 const Settings = lazy(() => import('./screens/Settings'))
 const Poker = lazy(() => import('./screens/Poker'))
 const SharedScreen = lazy(() => import('./sharedBudgets/SharedScreen'))
+const FirstRunBudgetOnboarding = lazy(() => import('./onboarding/FirstRunBudgetOnboarding'))
 
 function initialTab(): Tab {
   const params = new URLSearchParams(window.location.search)
@@ -27,6 +29,9 @@ function initialTab(): Tab {
 
 function AppShell() {
   const [tab, setTab] = useState<Tab>(initialTab)
+  const [showOnboarding, setShowOnboarding] = useState(() =>
+    shouldShowBudgetOnboarding(initialTab() === 'add'),
+  )
   const [addEntryDate, setAddEntryDate] = useState<string | undefined>()
   const [settingsTool, setSettingsTool] = useState<'poker' | 'shared' | null>(null)
   // Lives in the shell, not in AddEntry: the confirmation has to outlive the screen that
@@ -57,6 +62,23 @@ function AppShell() {
   function handleUndo() {
     if (toast) void removeEntry(toast.id)
     setToast(null)
+  }
+
+  function handleOnboardingFinish(destination: 'home' | 'add') {
+    setShowOnboarding(false)
+    setTab(destination)
+  }
+
+  if (showOnboarding) {
+    return (
+      <div className="app app--onboarding">
+        <main>
+          <Suspense fallback={null}>
+            <FirstRunBudgetOnboarding onFinish={handleOnboardingFinish} />
+          </Suspense>
+        </main>
+      </div>
+    )
   }
 
   return (

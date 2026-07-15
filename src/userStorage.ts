@@ -9,6 +9,7 @@ const USER_SCOPED_KEYS = [
   'poker_sessions',
   'poker_custom_stakes',
   'sync_queue',
+  'budget_onboarding_version',
 ] as const
 
 function recordedMigrationOwners(): string[] {

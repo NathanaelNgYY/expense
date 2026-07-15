@@ -16,7 +16,93 @@ afterEach(() => {
 })
 
 describe('App', () => {
+  it('opens the compact first-run welcome on a fresh install', async () => {
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(await screen.findByRole('heading', { name: 'Make your monthly money plan yours.' })).toBeInTheDocument()
+    expect(screen.getByText('Welcome — let’s start with your plan')).toBeInTheDocument()
+    expect(screen.getByText('Budget')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Use defaults' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Main navigation' })).not.toBeInTheDocument()
+  })
+
+  it('saves the envelope budget and presents the ready receipt', async () => {
+    await act(async () => {
+      render(<App />)
+    })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Set up my budget' }))
+    expect(screen.getByRole('heading', { name: 'Your pockets' })).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Total monthly plan'), { target: { value: '1400' } })
+    fireEvent.change(screen.getByLabelText('Lunch target'), { target: { value: '300' } })
+    fireEvent.change(screen.getByLabelText('Transport target'), { target: { value: '100' } })
+    fireEvent.change(screen.getByLabelText('Savings target'), { target: { value: '500' } })
+    fireEvent.change(screen.getByLabelText('Investments target'), { target: { value: '300' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Close my wallet' }))
+
+    expect(screen.getByRole('heading', { name: 'S$1,400' })).toBeInTheDocument()
+    expect(screen.getByText('Ready for this month')).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem('budget_config') ?? '{}')).toMatchObject({
+      monthlyIncome: 1400,
+      lunch: 300,
+      transport: 100,
+      savings: 500,
+      investments: 300,
+      buffer: 200,
+      others: 200,
+    })
+  })
+
+  it('prevents an overallocated plan from being saved', async () => {
+    await act(async () => {
+      render(<App />)
+    })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Set up my budget' }))
+    fireEvent.change(screen.getByLabelText('Total monthly plan'), { target: { value: '100' } })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Your targets are over the monthly plan')
+    expect(screen.getByRole('button', { name: 'Close my wallet' })).toBeDisabled()
+    expect(localStorage.getItem('budget_config')).toBeNull()
+  })
+
+  it('uses defaults and completes onboarding into Add entry', async () => {
+    await act(async () => {
+      render(<App />)
+    })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Use defaults' }))
+    expect(screen.getByText('Ready for this month')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add my first expense' }))
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Add entry' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument()
+    expect(localStorage.getItem('budget_onboarding_version')).toBe('1')
+  })
+
+  it('does not interrupt a user who already has a saved budget', async () => {
+    localStorage.setItem('budget_config', JSON.stringify({ monthlyIncome: 1200 }))
+    await act(async () => {
+      render(<App />)
+    })
+    expect(screen.queryByRole('heading', { name: 'Make your monthly money plan yours.' })).not.toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument()
+  })
+
+  it('does not interrupt a direct Add entry launch', async () => {
+    window.history.replaceState({}, '', '/?add=true')
+    await act(async () => {
+      render(<App />)
+    })
+    expect(screen.getByRole('heading', { level: 1, name: 'Add entry' })).toBeInTheDocument()
+  })
+
   it('renders the home tab by default', async () => {
+    localStorage.setItem('budget_onboarding_version', '1')
     await act(async () => {
       render(<App />)
     })
@@ -36,6 +122,7 @@ describe('App', () => {
   })
 
   it('restores the selected theme on app startup', async () => {
+    localStorage.setItem('budget_onboarding_version', '1')
     localStorage.setItem('budget-tracker-theme-v2', 'copper-current')
 
     await act(async () => {
@@ -46,6 +133,7 @@ describe('App', () => {
   })
 
   it('keeps the five-tab shell visible on Insights and Settings', async () => {
+    localStorage.setItem('budget_onboarding_version', '1')
     await act(async () => {
       render(<App />)
     })

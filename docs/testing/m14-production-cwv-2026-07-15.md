@@ -1,7 +1,9 @@
 # M14 production performance reassessment
 
-**Date:** 2026-07-15 (SGT)  
-**Target:** `https://budget-tracker-sooty-ten.vercel.app`  
+**Date:** 2026-07-15 (SGT)
+
+**Target:** `https://budget-tracker-sooty-ten.vercel.app`
+
 **Runner:** Lighthouse 13.0.1, Chrome 150.0.7871.116
 
 ## Method

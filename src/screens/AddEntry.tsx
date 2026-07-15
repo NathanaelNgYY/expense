@@ -1,6 +1,6 @@
 // src/screens/AddEntry.tsx
 import { useCallback, useEffect, useState } from 'react'
-import { Delete } from 'lucide-react'
+import { CalendarDays, Delete } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
 import { fromLocalDateString, toLocalDateString } from '../dates'
@@ -24,11 +24,13 @@ interface Props {
 const NUMPAD_KEYS = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
 
 export default function AddEntry({ initialDate, onSave }: Props) {
+  const today = toLocalDateString()
   const [digits, setDigits] = useState('0')
   const [animationCue, setAnimationCue] = useState({ key: '', version: 0 })
   const [category, setCategory] = useState<string | null>(null)
   const [note, setNote] = useState('')
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
+  const [entryDate, setEntryDate] = useState(() => initialDate && initialDate <= today ? initialDate : today)
   const [busy, setBusy] = useState(false)
   const { addEntry: addPersonalEntry } = useEntries()
   const shared = useSharedBudgets()
@@ -57,8 +59,6 @@ export default function AddEntry({ initialDate, onSave }: Props) {
   const activeGlyphIndex = getActiveGlyphIndex(digits, amountText, animationCue.key)
   const sharedSaveDisabled =
     isSharedDestination && (!selectedSharedBudget || !activeSharedReady || busy)
-  const today = toLocalDateString()
-  const entryDate = initialDate && initialDate <= today ? initialDate : today
   const saveLabel = entryDate === today ? 'Save' : `Add for ${format(fromLocalDateString(entryDate), 'MMM d')}`
 
   useEffect(() => {
@@ -193,6 +193,24 @@ export default function AddEntry({ initialDate, onSave }: Props) {
         </span>
         <span className="amount-screenreader">{amountText}</span>
       </div>
+
+      <label className="add-entry-date">
+        <span className="add-entry-date__trigger">
+          <CalendarDays size={17} aria-hidden="true" />
+          <span>{entryDate === today ? 'Today' : format(fromLocalDateString(entryDate), 'EEE, MMM d')}</span>
+          <input
+            type="date"
+            className="add-entry-date__input"
+            aria-label="Expense date"
+            value={entryDate}
+            max={today}
+            onChange={event => {
+              const nextDate = event.target.value
+              setEntryDate(nextDate && nextDate <= today ? nextDate : today)
+            }}
+          />
+        </span>
+      </label>
 
       <div className="numpad add-entry__keypad">
         {NUMPAD_KEYS.map(key => (

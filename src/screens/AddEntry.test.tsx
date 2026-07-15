@@ -3,6 +3,7 @@ import { act } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import AddEntry from './AddEntry'
 import { EntriesProvider } from '../EntriesContext'
+import { toLocalDateString } from '../dates'
 import { getEntries } from '../storage'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
 
@@ -71,8 +72,8 @@ describe('AddEntry', () => {
 
     const dateInput = screen.getByLabelText('Expense date')
     expect(dateInput).toHaveAttribute('type', 'date')
-    expect(dateInput).toHaveValue(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
-    expect(dateInput).toHaveAttribute('max', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
+    expect(dateInput).toHaveValue(toLocalDateString())
+    expect(dateInput).toHaveAttribute('max', toLocalDateString())
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
   })
 

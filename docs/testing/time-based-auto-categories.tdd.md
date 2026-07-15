@@ -41,7 +41,7 @@ No source plan was provided. The acceptance criteria were derived from the user 
 | 7 | The ingest handler assigns a custom Dinner id and degrades safely when preferences fail | `supabase/functions/ingest/handler.test.ts` | Integration | PASS |
 | 8 | The settings UI can target Dinner or another custom category and recover from load failure | `src/screens/settings/MealTimeRulesSettings.test.tsx` | Component | PASS |
 | 9 | The offline preference state has a 44px retry target and no horizontal overflow at 390×844 | `tests/e2e/journeys.spec.ts` | Browser E2E | PASS |
-| 10 | Owners are isolated and anonymous/forged access is denied | `supabase/tests/rls/automaticCategoryPreferences.rls.test.ts` | Live RLS | NOT RUN LOCALLY |
+| 10 | Owners are isolated and anonymous/forged access is denied | `supabase/tests/rls/automaticCategoryPreferences.rls.test.ts` | Live RLS | PASS |
 
 ## Full verification
 
@@ -51,8 +51,10 @@ No source plan was provided. The acceptance criteria were derived from the user 
 - `npm run build`: passed.
 - `npm run size`: 137.0 KiB initial JavaScript and 12.0 KiB initial CSS, both within budget.
 - `npm run typecheck:functions`: passed.
+- `npm run test:rls`: 6 files and 53 live Postgres tests passed after a clean local migration replay, including the new preferences table.
+- `npx supabase db advisors --local --type all --level warn --fail-on error`: no security or performance issues found.
 - `npm audit --audit-level=high`: 0 vulnerabilities.
 
-## Known gap and deployment order
+## Deployment order
 
-The local Supabase RLS suite could not run because Docker Desktop/the local Supabase stack was unavailable. The migration and live isolation tests are committed, but their result is deliberately recorded as not run. Do not deploy the client first: apply the migration, verify RLS, deploy the ingest Edge Function, then deploy the PWA and test a Lunch/Dinner pair on a physical iPhone.
+The migration now applies cleanly from an empty local Supabase stack and the complete live RLS suite passes. For production, apply the migration first, deploy the ingest Edge Function, then deploy the PWA and test a Lunch/Dinner pair on a physical iPhone.

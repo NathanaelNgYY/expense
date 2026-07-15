@@ -849,7 +849,7 @@ input:focus-visible {
   inset: 0;
   border-radius: 18px;
   padding: 16px 18px;
-  background: linear-gradient(155deg, #163b2c, #0a1611);
+  background: var(--bg-elev);
   border: 1px solid rgba(212, 175, 106, 0.25);
   box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.6);
   transition: transform 220ms ease, opacity 220ms ease;

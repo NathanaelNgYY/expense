@@ -63,6 +63,8 @@ Borders are gold-tinted alphas (`rgba(212,175,106,.16–.4)`), never gray.
   lifts to `--bg-elev`.
 - **Cards** (`.card`): green gradient (`155deg, #163b2c → #0a1611`), 18px radius, gold
   border, soft drop shadow.
+- **Dashboard passes** (`.pass`): flat `--bg-elev` surfaces so stacked personal/shared
+  budgets recede behind the amount; themes vary shape and shadow, not surface decoration.
 - **Inputs** (`.settings-input`): borderless on `--bg-elev-2`, 10px radius, 17px text,
   right-aligned numerics, `inputMode="decimal"`.
 - Every interactive element has an `:active` state; feedback is immediate.

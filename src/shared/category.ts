@@ -1,5 +1,6 @@
 // .ts extension: reached by the Deno-bundled ingest Edge Function (see shared/entry.ts).
 import type { Category, Entry } from '../types.ts'
+import { categoryFromSingaporeMerchantPack } from './singaporeMerchantPack.ts'
 
 const CATEGORY_RULES: Array<{ category: Category; keywords: string[] }> = [
   {
@@ -37,6 +38,9 @@ export function normalizeCategoryMerchant(value: string): string {
 // pollutes that category and undercounts the true one (e.g. a PayNow lunch).
 export function guessCategory(merchantText: string): Category | null {
   const normalized = normalizeCategoryMerchant(merchantText)
+  const merchantPackCategory = categoryFromSingaporeMerchantPack(normalized)
+  if (merchantPackCategory) return merchantPackCategory
+
   for (const rule of CATEGORY_RULES) {
     if (rule.keywords.some(keyword => normalized.includes(keyword))) {
       return rule.category

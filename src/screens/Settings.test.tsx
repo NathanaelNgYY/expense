@@ -134,7 +134,7 @@ describe('Settings hub', () => {
     localStorage.clear()
   })
 
-  it('shows three nav rows and the reset action, and no budget fields', () => {
+  it('shows four nav rows and the reset action, and no budget fields', () => {
     const rendered = renderSettings()
     root = rendered.root
     const { container } = rendered
@@ -142,8 +142,9 @@ describe('Settings hub', () => {
     expect(container).toHaveTextContent('Budget & Categories')
     expect(container).toHaveTextContent('Appearance')
     expect(container).toHaveTextContent('Data & Backup')
+    expect(container).toHaveTextContent('Automatic Tracking')
     expect(container).toHaveTextContent('Reset This Month')
-    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(3)
+    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(4)
     // The hub only navigates — the editable budget fields live one level down.
     expect(container.querySelector('#budget-monthly-income')).toBeNull()
   })
@@ -165,7 +166,7 @@ describe('Settings hub', () => {
     expect(container.querySelector('#budget-monthly-income')).not.toBeNull()
 
     goBack(container)
-    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(3)
+    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(4)
     expect(container.querySelector('#budget-monthly-income')).toBeNull()
   })
 
@@ -179,7 +180,7 @@ describe('Settings hub', () => {
     expect(container).toHaveTextContent('Applies immediately')
 
     goBack(container)
-    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(3)
+    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(4)
   })
 
   it('navigates to Data & Backup and back to the hub', () => {
@@ -191,7 +192,20 @@ describe('Settings hub', () => {
     expect(container).toHaveTextContent('CSV — entries only')
 
     goBack(container)
-    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(3)
+    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(4)
+  })
+
+  it('navigates to Automatic Tracking and back to the hub', () => {
+    const rendered = renderSettings()
+    root = rendered.root
+    const { container } = rendered
+
+    openSubscreen(container, 'Automatic Tracking')
+    expect(container).toHaveTextContent('PayNow has no native Shortcuts trigger')
+    expect(container.querySelector('a[href="shortcuts://"]')).toHaveTextContent('Open Shortcuts')
+
+    goBack(container)
+    expect(container.querySelectorAll('.settings-nav-row')).toHaveLength(4)
   })
 
   it('exits Settings from the hub back button', () => {

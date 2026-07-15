@@ -23,6 +23,10 @@ test('primary screens have a page heading and no automated WCAG A/AA violations'
   await page.getByRole('button', { name: 'Home' }).click()
   await page.getByRole('button', { name: 'Settings' }).click()
   await expectAccessiblePage(page, 'Settings')
+
+  await page.getByRole('button', { name: /Automatic Tracking/ }).click()
+  await expectAccessiblePage(page, 'Automatic tracking')
+  await expect(page.getByText('PayNow has no native Shortcuts trigger')).toBeVisible()
 })
 
 test('keyboard focus reaches named navigation and form controls', async ({ page }) => {
@@ -54,6 +58,16 @@ test('critical mobile controls expose at least a 44 by 44 pixel target', async (
 
   await page.getByRole('button', { name: 'History' }).click()
   for (const name of ['Previous month', 'Next month']) {
+    const box = await page.getByRole('button', { name }).boundingBox()
+    expect(box, `${name} should have a rendered target`).not.toBeNull()
+    expect(box!.width).toBeGreaterThanOrEqual(44)
+    expect(box!.height).toBeGreaterThanOrEqual(44)
+  }
+
+  await page.getByRole('button', { name: 'Home' }).click()
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('button', { name: /Automatic Tracking/ }).click()
+  for (const name of ['Copy endpoint', 'Refresh status', 'Back']) {
     const box = await page.getByRole('button', { name }).boundingBox()
     expect(box, `${name} should have a rendered target`).not.toBeNull()
     expect(box!.width).toBeGreaterThanOrEqual(44)

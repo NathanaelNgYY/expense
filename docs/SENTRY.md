@@ -11,6 +11,8 @@ The app initializes `@sentry/react` before React renders and reports root-bounda
 - Source-map token: organization-scoped `org:ci`, stored only as a sensitive Vercel variable
 - Production alias: `https://budget-tracker-sooty-ten.vercel.app`
 - Production status: deployed and smoke-tested on 2026-07-13; source-map upload verified
+- CSP requirement: `connect-src` allows only the configured EU ingestion origin,
+  `https://o4511727901736960.ingest.de.sentry.io`, in addition to the app and Supabase.
 
 These settings are active in production. No token or private credential is committed to the repository.
 
@@ -33,7 +35,8 @@ These settings are active in production. No token or private credential is commi
    | `SENTRY_PROJECT` | Build only | Set to the Sentry project slug, normally `budget-tracker` |
    | `SENTRY_AUTH_TOKEN` | Secret | Uploads source maps during the production build |
 
-4. Apply them to Production and Preview, then redeploy. Never prefix the auth token with `VITE_`; Vite variables with that prefix are exposed to browsers.
+4. Update the exact Sentry DSN origin in `vercel.json`'s `connect-src` directive if the project or region changed.
+5. Apply the variables to Production and Preview, then redeploy. Never prefix the auth token with `VITE_`; Vite variables with that prefix are exposed to browsers.
 
 The Vite plugin activates source-map generation only when all three build-only variables are present. It uploads hidden source maps and deletes them from `dist` after upload.
 

@@ -11,6 +11,11 @@ describe('guessCategory', () => {
     expect(guessCategory('Ya Kun Kaya Toast')).toBe('lunch')
     expect(guessCategory('McDonald\'s')).toBe('lunch')
   })
+  it('classifies Koufu merchant variants as lunch', () => {
+    expect(guessCategory('Koufu Pte Ltd')).toBe('lunch')
+    expect(guessCategory('KOUFU #234')).toBe('lunch')
+    expect(guessCategory('Koufu Foodcourt')).toBe('lunch')
+  })
   it('classifies grocery as others', () => {
     expect(guessCategory('FairPrice Finest')).toBe('others')
   })

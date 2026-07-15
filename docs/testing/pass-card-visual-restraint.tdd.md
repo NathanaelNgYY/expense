@@ -38,6 +38,13 @@ As a user glancing at Home, I want personal and shared budget passes to use rest
 
 The regression verifies the CSS contract and the browser checks cover functionality and accessibility; it does not perform pixel-diff testing because this is an intentional visual change without a committed screenshot baseline.
 
+## Production deployment
+
+- PR [#14](https://github.com/NathanaelNgYY/expense/pull/14) merged as `d2922ff9ac66c7136338b7d1d87553a9ad01454d`.
+- Vercel reported the production deployment successful at `https://budget-tracker-sooty-ten.vercel.app`.
+- Read-only production QA returned HTTP 200 at 390×844 and 1440×900, with no failed or 4xx/5xx requests, no horizontal overflow, and no automated WCAG A/AA violations.
+- Visual regression remains inconclusive without a committed screenshot baseline. Production QA also exposed a separate CSP configuration issue blocking Sentry ingestion; that monitoring fix is outside this visual-restraint change.
+
 ## Merge evidence
 
 - RED checkpoint: `375b01b test: add regression for flat dashboard passes`

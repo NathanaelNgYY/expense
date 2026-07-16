@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { Session } from '@supabase/supabase-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ConfirmProvider } from '../components/ConfirmDialog'
 import { toLocalDateString } from '../dates'
 import BudgetDetail from './BudgetDetail'
 import { SharedBudgetsContext, type SharedBudgetsContextValue } from './SharedBudgetsContext'
@@ -50,9 +51,11 @@ const ctx = {
 
 function renderDetail(value: SharedBudgetsContextValue = ctx) {
   return render(
-    <SharedBudgetsContext.Provider value={value}>
-      <BudgetDetail />
-    </SharedBudgetsContext.Provider>,
+    <ConfirmProvider>
+      <SharedBudgetsContext.Provider value={value}>
+        <BudgetDetail />
+      </SharedBudgetsContext.Provider>
+    </ConfirmProvider>,
   )
 }
 
@@ -103,11 +106,10 @@ describe('BudgetDetail', () => {
   })
 
   it('non-owner can leave the budget after confirm', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderDetail()
     fireEvent.click(screen.getByRole('button', { name: 'Leave budget' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Leave' }))
     await waitFor(() => expect(ctx.leaveActiveBudget).toHaveBeenCalled())
-    confirmSpy.mockRestore()
   })
 
   it('owner does not see the Leave budget button', () => {

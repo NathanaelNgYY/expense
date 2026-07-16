@@ -335,14 +335,12 @@ describe('Settings hub', () => {
       note: 'Noodles',
       date: '2020-01-05',
     }
-    vi.stubGlobal('confirm', vi.fn())
-
     const rendered = renderSettings([oldEntry])
     root = rendered.root
 
     click(findButton(rendered.container, 'Reset This Month'))
 
-    expect(confirm).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(rendered.container).toHaveTextContent('No entries to reset this month')
     expect(readCachedEntries()).toEqual([oldEntry])
   })

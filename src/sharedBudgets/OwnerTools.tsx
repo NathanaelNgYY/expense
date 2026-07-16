@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useConfirm } from '../components/ConfirmDialog'
 import { useSharedBudgets } from './SharedBudgetsContext'
 
 export default function OwnerTools() {
@@ -10,6 +11,7 @@ export default function OwnerTools() {
     deleteActiveBudget,
     addCategory,
   } = useSharedBudgets()
+  const confirm = useConfirm()
   const [name, setName] = useState(active?.budget.name ?? '')
   const [limit, setLimit] = useState(
     active && active.budget.monthlyLimit !== null ? String(active.budget.monthlyLimit) : '',
@@ -29,6 +31,19 @@ export default function OwnerTools() {
     } finally {
       setBusy(false)
     }
+  }
+
+  async function handleDelete() {
+    if (
+      !(await confirm({
+        title: `Delete "${budget.name}" for everyone?`,
+        message: 'This cannot be undone.',
+        confirmLabel: 'Delete',
+        destructive: true,
+      }))
+    )
+      return
+    void guard(() => deleteActiveBudget())
   }
 
   function share() {
@@ -140,11 +155,7 @@ export default function OwnerTools() {
         type="button"
         className="danger-btn"
         disabled={busy}
-        onClick={() => {
-          if (window.confirm(`Delete "${budget.name}" for everyone? This cannot be undone.`)) {
-            void guard(() => deleteActiveBudget())
-          }
-        }}
+        onClick={() => void handleDelete()}
       >
         Delete budget
       </button>

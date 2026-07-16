@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { Session } from '@supabase/supabase-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ConfirmProvider } from '../components/ConfirmDialog'
 import OwnerTools from './OwnerTools'
 import { SharedBudgetsContext, type SharedBudgetsContextValue } from './SharedBudgetsContext'
 import type { ActiveBudgetData } from './types'
@@ -35,9 +36,11 @@ const ctx = {
 
 function renderTools() {
   return render(
-    <SharedBudgetsContext.Provider value={ctx}>
-      <OwnerTools />
-    </SharedBudgetsContext.Provider>,
+    <ConfirmProvider>
+      <SharedBudgetsContext.Provider value={ctx}>
+        <OwnerTools />
+      </SharedBudgetsContext.Provider>
+    </ConfirmProvider>,
   )
 }
 
@@ -79,12 +82,14 @@ describe('OwnerTools', () => {
   })
 
   it('deletes the budget only after confirm', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
     renderTools()
+
     fireEvent.click(screen.getByRole('button', { name: 'Delete budget' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
     expect(ctx.deleteActiveBudget).not.toHaveBeenCalled()
-    confirmSpy.mockReturnValue(true)
+
     fireEvent.click(screen.getByRole('button', { name: 'Delete budget' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(ctx.deleteActiveBudget).toHaveBeenCalled())
   })
 

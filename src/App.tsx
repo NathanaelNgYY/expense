@@ -3,6 +3,7 @@ import { lazy, Suspense, useCallback, useState } from 'react'
 import TabBar from './components/TabBar'
 import type { Tab } from './components/TabBar'
 import SaveToast, { type ToastEntry } from './components/SaveToast'
+import LazyFallback from './components/LazyFallback'
 import Dashboard from './screens/Dashboard'
 import AddEntry from './screens/AddEntry'
 import type { SavedEntrySummary } from './screens/AddEntry'
@@ -73,7 +74,7 @@ function AppShell() {
     return (
       <div className="app app--onboarding">
         <main>
-          <Suspense fallback={null}>
+          <Suspense fallback={<LazyFallback />}>
             <FirstRunBudgetOnboarding onFinish={handleOnboardingFinish} />
           </Suspense>
         </main>
@@ -84,7 +85,7 @@ function AppShell() {
   return (
     <div className="app">
       <main>
-        <Suspense fallback={null}>
+        <Suspense fallback={<LazyFallback />}>
           {tab === 'home' && (
             <Dashboard onAddEntry={() => setTab('add')} />
           )}

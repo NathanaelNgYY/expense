@@ -10,6 +10,7 @@ import { useTheme } from '../theme/ThemeContext'
 import { THEMES } from '../theme/themeRegistry'
 import IngestStatusCard from './settings/IngestStatusCard'
 import AutomaticCaptureSettings from './settings/AutomaticCaptureSettings'
+import { useConfirm } from '../components/ConfirmDialog'
 import type { Entry } from '../types'
 
 interface Props {
@@ -55,6 +56,7 @@ export default function Settings({ onBack, onOpenPoker, onOpenShared }: Props) {
   const { entries, removeEntry, restoreEntry } = useEntries()
   const { theme } = useTheme()
   const themeName = THEMES.find(option => option.id === theme)?.name ?? THEMES[0].name
+  const confirm = useConfirm()
 
   async function handleReset() {
     const now = new Date()
@@ -67,9 +69,12 @@ export default function Settings({ onBack, onOpenPoker, onOpenShared }: Props) {
     }
 
     const noun = toRemove.length === 1 ? 'entry' : 'entries'
-    if (!confirm(
-      `Delete ${toRemove.length} ${noun} from this month? You can undo this while Settings remains open.`,
-    )) return
+    if (!(await confirm({
+      title: `Delete ${toRemove.length} ${noun} from this month?`,
+      message: 'You can undo this while Settings remains open.',
+      confirmLabel: 'Delete',
+      destructive: true,
+    }))) return
 
     for (const entry of toRemove) {
       await removeEntry(entry.id)

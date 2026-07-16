@@ -25,6 +25,7 @@ const ConfirmContext = createContext<ConfirmFn | null>(null)
  * `if (!confirm(…)) return` guards, so the API keeps that shape:
  * `if (!(await confirm({ … }))) return`.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useConfirm(): ConfirmFn {
   const confirm = useContext(ConfirmContext)
   if (!confirm) throw new Error('useConfirm must be used within a ConfirmProvider')

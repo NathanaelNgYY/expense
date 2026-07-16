@@ -72,7 +72,7 @@ npm run lint       # eslint
 Context for this repo lives in **two complementary layers**. Use the right one and you avoid sweeping raw source:
 
 - **Obsidian vault = design intent ("why").** Hub + per-component notes capture rationale that isn't in the code. **Hand-maintained**, changes rarely (only on architecture decisions). Read these FIRST for orientation.
-  - Vault project folder: `C:\Users\natha\OneDrive\Desktop\Obsidian Vault\BudgetTracking`
+  - Vault project folder: `C:\Users\natha\OneDrive\Desktop\Obsidian\Obsidian\Budget Tracker`
 - **Graphify = code structure ("what connects to what").** Files, functions, classes, calls, imports — extracted from the AST and **rebuilt automatically** by a git `post-commit` hook (and `graphify watch` during active dev). Query it instead of grepping. **Never hand-maintained.**
 
 > **Important:** there is **no per-source-file leaf-note rule.** Do *not* create/update Obsidian "leaf notes" when you add or change a file — Graphify owns that layer, for free and always-current. Only keep the hub + component notes in sync, and only when *design intent* changes.

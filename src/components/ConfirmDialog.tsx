@@ -44,6 +44,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     options =>
       new Promise<boolean>(resolve =>
         setPending(prev => {
+          // Resolving an already-superseded promise is a no-op for its caller
+          // (nothing awaits a stale `false` twice), and StrictMode's double
+          // invocation of this updater just calls it again harmlessly.
           prev?.resolve(false)
           return { options, resolve }
         }),
@@ -83,8 +86,18 @@ function ConfirmDialog({ options, onConfirm, onCancel }: DialogProps) {
   // showModal gives us the top layer, a real focus trap, and Esc for free;
   // Cancel gets initial focus so a reflexive double-tap can't destroy data.
   useEffect(() => {
-    dialogRef.current?.showModal()
+    const dialog = dialogRef.current
+    const opener = document.activeElement
+    dialog?.showModal()
     cancelRef.current?.focus()
+    return () => {
+      // This component unmounts (rather than the caller calling native
+      // close()) whenever `pending` is cleared, which skips the dialog
+      // close algorithm's own focus restoration. Do it ourselves so focus
+      // doesn't drop to <body> after Cancel/Confirm.
+      dialog?.close()
+      if (opener instanceof HTMLElement) opener.focus()
+    }
   }, [])
 
   return (
@@ -92,18 +105,22 @@ function ConfirmDialog({ options, onConfirm, onCancel }: DialogProps) {
       ref={dialogRef}
       className="confirm-dialog"
       aria-labelledby="confirm-dialog-title"
+      aria-describedby={options.message ? 'confirm-dialog-message' : undefined}
       onCancel={event => {
         // Esc. Prevent the native close so React state stays the source of truth.
         event.preventDefault()
         onCancel()
       }}
+      onClose={onCancel}
       onClick={event => {
         // A click on the ::backdrop registers with the <dialog> itself as target.
         if (event.target === dialogRef.current) onCancel()
       }}
     >
       <h2 id="confirm-dialog-title" className="confirm-dialog__title">{options.title}</h2>
-      {options.message && <p className="confirm-dialog__message">{options.message}</p>}
+      {options.message && (
+        <p id="confirm-dialog-message" className="confirm-dialog__message">{options.message}</p>
+      )}
       <div className="confirm-dialog__actions">
         <button
           ref={cancelRef}

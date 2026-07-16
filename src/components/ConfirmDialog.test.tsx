@@ -41,6 +41,7 @@ describe('ConfirmDialog', () => {
     renderHarness()
     const dialog = await screen.findByRole('dialog')
     expect(dialog).toHaveAccessibleName('Delete 3 entries?')
+    expect(dialog).toHaveAccessibleDescription('You can undo this afterwards.')
     expect(screen.getByText('You can undo this afterwards.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
@@ -62,6 +63,28 @@ describe('ConfirmDialog', () => {
   it('resolves false and closes when Cancel is pressed', async () => {
     const onResult = renderHarness()
     fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(onResult).toHaveBeenCalledWith(false))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('restores focus to the opener when the dialog closes', async () => {
+    renderHarness()
+    const trigger = screen.getByRole('button', { name: 'trigger' })
+    // fireEvent.click doesn't move focus the way a real click does, so focus
+    // the opener explicitly to model what happens in a real browser.
+    trigger.focus()
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(trigger).toHaveFocus()
+  })
+
+  it('resolves false and unmounts when the UA force-closes the dialog (native close event)', async () => {
+    const onResult = renderHarness()
+    const dialog = await screen.findByRole('dialog')
+    // The jsdom polyfill's close() doesn't dispatch a `close` event, so simulate
+    // a UA-forced close (e.g. CloseWatcher second-Esc ignoring preventDefault)
+    // by dispatching the native event directly.
+    fireEvent(dialog, new Event('close'))
     await waitFor(() => expect(onResult).toHaveBeenCalledWith(false))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
@@ -150,5 +173,9 @@ describe('ConfirmDialog', () => {
     // Dialog should now show the second title
     dialog = await screen.findByRole('dialog')
     expect(dialog).toHaveAccessibleName('Second confirm?')
+
+    // The second dialog's own promise still settles normally.
+    fireEvent.click(screen.getByRole('button', { name: 'Yes' }))
+    await waitFor(() => expect(onSecondResult).toHaveBeenCalledWith(true))
   })
 })

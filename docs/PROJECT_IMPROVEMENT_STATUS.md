@@ -42,13 +42,13 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 
 1. Verify one Lunch and one Dinner Apple Pay capture on a physical iPhone.
 2. Collect CrUX/real-user Core Web Vitals once the site has available field data; reopen M14 only if mobile LCP or INP fails consistently.
-3. Select the next product/audit item from M1–M9 or M12–M16.
+3. Select the next product/audit item from M3, M5–M6, M8–M9 or M12–M16.
 
 ## Remaining audit items
 
 - M3, M5–M6, M8–M9 and M12–M16, except where a later implementation or product decision explicitly retires an item.
 - M1, M2, and M4 are now complete (see the table above) and are no longer in this list.
-- M7 (two non-product tabs) was already retired by the earlier five-tab navigation restructure, before this status doc's remaining-items list was last narrowed; it was never a live remaining item during this update.
+- M7 (two non-product tabs) was retired by the earlier five-tab navigation restructure but had not yet been removed from this list's shorthand range; it is removed now.
 - C3's perfect Apple Pay dedupe guarantee remains impossible without a stable transaction identifier from iOS; the current fallback is deliberately documented rather than overstated.
 
 ## Verification baseline

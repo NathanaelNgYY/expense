@@ -179,7 +179,9 @@ describe('AddEntry', () => {
     const amountDisplay = screen.getByLabelText('Entered amount')
     const glyphs = Array.from(amountDisplay.querySelectorAll('.amount-glyph'))
 
-    expect(amountDisplay).toHaveAttribute('aria-live', 'polite')
+    // M4: the visual display is not a live region (see the debounced-announcement tests below)
+    // — a separate hidden role="status" span handles announcements instead.
+    expect(amountDisplay).not.toHaveAttribute('aria-live')
     expect(amountDisplay).toHaveTextContent('S$5.00')
     expect(glyphs.map(glyph => glyph.textContent).join('')).toBe('S$5.00')
     expect(glyphs.every(glyph => glyph.getAttribute('aria-hidden') === 'true')).toBe(true)
@@ -307,5 +309,65 @@ describe('AddEntry', () => {
       date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
     })
     expect(onSave).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not mark the visual amount display as a live region', async () => {
+    await act(async () => {
+      renderWithEntries()
+    })
+    expect(screen.getByLabelText('Entered amount')).not.toHaveAttribute('aria-live')
+  })
+
+  it('announces the amount once after a typing pause, not per keypress', async () => {
+    vi.useFakeTimers()
+    try {
+      await act(async () => {
+        renderWithEntries()
+      })
+      const status = screen.getByRole('status')
+      expect(status).toHaveTextContent('S$0.00')
+
+      fireEvent.click(screen.getByRole('button', { name: '1' }))
+      fireEvent.click(screen.getByRole('button', { name: '2' }))
+      // Mid-typing: the live region must NOT have updated yet (visual shows S$12.00 already).
+      expect(status).toHaveTextContent('S$0.00')
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+      // Digits type dollars-first (getNextDigits): '1' then '2' → 12 → S$12.00.
+      expect(status).toHaveTextContent('S$12.00')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('restarts the debounce on rapid input so intermediate values are never announced', async () => {
+    vi.useFakeTimers()
+    try {
+      await act(async () => {
+        renderWithEntries()
+      })
+      const status = screen.getByRole('status')
+
+      fireEvent.click(screen.getByRole('button', { name: '5' }))
+      act(() => {
+        vi.advanceTimersByTime(600) // less than the 1s window
+      })
+      fireEvent.click(screen.getByRole('button', { name: '5' }))
+      act(() => {
+        vi.advanceTimersByTime(600) // first timer would have fired by now if not reset
+      })
+      // Still the initial value: the second keypress reset the window.
+      expect(status).toHaveTextContent('S$0.00')
+
+      act(() => {
+        vi.advanceTimersByTime(400) // completes the second 1s window
+      })
+      // '5' then '5' → digits '55' → S$55.00.
+      expect(status).toHaveTextContent('S$55.00')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

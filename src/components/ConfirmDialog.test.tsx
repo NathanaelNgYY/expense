@@ -95,4 +95,60 @@ describe('ConfirmDialog', () => {
     }
     expect(() => render(<Bare />)).toThrow(/ConfirmProvider/)
   })
+
+  it('resolves pending confirm with false when a second confirm is called', async () => {
+    const onFirstResult = vi.fn()
+    const onSecondResult = vi.fn()
+
+    function TwoButtonHarnessWithSpies() {
+      const confirm = useConfirm()
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              void confirm({
+                title: 'First confirm?',
+                confirmLabel: 'Yes',
+              }).then(onFirstResult)
+            }}
+          >
+            first
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void confirm({
+                title: 'Second confirm?',
+                confirmLabel: 'Yes',
+              }).then(onSecondResult)
+            }}
+          >
+            second
+          </button>
+        </>
+      )
+    }
+
+    render(
+      <ConfirmProvider>
+        <TwoButtonHarnessWithSpies />
+      </ConfirmProvider>,
+    )
+
+    // Click first button to open first dialog
+    fireEvent.click(screen.getByRole('button', { name: 'first' }))
+    let dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveAccessibleName('First confirm?')
+
+    // Click second button to open second dialog (without closing the first)
+    fireEvent.click(screen.getByRole('button', { name: 'second' }))
+
+    // First promise should resolve with false
+    await waitFor(() => expect(onFirstResult).toHaveBeenCalledWith(false))
+
+    // Dialog should now show the second title
+    dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveAccessibleName('Second confirm?')
+  })
 })

@@ -11,6 +11,7 @@ import { EntriesProvider, useEntries } from './EntriesContext'
 import { SharedBudgetsProvider } from './sharedBudgets/SharedBudgetsContext'
 import { ThemeProvider } from './theme/ThemeContext'
 import AppErrorBoundary from './components/AppErrorBoundary'
+import { ConfirmProvider } from './components/ConfirmDialog'
 import SettingsHeader from './screens/settings/SettingsHeader'
 import { downloadJsonBackup } from './dataTransfer'
 import { reportReactError } from './monitoring'
@@ -123,7 +124,9 @@ export default function App() {
       <ThemeProvider>
         <EntriesProvider>
           <SharedBudgetsProvider>
-            <AppShell />
+            <ConfirmProvider>
+              <AppShell />
+            </ConfirmProvider>
           </SharedBudgetsProvider>
         </EntriesProvider>
       </ThemeProvider>

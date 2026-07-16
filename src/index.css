@@ -3229,3 +3229,63 @@ input:focus-visible {
     color: var(--text-secondary);
   }
 }
+
+/* ─── Confirm dialog (M2) ──────────────────────────────────
+   iOS-style alert replacing native confirm(): centered card, dim backdrop,
+   Cancel + action side by side. Built on <dialog> showModal, so focus trap,
+   Esc, and top-layer stacking come from the platform. */
+.confirm-dialog {
+  margin: auto;
+  width: min(280px, calc(100vw - 3rem));
+  border: 1px solid var(--separator);
+  border-radius: 14px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  padding: 1.1rem 1.1rem 0.85rem;
+  text-align: center;
+}
+
+.confirm-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.confirm-dialog__title {
+  font-size: 1.02rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.confirm-dialog__message {
+  margin-top: 0.4rem;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.confirm-dialog__btn {
+  flex: 1;
+  min-height: 44px; /* measured touch target, matches the app-wide floor */
+  border: none;
+  border-radius: 10px;
+  background: var(--fill);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.confirm-dialog__btn--destructive {
+  color: var(--red);
+  font-weight: 650;
+}
+
+.confirm-dialog__btn--primary {
+  color: var(--primary);
+  font-weight: 650;
+}

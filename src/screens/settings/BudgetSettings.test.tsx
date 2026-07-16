@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import BudgetSettings from './BudgetSettings'
 import { EntriesProvider } from '../../EntriesContext'
 import { ThemeProvider } from '../../theme/ThemeContext'
+import { ConfirmProvider } from '../../components/ConfirmDialog'
 import type { ActiveBudgetData, SharedBudget } from '../../sharedBudgets/types'
 
 const sharedCtx = vi.hoisted(() => ({
@@ -73,11 +75,13 @@ function renderBudget(entries: unknown[] = [], onDone: () => void = () => undefi
 
   act(() => {
     root.render(
-      <ThemeProvider>
-        <EntriesProvider>
-          <BudgetSettings onDone={onDone} />
-        </EntriesProvider>
-      </ThemeProvider>,
+      <ConfirmProvider>
+        <ThemeProvider>
+          <EntriesProvider>
+            <BudgetSettings onDone={onDone} />
+          </EntriesProvider>
+        </ThemeProvider>
+      </ConfirmProvider>,
     )
   })
 
@@ -340,12 +344,11 @@ describe('BudgetSettings', () => {
     expect(container).toHaveTextContent('Unsaved changes')
   })
 
-  it('guards Back from shared scope when personal edits are unsaved', () => {
+  it('guards Back from shared scope when personal edits are unsaved', async () => {
     const budget = makeSharedBudget()
     sharedCtx.value.budgets = [budget]
     sharedCtx.value.active = makeActive(budget)
     const onDone = vi.fn()
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
 
     const rendered = renderBudget([], onDone)
     root = rendered.root
@@ -357,9 +360,9 @@ describe('BudgetSettings', () => {
     clickButton(container, b => b.textContent?.trim() === 'Shared')
     clickButton(container, b => b.textContent?.includes('Settings') ?? false)
 
-    expect(confirmSpy).toHaveBeenCalledOnce()
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
+
     expect(onDone).not.toHaveBeenCalled()
-    confirmSpy.mockRestore()
   })
 
   it('clears a stale remove error when the scope changes', () => {
@@ -386,43 +389,42 @@ describe('BudgetSettings', () => {
     expect(container).not.toHaveTextContent(/use "Gym"/)
   })
 
-  it('guards Back when the form is dirty', () => {
+  it('guards Back when the form is dirty', async () => {
     const onDone = vi.fn()
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
     const rendered = renderBudget([], onDone)
     root = rendered.root
 
     changeInput(rendered.container.querySelector<HTMLInputElement>('#budget-monthly-income')!, '1800')
     clickButton(rendered.container, b => b.textContent?.includes('Settings') ?? false)
 
-    expect(confirmSpy).toHaveBeenCalledOnce()
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
+
     expect(onDone).not.toHaveBeenCalled()
-    confirmSpy.mockRestore()
   })
 
-  it('leaves when the dirty guard is confirmed', () => {
+  it('leaves when the dirty guard is confirmed', async () => {
     const onDone = vi.fn()
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const rendered = renderBudget([], onDone)
     root = rendered.root
 
     changeInput(rendered.container.querySelector<HTMLInputElement>('#budget-monthly-income')!, '1800')
     clickButton(rendered.container, b => b.textContent?.includes('Settings') ?? false)
 
-    expect(onDone).toHaveBeenCalledOnce()
-    confirmSpy.mockRestore()
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveAccessibleName('Unsaved budget changes')
+    fireEvent.click(screen.getByRole('button', { name: 'Leave' }))
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledOnce())
   })
 
   it('goes back without confirm when clean', () => {
     const onDone = vi.fn()
-    const confirmSpy = vi.spyOn(window, 'confirm')
     const rendered = renderBudget([], onDone)
     root = rendered.root
 
     clickButton(rendered.container, b => b.textContent?.includes('Settings') ?? false)
 
-    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(onDone).toHaveBeenCalledOnce()
-    confirmSpy.mockRestore()
   })
 })

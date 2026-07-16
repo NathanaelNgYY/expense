@@ -6,6 +6,7 @@ import SettingsHeader from './SettingsHeader'
 import CategoryEditorForm, { type CategoryEditorResult } from './CategoryEditorForm'
 import SharedBudgetSettings from './SharedBudgetSettings'
 import { parseOptionalBudget } from './parseOptionalBudget'
+import { useConfirm } from '../../components/ConfirmDialog'
 import {
   getBudgetConfig,
   saveBudgetConfig,
@@ -51,6 +52,7 @@ export default function BudgetSettings({ onDone }: Props) {
   const [removeError, setRemoveError] = useState('')
   const { entries } = useEntries()
   const shared = useSharedBudgets()
+  const confirm = useConfirm()
 
   const customTotal = customCategories.reduce((sum, c) => sum + (c.budget ?? 0), 0)
   const total = BUDGET_FIELDS.reduce((sum, field) => sum + config[field.key], 0) + customTotal
@@ -74,8 +76,12 @@ export default function BudgetSettings({ onDone }: Props) {
   // The guard is unconditional: the personal form stays mounted (and dirty) behind the shared
   // tab, so leaving from either scope would discard those edits. `isDirty` is computed from
   // personal state alone, so shared edits never trigger the prompt.
-  function handleBack() {
-    if (isDirty && !confirm('You have unsaved budget changes. Leave without saving?')) return
+  async function handleBack() {
+    if (isDirty && !(await confirm({
+      title: 'Unsaved budget changes',
+      message: 'Leave without saving?',
+      confirmLabel: 'Leave',
+    }))) return
     onDone()
   }
 

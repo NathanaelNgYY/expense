@@ -18,6 +18,7 @@ import {
   safeToSpendPerDay,
 } from '../compute'
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
+import { sgtToday } from '../shared/sgtDate'
 import { formatSGD, formatSGDWhole, formatRemaining } from '../format'
 import type { Category, Entry } from '../types'
 import { useEntries } from '../EntriesContext'
@@ -55,7 +56,7 @@ export default function Dashboard({ onAddEntry }: Props) {
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
   const [viewScope, setViewScope] = useState<'personal' | 'shared'>('personal')
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
-  const now = new Date()
+  const now = sgtToday()
   const { entries, removeEntry, sync, refresh } = useEntries()
   const shared = useSharedBudgets()
   const { openBudget } = shared

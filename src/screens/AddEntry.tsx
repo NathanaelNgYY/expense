@@ -3,7 +3,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { CalendarDays, Delete } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
-import { fromLocalDateString, toLocalDateString } from '../dates'
+import { fromLocalDateString } from '../dates'
+import { sgtTodayString } from '../shared/sgtDate'
 import { useEntries } from '../EntriesContext'
 import { getCustomCategories, getCategoryOverrides } from '../storage'
 import { buildCategoryOptions } from '../categoryDisplay'
@@ -25,7 +26,7 @@ const NUMPAD_KEYS = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
 const AMOUNT_ANNOUNCE_DELAY_MS = 1000
 
 export default function AddEntry({ initialDate, onSave }: Props) {
-  const today = toLocalDateString()
+  const today = sgtTodayString()
   const [digits, setDigits] = useState('0')
   const [animationCue, setAnimationCue] = useState({ key: '', version: 0 })
   const [category, setCategory] = useState<string | null>(null)

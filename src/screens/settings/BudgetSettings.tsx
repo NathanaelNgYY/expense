@@ -8,14 +8,9 @@ import SharedBudgetSettings from './SharedBudgetSettings'
 import { parseOptionalBudget } from './parseOptionalBudget'
 import { useConfirm } from '../../components/ConfirmDialog'
 import {
-  getBudgetConfig,
-  saveBudgetConfig,
-  getCustomCategories,
-  saveCustomCategories,
-  getCategoryOverrides,
-  saveCategoryOverrides,
   makeCustomCategoryId,
 } from '../../storage'
+import { useBudgetConfig } from '../../BudgetConfigContext'
 import { categoryIcon, categoryLabel } from '../../categoryDisplay'
 import { formatSGD } from '../../format'
 import { countEntriesForCategory } from '../../compute'
@@ -43,10 +38,11 @@ const BUDGET_FIELDS: Array<{ key: BudgetFieldKey; label: string }> = [
 const EDITABLE_BASICS = new Set<string>(['lunch', 'transport', 'savings', 'investments'])
 
 export default function BudgetSettings({ onDone }: Props) {
+  const budget = useBudgetConfig()
   const [scope, setScope] = useState<'personal' | 'shared'>('personal')
-  const [config, setConfig] = useState<BudgetConfig>(getBudgetConfig)
-  const [customCategories, setCustomCategories] = useState<CustomCategory[]>(getCustomCategories)
-  const [overrides, setOverrides] = useState(getCategoryOverrides)
+  const [config, setConfig] = useState<BudgetConfig>(() => budget.config)
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>(() => budget.customCategories)
+  const [overrides, setOverrides] = useState(() => budget.overrides)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [removeError, setRemoveError] = useState('')
@@ -61,15 +57,15 @@ export default function BudgetSettings({ onDone }: Props) {
   // Budget edits live in local state until Save. Without this the user could edit a field,
   // scroll away to check another, leave the screen, and lose the change with no warning —
   // so track what's actually persisted and let the UI say when they diverge.
-  const [savedSnapshot, setSavedSnapshot] = useState(() =>
-    JSON.stringify({ config: getBudgetConfig(), customCategories: getCustomCategories(), overrides: getCategoryOverrides() }),
-  )
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify({
+    config: budget.config,
+    customCategories: budget.customCategories,
+    overrides: budget.overrides,
+  }))
   const isDirty = JSON.stringify({ config, customCategories, overrides }) !== savedSnapshot
 
   function persistBudgets() {
-    saveBudgetConfig(config)
-    saveCustomCategories(customCategories)
-    saveCategoryOverrides(overrides)
+    budget.saveBudgets({ config, customCategories, overrides })
     setSavedSnapshot(JSON.stringify({ config, customCategories, overrides }))
   }
 

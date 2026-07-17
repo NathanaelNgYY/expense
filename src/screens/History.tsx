@@ -11,7 +11,7 @@ import {
   toLocalDateString,
 } from '../dates'
 import { sgtToday } from '../shared/sgtDate'
-import { getCustomCategories, getCategoryOverrides } from '../storage'
+import { useBudgetConfig } from '../BudgetConfigContext'
 import { buildCategoryOptions, categoryIcon, categoryLabel } from '../categoryDisplay'
 import { useEntries } from '../EntriesContext'
 import type { Entry } from '../types'
@@ -122,8 +122,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
   const [ledgerMessage, setLedgerMessage] = useState('')
   const dayFilterRef = useRef<HTMLElement>(null)
 
-  const customCategories = getCustomCategories()
-  const overrides = getCategoryOverrides()
+  const { customCategories, overrides } = useBudgetConfig()
   const categoryOptions = buildCategoryOptions(overrides, customCategories)
   const labelForCategory = (id: string): string => categoryLabel(id, overrides, customCategories)
   const iconForCategory = (id: string): string => categoryIcon(id, overrides, customCategories)

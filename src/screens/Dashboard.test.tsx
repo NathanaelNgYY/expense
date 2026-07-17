@@ -3,6 +3,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import Dashboard from './Dashboard'
 import { EntriesProvider } from '../EntriesContext'
+import { BudgetConfigProvider } from '../BudgetConfigContext'
 import type { Entry } from '../types'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
 
@@ -62,9 +63,11 @@ function renderWithEntries(entries: unknown[] = []) {
 
   act(() => {
     root.render(
-      <EntriesProvider>
-        <Dashboard onAddEntry={() => undefined} />
-      </EntriesProvider>,
+      <BudgetConfigProvider>
+        <EntriesProvider>
+          <Dashboard onAddEntry={() => undefined} />
+        </EntriesProvider>
+      </BudgetConfigProvider>,
     )
   })
 

@@ -2,6 +2,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EntriesProvider } from '../EntriesContext'
+import { BudgetConfigProvider } from '../BudgetConfigContext'
 import Insights from './Insights'
 
 describe('Insights', () => {
@@ -30,9 +31,11 @@ describe('Insights', () => {
 
     await act(async () => {
       root?.render(
-        <EntriesProvider>
-          <Insights />
-        </EntriesProvider>,
+        <BudgetConfigProvider>
+          <EntriesProvider>
+            <Insights />
+          </EntriesProvider>
+        </BudgetConfigProvider>,
       )
     })
 
@@ -52,7 +55,11 @@ describe('Insights', () => {
     root = createRoot(container)
 
     await act(async () => {
-      root?.render(<EntriesProvider><Insights /></EntriesProvider>)
+      root?.render(
+        <BudgetConfigProvider>
+          <EntriesProvider><Insights /></EntriesProvider>
+        </BudgetConfigProvider>,
+      )
     })
 
     const firstWeek = container.querySelector<HTMLElement>('.week-bar')

@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import BudgetSettings from './BudgetSettings'
 import { EntriesProvider } from '../../EntriesContext'
+import { BudgetConfigProvider } from '../../BudgetConfigContext'
 import { ThemeProvider } from '../../theme/ThemeContext'
 import { ConfirmProvider } from '../../components/ConfirmDialog'
 import type { ActiveBudgetData, SharedBudget } from '../../sharedBudgets/types'
@@ -75,13 +76,15 @@ function renderBudget(entries: unknown[] = [], onDone: () => void = () => undefi
 
   act(() => {
     root.render(
-      <ConfirmProvider>
-        <ThemeProvider>
-          <EntriesProvider>
-            <BudgetSettings onDone={onDone} />
-          </EntriesProvider>
-        </ThemeProvider>
-      </ConfirmProvider>,
+      <BudgetConfigProvider>
+        <ConfirmProvider>
+          <ThemeProvider>
+            <EntriesProvider>
+              <BudgetSettings onDone={onDone} />
+            </EntriesProvider>
+          </ThemeProvider>
+        </ConfirmProvider>
+      </BudgetConfigProvider>,
     )
   })
 

@@ -6,7 +6,7 @@ import BudgetIcon from '../components/BudgetIcon'
 import { fromLocalDateString } from '../dates'
 import { sgtTodayString } from '../shared/sgtDate'
 import { useEntries } from '../EntriesContext'
-import { getCustomCategories, getCategoryOverrides } from '../storage'
+import { useBudgetConfig } from '../BudgetConfigContext'
 import { buildCategoryOptions } from '../categoryDisplay'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
 
@@ -45,11 +45,11 @@ export default function AddEntry({ initialDate, onSave }: Props) {
     setCategory(null)
   }
 
-  const customCategories = getCustomCategories()
+  const { customCategories, overrides } = useBudgetConfig()
   const selectedSharedBudget = shared.budgets.find(b => b.id === selectedBudgetId) ?? null
   const isSharedDestination = selectedBudgetId !== null
   const activeSharedReady = shared.active?.budget.id === selectedBudgetId
-  const personalCategoryOptions = buildCategoryOptions(getCategoryOverrides(), customCategories)
+  const personalCategoryOptions = buildCategoryOptions(overrides, customCategories)
   const sharedCategoryOptions =
     activeSharedReady && shared.active
       ? shared.active.categories.map(c => ({ id: c.id, label: c.label, icon: c.icon }))

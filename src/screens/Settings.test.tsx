@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { fireEvent, screen } from '@testing-library/react'
 import Settings from './Settings'
 import { EntriesProvider } from '../EntriesContext'
+import { BudgetConfigProvider } from '../BudgetConfigContext'
 import { ThemeProvider } from '../theme/ThemeContext'
 import { ConfirmProvider } from '../components/ConfirmDialog'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
@@ -71,13 +72,15 @@ function renderSettings(
 
   act(() => {
     root.render(
-      <ConfirmProvider>
-        <ThemeProvider>
-          <EntriesProvider>
-            <Settings onBack={onBack} onOpenPoker={onOpenPoker} onOpenShared={onOpenShared} />
-          </EntriesProvider>
-        </ThemeProvider>
-      </ConfirmProvider>,
+      <BudgetConfigProvider>
+        <ConfirmProvider>
+          <ThemeProvider>
+            <EntriesProvider>
+              <Settings onBack={onBack} onOpenPoker={onOpenPoker} onOpenShared={onOpenShared} />
+            </EntriesProvider>
+          </ThemeProvider>
+        </ConfirmProvider>
+      </BudgetConfigProvider>,
     )
   })
 

@@ -344,6 +344,30 @@ describe('Dashboard category expense history', () => {
     expect(rendered.container).toHaveTextContent('S$1,800 / month')
   })
 
+  it('keeps commitments out of safe-to-spend and labels total usage as allocated', () => {
+    const rendered = renderWithEntries([
+      entry({ amount: 50, category: 'lunch' }),
+      entry({ amount: 200, category: 'savings' }),
+    ])
+    root = rendered.root
+
+    expect(rendered.container.querySelector('.home-safe-amount')).toHaveTextContent('S$20.00')
+    expect(rendered.container.querySelector('.pass-meta')).toHaveTextContent(
+      'S$250 of S$1,200 allocated',
+    )
+  })
+
+  it('adds budgeted custom categories to the safe-to-spend envelope', () => {
+    localStorage.setItem('budget_custom_categories', JSON.stringify([
+      { id: 'cat_groceries', label: 'Groceries', budget: 100, icon: 'shopping-cart' },
+    ]))
+
+    const rendered = renderWithEntries([entry({ amount: 50, category: 'lunch' })])
+    root = rendered.root
+
+    expect(rendered.container.querySelector('.home-safe-amount')).toHaveTextContent('S$24.00')
+  })
+
   it('shows a card for a budgeted custom category and its spend', () => {
     localStorage.setItem(
       'budget_custom_categories',

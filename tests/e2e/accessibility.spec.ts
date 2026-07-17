@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, prepareApp, test } from './fixtures'
+import { currentLocalDate, expect, prepareApp, test } from './fixtures'
 
 async function expectAccessiblePage(page: Parameters<typeof prepareApp>[0], name: string) {
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
@@ -85,4 +85,48 @@ test('critical mobile controls expose at least a 44 by 44 pixel target', async (
     expect(box!.width).toBeGreaterThanOrEqual(44)
     expect(box!.height).toBeGreaterThanOrEqual(44)
   }
+})
+
+test('primary screens stay usable on SE-class short viewports', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 568 })
+  await prepareApp(page, [{
+    id: 'short-1',
+    amount: 12,
+    category: 'lunch',
+    note: 'Lunch',
+    date: currentLocalDate(),
+  }])
+  await page.goto('/')
+
+  const expectNoHorizontalOverflow = async () =>
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible()
+  await expectNoHorizontalOverflow()
+
+  // Add: after entering an amount, the save control must be reachable and tappable.
+  await page.getByRole('button', { name: 'Add entry' }).click()
+  await page.getByRole('button', { name: '5', exact: true }).click()
+  const save = page.getByRole('button', { name: /^(Save|Add for)/ })
+  await save.scrollIntoViewIfNeeded()
+  const saveBox = await save.boundingBox()
+  expect(saveBox?.height).toBeGreaterThanOrEqual(44)
+  await expectNoHorizontalOverflow()
+
+  await page.getByRole('button', { name: 'History' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'History' })).toBeVisible()
+  await expectNoHorizontalOverflow()
+
+  await page.getByRole('button', { name: 'Insights' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: /Insights/ })).toBeVisible()
+  await expectNoHorizontalOverflow()
+
+  // Settings: the danger-zone reset button sits at the bottom and must be scrollable
+  // into a tappable position.
+  await page.getByRole('button', { name: 'Settings' }).click()
+  const reset = page.getByRole('button', { name: "Reset This Month's Data" })
+  await reset.scrollIntoViewIfNeeded()
+  const resetBox = await reset.boundingBox()
+  expect(resetBox?.height).toBeGreaterThanOrEqual(44)
+  await expectNoHorizontalOverflow()
 })

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { CheckCircle, ChevronLeft, Wallet, WalletCards } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import { formatSGDWhole } from '../format'
-import { saveBudgetConfig } from '../storage'
+import { useBudgetConfig } from '../BudgetConfigContext'
 import { DEFAULT_BUDGET, type BudgetConfig } from '../types'
 import { completeBudgetOnboarding } from './onboardingState'
 import './FirstRunBudgetOnboarding.css'
@@ -38,6 +38,7 @@ function amount(value: string): number {
 }
 
 export default function FirstRunBudgetOnboarding({ onFinish }: Props) {
+  const { saveConfig } = useBudgetConfig()
   const [step, setStep] = useState<Step>('welcome')
   const [draft, setDraft] = useState(initialDraft)
 
@@ -60,7 +61,7 @@ export default function FirstRunBudgetOnboarding({ onFinish }: Props) {
   }
 
   function acceptPlan(next: BudgetConfig) {
-    saveBudgetConfig(next)
+    saveConfig(next)
     completeBudgetOnboarding()
     setStep('ready')
   }

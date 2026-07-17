@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen } from '../test-utils'
 import InsightsSection from './InsightsSection'
 import type { CustomCategory, Entry } from '../types'
 

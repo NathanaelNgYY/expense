@@ -15,7 +15,7 @@ import {
 } from '../compute'
 import { buildCategoryOptions } from '../categoryDisplay'
 import { formatSGD, formatSGDWhole } from '../format'
-import { getBudgetConfig, getCategoryOverrides, getCustomCategories } from '../storage'
+import { useBudgetConfig } from '../BudgetConfigContext'
 
 function progressPercent(amount: number, budget: number): number {
   if (budget <= 0) return amount > 0 ? 100 : 0
@@ -27,9 +27,8 @@ export default function Insights() {
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
   const { entries } = useEntries()
-  const config = getBudgetConfig()
-  const customCategories = getCustomCategories()
-  const categoryOptions = buildCategoryOptions(getCategoryOverrides(), customCategories)
+  const { config, customCategories, overrides } = useBudgetConfig()
+  const categoryOptions = buildCategoryOptions(overrides, customCategories)
   const monthEntries = entriesForMonth(entries, year, month)
   const categorySpend = monthlySpendByCategory(entries, year, month, customCategories)
   const weeks = weeksInMonth(year, month)

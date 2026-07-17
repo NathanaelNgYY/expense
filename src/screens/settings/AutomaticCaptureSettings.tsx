@@ -5,7 +5,7 @@ import IngestStatusCard from './IngestStatusCard'
 import SettingsHeader from './SettingsHeader'
 import MealTimeRulesSettings from './MealTimeRulesSettings'
 import { buildCategoryOptions } from '../../categoryDisplay'
-import { getCategoryOverrides, getCustomCategories } from '../../storage'
+import { useBudgetConfig } from '../../BudgetConfigContext'
 
 interface Props {
   onDone: () => void
@@ -21,7 +21,8 @@ export default function AutomaticCaptureSettings({
   ingestEndpoint = getConfiguredIngestEndpoint() ?? '',
 }: Props) {
   const [copyState, setCopyState] = useState<CopyState>('idle')
-  const categoryOptions = buildCategoryOptions(getCategoryOverrides(), getCustomCategories())
+  const { overrides, customCategories } = useBudgetConfig()
+  const categoryOptions = buildCategoryOptions(overrides, customCategories)
 
   async function copyEndpoint() {
     if (!ingestEndpoint) return

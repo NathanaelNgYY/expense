@@ -5,6 +5,7 @@ import SettingsHeader from './SettingsHeader'
 import { entriesToCsv, mergeImportedEntries, parseEntriesCsv } from '../../csvEntries'
 import { downloadJsonBackup, parseImportPayload, applyImport } from '../../dataTransfer'
 import { useEntries } from '../../EntriesContext'
+import { useBudgetConfig } from '../../BudgetConfigContext'
 
 interface Props {
   onDone: () => void
@@ -41,6 +42,7 @@ export default function DataSettings({ onDone }: Props) {
   const importInputRef = useRef<HTMLInputElement>(null)
   const jsonFileInputRef = useRef<HTMLInputElement>(null)
   const { entries, importEntries, refresh } = useEntries()
+  const { reload } = useBudgetConfig()
 
   function handleExport() {
     const blob = new Blob([entriesToCsv(entries)], { type: 'text/csv;charset=utf-8' })
@@ -84,6 +86,7 @@ export default function DataSettings({ onDone }: Props) {
     setJsonBusy(true)
     try {
       const result = await applyImport(parseImportPayload(text))
+      reload()
       // The import is already durable server-side and in the localStorage cache (applyImport's
       // job) by this point — refresh() only pulls that into the rendered `entries` list. If it
       // fails (offline/auth), don't claim the list is up to date; say so instead of lying.

@@ -5,7 +5,7 @@ import BudgetIcon from '../components/BudgetIcon'
 import BudgetUsageRing from '../components/BudgetUsageRing'
 import SyncStatus from '../components/SyncStatus'
 import { downloadJsonBackup } from '../dataTransfer'
-import { getBudgetConfig, getCustomCategories, getCategoryOverrides } from '../storage'
+import { useBudgetConfig } from '../BudgetConfigContext'
 import { categoryIcon, categoryLabel } from '../categoryDisplay'
 import {
   bufferRemaining,
@@ -60,9 +60,7 @@ export default function Dashboard({ onAddEntry }: Props) {
   const { entries, removeEntry, sync, refresh } = useEntries()
   const shared = useSharedBudgets()
   const { openBudget } = shared
-  const config = getBudgetConfig()
-  const customCategories = getCustomCategories()
-  const overrides = getCategoryOverrides()
+  const { config, customCategories, overrides } = useBudgetConfig()
   const categoryIds = allCategoryIds(customCategories)
   const budgets = categoryBudgets(config, customCategories)
   const labelFor = (id: string): string => categoryLabel(id, overrides, customCategories)

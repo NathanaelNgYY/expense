@@ -11,7 +11,7 @@ import {
 } from '../compute'
 import { CATEGORIES } from '../types'
 import { categoryLabel } from '../categoryDisplay'
-import { getCategoryOverrides } from '../storage'
+import { useBudgetConfig } from '../BudgetConfigContext'
 import { formatSGD, formatSignedSGD } from '../format'
 import { fromLocalDateString } from '../dates'
 import type { CustomCategory, Entry } from '../types'
@@ -29,7 +29,7 @@ interface Props {
 const MIN_ENTRIES_FOR_INSIGHTS = 15
 
 export default function InsightsSection({ entries, year, month, customCategories }: Props) {
-  const overrides = getCategoryOverrides()
+  const { overrides } = useBudgetConfig()
   const topCat = mostExpensiveCategory(entries, year, month, customCategories)
   const avgLunch = averageLunchPerEntry(entries, year, month)
   const topDay = highestSpendingDay(entries, year, month)

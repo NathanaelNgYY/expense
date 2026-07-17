@@ -101,6 +101,19 @@ test('primary screens stay usable on SE-class short viewports', async ({ page })
   const expectNoHorizontalOverflow = async () =>
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 
+  // A control trapped behind the opaque fixed tab bar is the failure this guard
+  // exists to catch. boundingBox() alone can't see ancestor clipping, so assert
+  // the control's bottom edge clears the tab bar's top edge after scrolling.
+  const expectClearsTabBar = async (control: ReturnType<typeof page.getByRole>) => {
+    const [controlBox, tabBarBox] = await Promise.all([
+      control.boundingBox(),
+      page.getByRole('navigation', { name: 'Main navigation' }).boundingBox(),
+    ])
+    expect(controlBox, 'control must be rendered').not.toBeNull()
+    expect(tabBarBox, 'tab bar must be rendered').not.toBeNull()
+    expect(controlBox!.y + controlBox!.height).toBeLessThanOrEqual(tabBarBox!.y + 1)
+  }
+
   await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible()
   await expectNoHorizontalOverflow()
 
@@ -111,6 +124,7 @@ test('primary screens stay usable on SE-class short viewports', async ({ page })
   await save.scrollIntoViewIfNeeded()
   const saveBox = await save.boundingBox()
   expect(saveBox?.height).toBeGreaterThanOrEqual(44)
+  await expectClearsTabBar(save)
   await expectNoHorizontalOverflow()
 
   await page.getByRole('button', { name: 'History' }).click()
@@ -128,5 +142,6 @@ test('primary screens stay usable on SE-class short viewports', async ({ page })
   await reset.scrollIntoViewIfNeeded()
   const resetBox = await reset.boundingBox()
   expect(resetBox?.height).toBeGreaterThanOrEqual(44)
+  await expectClearsTabBar(reset)
   await expectNoHorizontalOverflow()
 })

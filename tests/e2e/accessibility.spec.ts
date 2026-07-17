@@ -145,3 +145,18 @@ test('primary screens stay usable on SE-class short viewports', async ({ page })
   await expectClearsTabBar(reset)
   await expectNoHorizontalOverflow()
 })
+
+test('desktop backdrop renders behind the app column on wide viewports (M5)', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 800 })
+  await prepareApp(page)
+  await page.goto('/')
+
+  // At >=700px the page backdrop must be darker than the app column (M5). If a
+  // future cascade change lets themes.css's blanket `background: var(--bg)` win
+  // again, body and .app collapse to the same color and this fails.
+  const [bodyBg, appBg] = await Promise.all([
+    page.evaluate(() => getComputedStyle(document.body).backgroundColor),
+    page.evaluate(() => getComputedStyle(document.querySelector('.app')).backgroundColor),
+  ])
+  expect(bodyBg).not.toBe(appBg)
+})

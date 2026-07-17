@@ -1,5 +1,5 @@
 // src/App.tsx
-import { lazy, Suspense, useCallback, useState } from 'react'
+import { Suspense, useCallback, useState } from 'react'
 import TabBar from './components/TabBar'
 import type { Tab } from './components/TabBar'
 import SaveToast, { type ToastEntry } from './components/SaveToast'
@@ -16,13 +16,20 @@ import SettingsHeader from './screens/settings/SettingsHeader'
 import { downloadJsonBackup } from './dataTransfer'
 import { reportReactError } from './monitoring'
 import { shouldShowBudgetOnboarding } from './onboarding/onboardingState'
+import { lazyWithRetry } from './lazyWithRetry'
 
-const History = lazy(() => import('./screens/History'))
-const Insights = lazy(() => import('./screens/Insights'))
-const Settings = lazy(() => import('./screens/Settings'))
-const Poker = lazy(() => import('./screens/Poker'))
-const SharedScreen = lazy(() => import('./sharedBudgets/SharedScreen'))
-const FirstRunBudgetOnboarding = lazy(() => import('./onboarding/FirstRunBudgetOnboarding'))
+// lazyWithRetry (not bare React.lazy): a stale chunk after a deploy — or a
+// transient mobile-network blip — would otherwise crash the lazy route to the
+// error boundary. It retries, then reloads once onto the fresh index.html.
+const History = lazyWithRetry(() => import('./screens/History'), 'history')
+const Insights = lazyWithRetry(() => import('./screens/Insights'), 'insights')
+const Settings = lazyWithRetry(() => import('./screens/Settings'), 'settings')
+const Poker = lazyWithRetry(() => import('./screens/Poker'), 'poker')
+const SharedScreen = lazyWithRetry(() => import('./sharedBudgets/SharedScreen'), 'shared')
+const FirstRunBudgetOnboarding = lazyWithRetry(
+  () => import('./onboarding/FirstRunBudgetOnboarding'),
+  'onboarding',
+)
 
 function initialTab(): Tab {
   const params = new URLSearchParams(window.location.search)

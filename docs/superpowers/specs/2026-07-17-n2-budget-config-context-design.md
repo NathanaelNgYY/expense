@@ -1,7 +1,7 @@
 # N2 — Reactive budget-config context
 
 **Date:** 2026-07-17
-**Status:** Approved, pending implementation
+**Status:** Implemented
 **Backlog item:** N2 (Medium, Architecture) in `docs/PROJECT_IMPROVEMENT_STATUS.md`
 
 ## Problem

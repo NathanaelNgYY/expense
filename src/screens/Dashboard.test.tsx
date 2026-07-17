@@ -399,6 +399,7 @@ describe('Dashboard category expense history', () => {
     expect(rendered.container).toHaveTextContent('No budget set')
     // a no-budget category must not be reported as "over"
     expect(rendered.container).not.toHaveTextContent('S$25.00 over')
+    expect(rendered.container.querySelector('.home-safe-amount')).toHaveTextContent('S$21.00')
   })
 
   it('shows the selected shared budget from the Home shared view', () => {
@@ -437,6 +438,7 @@ describe('Dashboard category expense history', () => {
     clickButton(rendered.container, b => b.getAttribute('aria-label') === 'Switch to Family')
 
     expect(rendered.container).toHaveTextContent('Family')
+    expect(rendered.container.querySelector('.pass-meta')).toHaveTextContent('S$20 of S$100 spent')
     expect(rendered.container).toHaveTextContent('S$20.00 of S$100.00')
     expect(rendered.container).toHaveTextContent('Nat')
     expect(rendered.container).toHaveTextContent('kopi')

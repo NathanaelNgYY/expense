@@ -73,6 +73,21 @@ button {
   }
 }
 
+/* M5: on wide viewports the column reads as a deliberate app surface instead of
+   a stranded phone view. Backdrop + elevation only — nothing inside the column
+   changes at any width, and every value derives from the active theme's tokens
+   so all four themes get a coherent backdrop for free. */
+@media (min-width: 700px) {
+  body {
+    background: color-mix(in srgb, var(--bg) 82%, black);
+  }
+
+  .app {
+    box-shadow: 0 24px 64px rgb(0 0 0 / 0.4);
+    border-inline: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  }
+}
+
 /* The flex link between the bounded .app shell and the scrolling .screen: without
    flex + min-height 0 here, main grows to its content and .screen never scrolls. */
 .app > main {

@@ -82,11 +82,26 @@ describe('ConfirmDialog', () => {
     const onResult = renderHarness()
     const dialog = await screen.findByRole('dialog')
     // The jsdom polyfill's close() doesn't dispatch a `close` event, so simulate
-    // a UA-forced close (e.g. CloseWatcher second-Esc ignoring preventDefault)
-    // by dispatching the native event directly.
+    // a UA-forced close (e.g. CloseWatcher second-Esc ignoring preventDefault):
+    // the UA closes the dialog first (open=false), then fires `close`. The
+    // component ignores close events that arrive while the dialog is open —
+    // those are stale events from StrictMode's mount→cleanup→remount cycle.
+    dialog.removeAttribute('open')
     fireEvent(dialog, new Event('close'))
     await waitFor(() => expect(onResult).toHaveBeenCalledWith(false))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('ignores a stale close event that fires while the dialog is open (StrictMode remount)', async () => {
+    const onResult = renderHarness()
+    const dialog = await screen.findByRole('dialog')
+    // StrictMode's mount→cleanup→remount cycle calls dialog.close(), which
+    // queues an async close event that lands AFTER the remount reopened the
+    // dialog. That stale event must not cancel the freshly opened dialog.
+    fireEvent(dialog, new Event('close'))
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(onResult).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
   it('resolves false on Esc (the dialog cancel event)', async () => {

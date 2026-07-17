@@ -111,7 +111,15 @@ function ConfirmDialog({ options, onConfirm, onCancel }: DialogProps) {
         event.preventDefault()
         onCancel()
       }}
-      onClose={onCancel}
+      onClose={() => {
+        // Safety net for UA-forced closes (e.g. CloseWatcher ignoring
+        // preventDefault). Guard on `open`: dialog.close() queues the close
+        // event asynchronously, so StrictMode's mount→cleanup→remount cycle
+        // delivers a stale close event AFTER the effect re-ran showModal().
+        // If the dialog is open again by the time the event fires, it's that
+        // stale event — ignore it, or the dialog cancels itself on mount.
+        if (!dialogRef.current?.open) onCancel()
+      }}
       onClick={event => {
         // A click on the ::backdrop registers with the <dialog> itself as target.
         if (event.target === dialogRef.current) onCancel()

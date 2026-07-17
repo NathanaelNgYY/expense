@@ -2,6 +2,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import AutomaticCaptureSettings from './AutomaticCaptureSettings'
+import { BudgetConfigProvider } from '../../BudgetConfigContext'
 
 vi.mock('./IngestStatusCard', () => ({
   default: ({ refreshable }: { refreshable?: boolean }) => (
@@ -20,7 +21,9 @@ function renderSettings(endpoint = 'https://project-ref.supabase.co/functions/v1
   const onDone = vi.fn()
 
   act(() => root.render(
-    <AutomaticCaptureSettings onDone={onDone} ingestEndpoint={endpoint} />,
+    <BudgetConfigProvider>
+      <AutomaticCaptureSettings onDone={onDone} ingestEndpoint={endpoint} />
+    </BudgetConfigProvider>,
   ))
 
   return { container, root, onDone }

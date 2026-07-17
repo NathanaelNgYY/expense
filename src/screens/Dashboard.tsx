@@ -5,7 +5,7 @@ import BudgetIcon from '../components/BudgetIcon'
 import BudgetUsageRing from '../components/BudgetUsageRing'
 import SyncStatus from '../components/SyncStatus'
 import { downloadJsonBackup } from '../dataTransfer'
-import { getBudgetConfig, getCustomCategories, getCategoryOverrides } from '../storage'
+import { useBudgetConfig } from '../BudgetConfigContext'
 import { categoryIcon, categoryLabel } from '../categoryDisplay'
 import {
   bufferRemaining,
@@ -15,6 +15,7 @@ import {
   weeklyTotal,
   allCategoryIds,
   categoryBudgets,
+  customBudgetTotal,
   safeToSpendPerDay,
 } from '../compute'
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
@@ -60,9 +61,7 @@ export default function Dashboard({ onAddEntry }: Props) {
   const { entries, removeEntry, sync, refresh } = useEntries()
   const shared = useSharedBudgets()
   const { openBudget } = shared
-  const config = getBudgetConfig()
-  const customCategories = getCustomCategories()
-  const overrides = getCategoryOverrides()
+  const { config, customCategories, overrides } = useBudgetConfig()
   const categoryIds = allCategoryIds(customCategories)
   const budgets = categoryBudgets(config, customCategories)
   const labelFor = (id: string): string => categoryLabel(id, overrides, customCategories)
@@ -84,12 +83,14 @@ export default function Dashboard({ onAddEntry }: Props) {
   const thisWeek = weeklyTotal(entries, now)
   const monthlyIncome = config.monthlyIncome
   const budgetUsedPct = monthlyIncome > 0 ? Math.min(100, (monthTotal / monthlyIncome) * 100) : monthTotal > 0 ? 100 : 0
+  const spendableBudget = config.lunch + config.transport + config.buffer + customBudgetTotal(customCategories)
   const safePerDay = safeToSpendPerDay(
     entries,
     now.getFullYear(),
     now.getMonth(),
-    monthlyIncome,
+    spendableBudget,
     now,
+    { excludedCategories: COMMITTED_CATEGORIES },
   ).amountPerDay
 
   const monthLabel = now.toLocaleString('default', { month: 'long', year: 'numeric' })
@@ -145,11 +146,19 @@ export default function Dashboard({ onAddEntry }: Props) {
     amount: number | null
     limit: number | null
     pct: number
+    usageLabel: 'allocated' | 'spent'
   }
 
   function passInfo(item: PassItem): PassInfo {
     if (item.kind === 'personal') {
-      return { title: 'Personal', subtitle: monthLabel, amount: monthTotal, limit: monthlyIncome, pct: budgetUsedPct }
+      return {
+        title: 'Personal',
+        subtitle: monthLabel,
+        amount: monthTotal,
+        limit: monthlyIncome,
+        pct: budgetUsedPct,
+        usageLabel: 'allocated',
+      }
     }
     if (shared.active?.budget.id === item.id) {
       const month = currentSgtMonth()
@@ -157,9 +166,9 @@ export default function Dashboard({ onAddEntry }: Props) {
       const spent = sharedTotalSpent(monthEntries)
       const limit = shared.active.budget.monthlyLimit
       const pct = limit !== null && limit > 0 ? Math.min(100, (spent / limit) * 100) : spent > 0 ? 100 : 0
-      return { title: item.name, subtitle: 'Shared', amount: spent, limit, pct }
+      return { title: item.name, subtitle: 'Shared', amount: spent, limit, pct, usageLabel: 'spent' }
     }
-    return { title: item.name, subtitle: 'Shared', amount: null, limit: null, pct: 0 }
+    return { title: item.name, subtitle: 'Shared', amount: null, limit: null, pct: 0, usageLabel: 'spent' }
   }
 
   function toggleCategory(category: ExpandKey) {
@@ -277,7 +286,7 @@ export default function Dashboard({ onAddEntry }: Props) {
               </div>
               {capped && (
                 <div className="pass-meta">
-                  {formatSGDWhole(info.amount!)} of {formatSGDWhole(info.limit!)} spent
+                  {formatSGDWhole(info.amount!)} of {formatSGDWhole(info.limit!)} {info.usageLabel}
                 </div>
               )}
               {depth !== 0 && (
@@ -320,7 +329,7 @@ export default function Dashboard({ onAddEntry }: Props) {
         <>
 
       <section className="home-budget-overview" aria-label="Monthly budget overview">
-        <BudgetUsageRing spent={monthTotal} total={monthlyIncome} />
+        <BudgetUsageRing allocated={monthTotal} total={monthlyIncome} />
         <div className="home-budget-overview__copy">
           <span className="summary-label">Safe to spend today</span>
           <strong className="home-safe-amount">

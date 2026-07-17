@@ -3,6 +3,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import History from './History'
 import { EntriesProvider } from '../EntriesContext'
+import { BudgetConfigProvider } from '../BudgetConfigContext'
 import { getEntries } from '../storage'
 import type { Entry } from '../types'
 
@@ -52,9 +53,11 @@ function renderWithEntries(
 
   act(() => {
     root.render(
-      <EntriesProvider>
-        <History {...props} />
-      </EntriesProvider>,
+      <BudgetConfigProvider>
+        <EntriesProvider>
+          <History {...props} />
+        </EntriesProvider>
+      </BudgetConfigProvider>,
     )
   })
 

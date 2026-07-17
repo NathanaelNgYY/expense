@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '../test-utils'
 import AddEntry from './AddEntry'
 import { EntriesProvider } from '../EntriesContext'
 import { getEntries } from '../storage'

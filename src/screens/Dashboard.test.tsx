@@ -3,6 +3,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import Dashboard from './Dashboard'
 import { EntriesProvider } from '../EntriesContext'
+import { BudgetConfigProvider } from '../BudgetConfigContext'
 import type { Entry } from '../types'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
 
@@ -62,9 +63,11 @@ function renderWithEntries(entries: unknown[] = []) {
 
   act(() => {
     root.render(
-      <EntriesProvider>
-        <Dashboard onAddEntry={() => undefined} />
-      </EntriesProvider>,
+      <BudgetConfigProvider>
+        <EntriesProvider>
+          <Dashboard onAddEntry={() => undefined} />
+        </EntriesProvider>
+      </BudgetConfigProvider>,
     )
   })
 
@@ -341,6 +344,30 @@ describe('Dashboard category expense history', () => {
     expect(rendered.container).toHaveTextContent('S$1,800 / month')
   })
 
+  it('keeps commitments out of safe-to-spend and labels total usage as allocated', () => {
+    const rendered = renderWithEntries([
+      entry({ amount: 50, category: 'lunch' }),
+      entry({ amount: 200, category: 'savings' }),
+    ])
+    root = rendered.root
+
+    expect(rendered.container.querySelector('.home-safe-amount')).toHaveTextContent('S$20.00')
+    expect(rendered.container.querySelector('.pass-meta')).toHaveTextContent(
+      'S$250 of S$1,200 allocated',
+    )
+  })
+
+  it('adds budgeted custom categories to the safe-to-spend envelope', () => {
+    localStorage.setItem('budget_custom_categories', JSON.stringify([
+      { id: 'cat_groceries', label: 'Groceries', budget: 100, icon: 'shopping-cart' },
+    ]))
+
+    const rendered = renderWithEntries([entry({ amount: 50, category: 'lunch' })])
+    root = rendered.root
+
+    expect(rendered.container.querySelector('.home-safe-amount')).toHaveTextContent('S$24.00')
+  })
+
   it('shows a card for a budgeted custom category and its spend', () => {
     localStorage.setItem(
       'budget_custom_categories',
@@ -372,6 +399,7 @@ describe('Dashboard category expense history', () => {
     expect(rendered.container).toHaveTextContent('No budget set')
     // a no-budget category must not be reported as "over"
     expect(rendered.container).not.toHaveTextContent('S$25.00 over')
+    expect(rendered.container.querySelector('.home-safe-amount')).toHaveTextContent('S$21.00')
   })
 
   it('shows the selected shared budget from the Home shared view', () => {
@@ -410,6 +438,7 @@ describe('Dashboard category expense history', () => {
     clickButton(rendered.container, b => b.getAttribute('aria-label') === 'Switch to Family')
 
     expect(rendered.container).toHaveTextContent('Family')
+    expect(rendered.container.querySelector('.pass-meta')).toHaveTextContent('S$20 of S$100 spent')
     expect(rendered.container).toHaveTextContent('S$20.00 of S$100.00')
     expect(rendered.container).toHaveTextContent('Nat')
     expect(rendered.container).toHaveTextContent('kopi')

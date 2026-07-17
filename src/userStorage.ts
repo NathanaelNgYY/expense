@@ -1,6 +1,8 @@
 const ACTIVE_USER_KEY = 'budget_active_user_id'
 const LEGACY_OWNER_KEY = 'budget_legacy_storage_owner'
 
+const activeUserListeners = new Set<() => void>()
+
 const USER_SCOPED_KEYS = [
   'budget_entries',
   'budget_config',
@@ -58,7 +60,13 @@ export function activateUserStorage(userId: string): boolean {
   }
 
   localStorage.setItem(ACTIVE_USER_KEY, userId)
+  if (changed) activeUserListeners.forEach(listener => listener())
   return changed
+}
+
+export function subscribeActiveUser(listener: () => void): () => void {
+  activeUserListeners.add(listener)
+  return () => activeUserListeners.delete(listener)
 }
 
 export function getActiveStorageUserId(): string | null {

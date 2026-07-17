@@ -8,6 +8,7 @@ import Dashboard from './screens/Dashboard'
 import AddEntry from './screens/AddEntry'
 import type { SavedEntrySummary } from './screens/AddEntry'
 import { EntriesProvider, useEntries } from './EntriesContext'
+import { BudgetConfigProvider } from './BudgetConfigContext'
 import { SharedBudgetsProvider } from './sharedBudgets/SharedBudgetsContext'
 import { ThemeProvider } from './theme/ThemeContext'
 import AppErrorBoundary from './components/AppErrorBoundary'
@@ -130,11 +131,13 @@ export default function App() {
     >
       <ThemeProvider>
         <EntriesProvider>
-          <SharedBudgetsProvider>
-            <ConfirmProvider>
-              <AppShell />
-            </ConfirmProvider>
-          </SharedBudgetsProvider>
+          <BudgetConfigProvider>
+            <SharedBudgetsProvider>
+              <ConfirmProvider>
+                <AppShell />
+              </ConfirmProvider>
+            </SharedBudgetsProvider>
+          </BudgetConfigProvider>
         </EntriesProvider>
       </ThemeProvider>
     </AppErrorBoundary>

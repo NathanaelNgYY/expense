@@ -3,6 +3,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import DataSettings from './DataSettings'
 import { EntriesProvider } from '../../EntriesContext'
+import { BudgetConfigProvider } from '../../BudgetConfigContext'
 import * as dataTransfer from '../../dataTransfer'
 import { bulkUpsertEntries, ensureUserId, fetchEntries } from '../../api'
 import type { Entry } from '../../types'
@@ -54,9 +55,11 @@ function renderData(entries: unknown[] = []) {
   const root = createRoot(container)
   act(() => {
     root.render(
-      <EntriesProvider>
-        <DataSettings onDone={() => undefined} />
-      </EntriesProvider>,
+      <BudgetConfigProvider>
+        <EntriesProvider>
+          <DataSettings onDone={() => undefined} />
+        </EntriesProvider>
+      </BudgetConfigProvider>,
     )
   })
   return { container, root }

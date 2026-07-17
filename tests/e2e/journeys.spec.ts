@@ -122,7 +122,7 @@ test('five-tab navigation keeps secondary tools under Settings', async ({ page }
   await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
   await page.getByRole('button', { name: /Poker tracker/ }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Poker tracker' })).toBeVisible()
-  await expect(navigation.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(navigation.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page')
   await page.getByRole('button', { name: 'Settings', exact: true }).first().click()
 
   await page.getByRole('button', { name: /Shared budgets/ }).click()

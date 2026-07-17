@@ -78,7 +78,12 @@ button {
    changes at any width, and every value derives from the active theme's tokens
    so all four themes get a coherent backdrop for free. */
 @media (min-width: 700px) {
-  body {
+  /* html-prefixed to outrank themes.css's unconditional
+     `html, body, #root, .app { background: var(--bg) }`, which loads later
+     and otherwise wins the cascade tie; #root is full-width and must darken
+     too or it paints var(--bg) over the body backdrop. */
+  html body,
+  html #root {
     background: color-mix(in srgb, var(--bg) 82%, black);
   }
 

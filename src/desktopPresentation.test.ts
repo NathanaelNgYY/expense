@@ -12,8 +12,8 @@ describe('desktop presentation of the app column (M5)', () => {
     expect(wideBlock).toBeDefined()
   })
 
-  it('derives the backdrop from theme tokens, not hardcoded colors', () => {
-    expect(wideBlock).toMatch(/body \{[^}]*color-mix\(in srgb, var\(--bg\)/s)
+  it('derives the backdrop from theme tokens and outranks the themes.css blanket rule', () => {
+    expect(wideBlock).toMatch(/html body,\s*html #root \{[^}]*color-mix\(in srgb, var\(--bg\)/s)
   })
 
   it('frames the app column with elevation and a token-derived hairline', () => {

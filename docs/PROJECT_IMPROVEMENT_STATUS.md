@@ -8,7 +8,7 @@
 
 ## Current position
 
-The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, weekly-history correctness/accessibility, H6 presentation, M17 isolation/browser/accessibility, H11 batch imports, the first M14 bundle reduction, the five-tab navigation restructure, first-run budget onboarding, time-based automatic categories, and dashboard pass visual restraint are implemented and deployed. M18 runtime retirement and H9 repository enforcement are complete. Automatic Tracking setup and direct past-date entry are complete. M1, M2, and M4 — blank lazy-screen loads, native `confirm()` dialogs, and amount-announcement spam — are complete. M3, M5, and M6 — tab-bar semantics, desktop presentation, and short screens — are complete. The lost `M8–M9`/`M12–M16` shorthand has been replaced by a fresh 2026-07-17 codebase audit (the `N`-series backlog below); N1 (SGT-local date handling) and N2 (reactive budget config) are complete.
+The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, weekly-history correctness/accessibility, H6 presentation, M17 isolation/browser/accessibility, H11 batch imports, the first M14 bundle reduction, the five-tab navigation restructure, first-run budget onboarding, time-based automatic categories, and dashboard pass visual restraint are implemented and deployed. M18 runtime retirement and H9 repository enforcement are complete. Automatic Tracking setup and direct past-date entry are complete. M1, M2, and M4 — blank lazy-screen loads, native `confirm()` dialogs, and amount-announcement spam — are complete. M3, M5, and M6 — tab-bar semantics, desktop presentation, and short screens — are complete. The lost `M8–M9`/`M12–M16` shorthand has been replaced by a fresh 2026-07-17 codebase audit (the `N`-series backlog below); N1–N3 are complete.
 
 ## Completed or materially addressed
 
@@ -54,17 +54,17 @@ health at audit time was strong: 65 test files / 539 tests green, lint + typeche
 | --- | --- | --- | --- | --- |
 | ~~N1~~ | Done | Correctness | **Complete (2026-07-17).** The real leak was at write/"now" time, not in stored-entry bucketing (`entriesForMonth` reads calendar fields back and was already timezone-independent). Added `sgtToday`/`sgtTodayString` to `src/shared/sgtDate.ts`; routed all screen "now"/"today" derivations and `isFutureDateString` through them so the client agrees with the SGT server/ingest model on any device timezone. `compute.ts` deliberately left timezone-agnostic (injected `referenceDate`). | `docs/superpowers/specs/2026-07-17-n1-sgt-today-design.md`, `src/shared/sgtDate.ts`, `src/shared/sgtDate.test.ts`, `src/dates.ts`, `src/dates.test.ts` |
 | ~~N2~~ | Done | Architecture | **Complete (2026-07-17).** Budget config, custom categories, and overrides now live in one reactive context seeded from the existing user-scoped storage layer. Context writes persist and publish state, JSON import reloads it, and active-user changes reload the correct namespace. Dashboard/History splitting remains a separate follow-up. | `docs/superpowers/specs/2026-07-17-n2-budget-config-context-design.md`, `docs/testing/n2-budget-config-context.tdd.md`, `src/BudgetConfigContext.tsx`, `src/userStorage.ts` |
-| N3 | Low–Med | Finance clarity | Committed money (savings/investments) counts as "spent" in the headline metrics: `budgetUsedPct`, `BudgetUsageRing`, and `safeToSpendPerDay` all divide `monthTotal` by `monthlyIncome` with no category exclusion, so moving money to savings reduces "Safe to spend today" as if it were spent. May be the intended semantics, but it is a deliberate product call worth confirming and labelling rather than leaving implicit. | `src/screens/Dashboard.tsx:85-92`, `src/compute.ts:295-312` |
+| ~~N3~~ | Done | Finance clarity | **Complete (2026-07-17).** Restored the previously approved commitment model: safe-to-spend uses Lunch + Transport + Buffer + budgeted custom envelopes and excludes Savings/Investments entries, so its value no longer depends on when commitments are logged. Personal totals are labelled allocated; shared-budget totals remain spent. | `docs/superpowers/specs/2026-07-17-n3-finance-clarity-product-brief.md`, `docs/testing/n3-finance-clarity.tdd.md`, `src/screens/Dashboard.tsx`, `src/components/BudgetUsageRing.tsx` |
 | N4 | Low | Finance | Early-month forecast is volatile: `monthlySpendForecast.projectedTotal = dailyAverage × daysInMonth` extrapolates straight-line from `daysElapsed ≥ 1`, so one large expense on day 2 projects an alarming month. If surfaced on Insights, add a minimum-elapsed-days guard or smoothing. | `src/compute.ts:274-293` |
 | N5 | Verify | Production | Real-world verification items: (a) one Lunch + one Dinner Apple Pay capture on a physical iPhone; (b) confirm BUDGET-TRACKER-2 (lazy-chunk stale-deploy) stops recurring in Sentry now that PR #21 shipped; (c) collect CrUX field Core Web Vitals before reopening M14. | prior list; PR #21 |
 
 ## Next recommended work
 
-1. **N3** — decide and label whether committed money (savings/investments) should count against the headline "safe to spend" / budget-used metrics.
-2. Verify the N5 real-world items (Apple Pay capture on a physical iPhone; BUDGET-TRACKER-2 resolution; CrUX field CWV).
-3. Split `Dashboard.tsx` and `History.tsx` as a separate maintainability pass.
+1. Verify the N5 real-world items (Apple Pay capture on a physical iPhone; BUDGET-TRACKER-2 resolution; CrUX field CWV).
+2. Split `Dashboard.tsx` and `History.tsx` as a separate maintainability pass.
+3. Revisit N4 forecast smoothing only if a forecast is surfaced again.
 
-(N1 — SGT-local date handling — and N2 — reactive budget config — are complete; see the N-series table above.)
+(N1–N3 are complete; see the N-series table above.)
 
 ## Remaining audit items
 
@@ -74,9 +74,9 @@ health at audit time was strong: 65 test files / 539 tests green, lint + typeche
 
 ## Verification baseline
 
-- Current suite: 67 test files, 550 tests passed (N2 added reactive context and active-user reload tests).
+- Current suite: 67 test files, 552 tests passed (N3 added commitment semantics and allocation-copy tests).
 - Lint and production build pass.
-- Whole-project coverage: 85.38% statements, 77.89% branches, 84.33% functions, 88.87% lines. The existing CI thresholds remain enforced and were not lowered.
+- Whole-project coverage: 85.09% statements, 77.75% branches, 84.09% functions, 88.57% lines. The existing CI thresholds remain enforced and were not lowered.
 - Live RLS: 53 isolation tests across 10 tables and 2 SECURITY DEFINER RPCs pass against a real Postgres locally and in the parallel `rls` CI job. These replaced `supabase/tests/ingest_visibility.test.ts`, which asserted that migration files *contained* policy substrings and would have stayed green if a policy were later dropped.
 - Browser E2E: 11 mobile Chromium checks pass across seven critical journeys, Axe WCAG A/AA scans on all primary screens and Settings tools, keyboard focus, accessible names, measured 44px targets, and no-overflow checks at 320×568 (added by M6), 375×667, and 390×844. They run in a parallel `e2e` CI job without contacting deployed Supabase.
 - Physical accessibility: the deployed weekly History rows passed an iPhone VoiceOver check on 2026-07-14.

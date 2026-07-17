@@ -1,7 +1,7 @@
 # N3 — Commitment and safe-to-spend clarity
 
 **Date:** 2026-07-17
-**Status:** Decision complete; implementation in progress
+**Status:** Implemented
 **Backlog item:** N3 in `docs/PROJECT_IMPROVEMENT_STATUS.md`
 
 ## Product diagnosis

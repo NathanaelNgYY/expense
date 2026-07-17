@@ -144,7 +144,7 @@ describe('App', () => {
 
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Settings' })))
     expect(await screen.findByRole('heading', { level: 1, name: 'Settings' }, { timeout: 10_000 })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument()
   }, 15_000)
 })

@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import InsightsSection from '../components/InsightsSection'
 import { useEntries } from '../EntriesContext'
+import { sgtToday } from '../shared/sgtDate'
 import {
   entriesForMonth,
   lunchWeeklySpend,
@@ -22,7 +23,7 @@ function progressPercent(amount: number, budget: number): number {
 }
 
 export default function Insights() {
-  const now = new Date()
+  const now = sgtToday()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
   const { entries } = useEntries()

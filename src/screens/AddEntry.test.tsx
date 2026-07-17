@@ -3,9 +3,16 @@ import { act } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import AddEntry from './AddEntry'
 import { EntriesProvider } from '../EntriesContext'
-import { toLocalDateString } from '../dates'
 import { getEntries } from '../storage'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
+
+// Pin "today" to a fixed SGT date so the default-date assertions are independent of the
+// runner's timezone (dev is SGT, CI is UTC). Proves the screen derives its default from the
+// SGT helper rather than device-local toLocalDateString().
+vi.mock('../shared/sgtDate', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../shared/sgtDate')>()
+  return { ...actual, sgtTodayString: () => '2026-08-01' }
+})
 
 const sharedCtx = vi.hoisted(() => ({
   value: {
@@ -72,8 +79,8 @@ describe('AddEntry', () => {
 
     const dateInput = screen.getByLabelText('Expense date')
     expect(dateInput).toHaveAttribute('type', 'date')
-    expect(dateInput).toHaveValue(toLocalDateString())
-    expect(dateInput).toHaveAttribute('max', toLocalDateString())
+    expect(dateInput).toHaveValue('2026-08-01')
+    expect(dateInput).toHaveAttribute('max', '2026-08-01')
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
   })
 

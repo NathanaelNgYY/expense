@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
-import { toLocalDateString } from '../dates'
+import { sgtTodayString } from '../shared/sgtDate'
 import { formatStakesLabel } from '../pokerDisplay'
 import { getCustomStakes, saveCustomStakes, savePokerSession } from '../storage'
 
@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function LogSession({ onSave, onBack }: Props) {
-  const [date, setDate] = useState(toLocalDateString())
+  const [date, setDate] = useState(sgtTodayString())
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
   const [stakes, setStakes] = useState('')
@@ -95,7 +95,7 @@ export default function LogSession({ onSave, onBack }: Props) {
               type="date"
               className="date-input--native"
               value={date}
-              max={toLocalDateString()}
+              max={sgtTodayString()}
               onChange={e => setDate(e.target.value)}
               aria-label="Session date"
             />

@@ -8,7 +8,7 @@
 
 ## Current position
 
-The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, weekly-history correctness/accessibility, H6 presentation, M17 isolation/browser/accessibility, H11 batch imports, the first M14 bundle reduction, the five-tab navigation restructure, first-run budget onboarding, time-based automatic categories, and dashboard pass visual restraint are implemented and deployed. M18 runtime retirement and H9 repository enforcement are complete. Automatic Tracking setup and direct past-date entry are complete. M1, M2, and M4 — blank lazy-screen loads, native `confirm()` dialogs, and amount-announcement spam — are complete. M3, M5, and M6 — tab-bar semantics, desktop presentation, and short screens — are complete.
+The highest-risk identity, ingestion visibility, migration recovery, crash recovery, bulk-reset safety, month-analytics correctness, weekly-history correctness/accessibility, H6 presentation, M17 isolation/browser/accessibility, H11 batch imports, the first M14 bundle reduction, the five-tab navigation restructure, first-run budget onboarding, time-based automatic categories, and dashboard pass visual restraint are implemented and deployed. M18 runtime retirement and H9 repository enforcement are complete. Automatic Tracking setup and direct past-date entry are complete. M1, M2, and M4 — blank lazy-screen loads, native `confirm()` dialogs, and amount-announcement spam — are complete. M3, M5, and M6 — tab-bar semantics, desktop presentation, and short screens — are complete. The lost `M8–M9`/`M12–M16` shorthand has been replaced by a fresh 2026-07-17 codebase audit (the `N`-series backlog below); N1 (SGT-local date handling) is complete.
 
 ## Completed or materially addressed
 
@@ -39,22 +39,42 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 | M1, M2, M4 — blank lazy loads, native confirm(), amount announcement spam | Complete | Lazy screens show a 150ms-delayed themed spinner; all four destructive/discard confirms use an in-app iOS-style dialog on native <dialog> (Cancel focused; Esc/backdrop cancel); the Add-entry amount announces once, 1s after typing pauses, via a hidden debounced live region. | `docs/testing/m1-m2-m4-ux-a11y.tdd.md`, `src/components/LazyFallback.tsx`, `src/components/ConfirmDialog.tsx`, `src/screens/AddEntry.tsx` |
 | M3, M5, M6 — tab-bar semantics, desktop presentation, short screens | Complete | The tab bar exposes aria-current="page" with arrow/Home/End focus movement; wide viewports frame the 430px column with a themed backdrop and elevation; a 9-screen × 4-theme × 2-viewport short-screen audit found no qualifying defects (content that looked clipped is reachable inside the `.screen` scroll container), and a 320×568 e2e check guards against regressions. | `docs/testing/m3-m5-m6-ui-polish.tdd.md`, `docs/testing/m6-short-screen-audit.md`, `src/components/TabBar.tsx` |
 
+## Fresh audit — N-series backlog (2026-07-17)
+
+The original July 2026 review that assigned the `M`/`H`/`C` numbers was an interactive session; only
+items that were worked on ever had their definitions written into this doc. The pending shorthand
+`M8–M9` and `M12–M16` therefore have **no recoverable definition** on disk, in git history, or in the
+vault. Rather than guess at them, a fresh codebase audit was run on 2026-07-17 across
+finance/domain correctness, offline-sync, production readiness, UX/accessibility, and security. The
+`N`-series below **replaces** the lost `M8–M9`/`M12–M16` shorthand as the pending backlog. Overall
+health at audit time was strong: 65 test files / 539 tests green, lint + typecheck + build clean, zero
+`any`, zero `TODO`/`FIXME`, no security findings — so these are refinements, not firefighting.
+
+| Item | Sev | Dimension | Finding | Evidence |
+| --- | --- | --- | --- | --- |
+| ~~N1~~ | Done | Correctness | **Complete (2026-07-17).** The real leak was at write/"now" time, not in stored-entry bucketing (`entriesForMonth` reads calendar fields back and was already timezone-independent). Added `sgtToday`/`sgtTodayString` to `src/shared/sgtDate.ts`; routed all screen "now"/"today" derivations and `isFutureDateString` through them so the client agrees with the SGT server/ingest model on any device timezone. `compute.ts` deliberately left timezone-agnostic (injected `referenceDate`). | `docs/superpowers/specs/2026-07-17-n1-sgt-today-design.md`, `src/shared/sgtDate.ts`, `src/shared/sgtDate.test.ts`, `src/dates.ts`, `src/dates.test.ts` |
+| N2 | Medium | Architecture | Budget config, custom categories, and overrides are read straight from localStorage during render (`getBudgetConfig()` etc.), so they are non-reactive — a settings change is not reflected in a mounted screen without a remount — and re-parse on every render. `Dashboard.tsx` (669 lines) and `History.tsx` (677) also exceed the 400-line target and approach the 800 max. Lifting config into context fixes reactivity, testability, and per-render parse cost together. | `src/screens/Dashboard.tsx:62-64` |
+| N3 | Low–Med | Finance clarity | Committed money (savings/investments) counts as "spent" in the headline metrics: `budgetUsedPct`, `BudgetUsageRing`, and `safeToSpendPerDay` all divide `monthTotal` by `monthlyIncome` with no category exclusion, so moving money to savings reduces "Safe to spend today" as if it were spent. May be the intended semantics, but it is a deliberate product call worth confirming and labelling rather than leaving implicit. | `src/screens/Dashboard.tsx:85-92`, `src/compute.ts:295-312` |
+| N4 | Low | Finance | Early-month forecast is volatile: `monthlySpendForecast.projectedTotal = dailyAverage × daysInMonth` extrapolates straight-line from `daysElapsed ≥ 1`, so one large expense on day 2 projects an alarming month. If surfaced on Insights, add a minimum-elapsed-days guard or smoothing. | `src/compute.ts:274-293` |
+| N5 | Verify | Production | Real-world verification items: (a) one Lunch + one Dinner Apple Pay capture on a physical iPhone; (b) confirm BUDGET-TRACKER-2 (lazy-chunk stale-deploy) stops recurring in Sentry now that PR #21 shipped; (c) collect CrUX field Core Web Vitals before reopening M14. | prior list; PR #21 |
+
 ## Next recommended work
 
-1. Verify one Lunch and one Dinner Apple Pay capture on a physical iPhone.
-2. Collect CrUX/real-user Core Web Vitals once the site has available field data; reopen M14 only if mobile LCP or INP fails consistently.
-3. Select the next product/audit item from M8–M9 or M12–M16.
+1. **N2** — move budget config/custom categories/overrides into reactive context.
+2. **N3** — decide and label whether committed money (savings/investments) should count against the headline "safe to spend" / budget-used metrics.
+3. Verify the N5 real-world items (Apple Pay capture on a physical iPhone; BUDGET-TRACKER-2 resolution; CrUX field CWV).
+
+(N1 — SGT-local date handling — complete; see the N-series table above.)
 
 ## Remaining audit items
 
-- M8–M9 and M12–M16, except where a later implementation or product decision explicitly retires an item.
-- M1, M2, M4, M3, M5, and M6 are now complete (see the table above) and are no longer in this list.
-- M7 (two non-product tabs) was retired by the earlier five-tab navigation restructure but had not yet been removed from this list's shorthand range; it is removed now.
+- The `N`-series above is the current pending backlog. It supersedes the unrecoverable `M8–M9`/`M12–M16` shorthand, whose definitions were lost with the original interactive review.
+- M1–M7 are resolved: M1, M2, M4, M3, M5, M6 are complete (see the table above), and M7 (two non-product tabs) was retired by the five-tab navigation restructure.
 - C3's perfect Apple Pay dedupe guarantee remains impossible without a stable transaction identifier from iOS; the current fallback is deliberately documented rather than overstated.
 
 ## Verification baseline
 
-- Current suite: 64 test files, 533 tests passed.
+- Current suite: 66 test files, 545 tests passed (N1 added SGT-helper and future-date-clamp tests).
 - Lint and production build pass.
 - Whole-project coverage: 84.50% statements, 77.34% branches, 83.14% functions, 88.09% lines. The existing CI thresholds remain enforced and were not lowered.
 - Live RLS: 53 isolation tests across 10 tables and 2 SECURITY DEFINER RPCs pass against a real Postgres locally and in the parallel `rls` CI job. These replaced `supabase/tests/ingest_visibility.test.ts`, which asserted that migration files *contained* policy substrings and would have stayed green if a policy were later dropped.

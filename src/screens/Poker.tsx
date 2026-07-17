@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Flame, Percent, TrendingUp, Trophy } from 'lucide-react'
 import { getPokerSessions } from '../storage'
+import { sgtToday } from '../shared/sgtDate'
 import {
   bankrollTrend,
   biggestSession,
@@ -34,7 +35,7 @@ export default function Poker() {
     return <LogSession onSave={() => setShowLog(false)} onBack={() => setShowLog(false)} />
   }
 
-  const now = new Date()
+  const now = sgtToday()
   const sessions = getPokerSessions()
   const pnl = totalPnl(sessions)
   const hours = totalHours(sessions)

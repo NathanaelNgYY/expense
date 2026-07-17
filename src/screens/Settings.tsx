@@ -6,6 +6,7 @@ import BudgetSettings from './settings/BudgetSettings'
 import AppearanceSettings from './settings/AppearanceSettings'
 import DataSettings from './settings/DataSettings'
 import { useEntries } from '../EntriesContext'
+import { sgtToday } from '../shared/sgtDate'
 import { useTheme } from '../theme/ThemeContext'
 import { THEMES } from '../theme/themeRegistry'
 import IngestStatusCard from './settings/IngestStatusCard'
@@ -59,7 +60,7 @@ export default function Settings({ onBack, onOpenPoker, onOpenShared }: Props) {
   const confirm = useConfirm()
 
   async function handleReset() {
-    const now = new Date()
+    const now = sgtToday()
     const toRemove = entries.filter(entry =>
       isEntryInMonth(entry.date, now.getFullYear(), now.getMonth()),
     )

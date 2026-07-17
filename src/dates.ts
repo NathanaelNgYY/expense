@@ -1,3 +1,5 @@
+import { sgtTodayString } from './shared/sgtDate'
+
 export function toLocalDateString(date = new Date()): string {
   const pad = (value: number) => String(value).padStart(2, '0')
 
@@ -25,5 +27,5 @@ export function clampDateString(value: string, min: string, max: string): string
 }
 
 export function isFutureDateString(value: string): boolean {
-  return value > toLocalDateString()
+  return value > sgtTodayString()
 }

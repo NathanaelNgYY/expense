@@ -10,6 +10,7 @@ import {
   isFutureDateString,
   toLocalDateString,
 } from '../dates'
+import { sgtToday } from '../shared/sgtDate'
 import { getCustomCategories, getCategoryOverrides } from '../storage'
 import { buildCategoryOptions, categoryIcon, categoryLabel } from '../categoryDisplay'
 import { useEntries } from '../EntriesContext'
@@ -54,7 +55,7 @@ function minDateForMonth(year: number, month: number): string {
 }
 
 function maxDateForMonth(year: number, month: number): string {
-  const today = new Date()
+  const today = sgtToday()
   const monthEnd = new Date(year, month + 1, 0)
 
   return toLocalDateString(monthEnd > today ? today : monthEnd)
@@ -102,7 +103,7 @@ function initialHistoryState(
 }
 
 export default function History({ initialEditingEntryId = null, onEditHandled, onAddForDate }: Props) {
-  const now = new Date()
+  const now = sgtToday()
   const { entries, addEntry, restoreEntry, editEntry, removeEntry } = useEntries()
   const [initialState] = useState(() => initialHistoryState(initialEditingEntryId, now, entries))
   const [year, setYear] = useState(initialState.year)

@@ -22,6 +22,7 @@ interface Props {
 }
 
 const NUMPAD_KEYS = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
+const AMOUNT_ANNOUNCE_DELAY_MS = 1000
 
 export default function AddEntry({ initialDate, onSave }: Props) {
   const today = toLocalDateString()
@@ -57,6 +58,17 @@ export default function AddEntry({ initialDate, onSave }: Props) {
   const amount = parseFloat(digits) || 0
   const amountText = `S$${amount.toFixed(2)}`
   const activeGlyphIndex = getActiveGlyphIndex(digits, amountText, animationCue.key)
+
+  // M4: announcing on every keypress spammed screen readers with the full re-read amount.
+  // Instead a hidden live region settles to the final value 1s after the user pauses.
+  // Initialized to the current text so mounting announces nothing.
+  const [announcedAmount, setAnnouncedAmount] = useState(amountText)
+
+  useEffect(() => {
+    const id = setTimeout(() => setAnnouncedAmount(amountText), AMOUNT_ANNOUNCE_DELAY_MS)
+    return () => clearTimeout(id)
+  }, [amountText])
+
   const sharedSaveDisabled =
     isSharedDestination && (!selectedSharedBudget || !activeSharedReady || busy)
   const saveLabel = entryDate === today ? 'Save' : `Add for ${format(fromLocalDateString(entryDate), 'MMM d')}`
@@ -165,7 +177,7 @@ export default function AddEntry({ initialDate, onSave }: Props) {
         </div>
       )}
 
-      <div className="amount-display add-entry__amount" aria-label="Entered amount" aria-live="polite">
+      <div className="amount-display add-entry__amount" aria-label="Entered amount">
         <span className="amount-glyph-set" aria-hidden="true">
           {Array.from(amountText).map((char, index) => {
             const isActive = index === activeGlyphIndex
@@ -193,6 +205,7 @@ export default function AddEntry({ initialDate, onSave }: Props) {
         </span>
         <span className="amount-screenreader">{amountText}</span>
       </div>
+      <span className="amount-screenreader" role="status">{announcedAmount}</span>
 
       <label className="add-entry-date">
         <span className="add-entry-date__trigger">

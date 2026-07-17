@@ -1,6 +1,7 @@
 import { ChevronLeft, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import BudgetIcon from '../components/BudgetIcon'
+import { useConfirm } from '../components/ConfirmDialog'
 import { toLocalDateString } from '../dates'
 import { computeMemberTotals, currentSgtMonth, entriesForMonth, totalSpent } from './memberTotals'
 import OwnerTools from './OwnerTools'
@@ -10,6 +11,7 @@ import { formatSGD } from '../format'
 export default function BudgetDetail() {
   const { active, session, error, closeBudget, addEntry, removeEntry, leaveActiveBudget } =
     useSharedBudgets()
+  const confirm = useConfirm()
   const [amount, setAmount] = useState('')
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [note, setNote] = useState('')
@@ -42,6 +44,19 @@ export default function BudgetDetail() {
     } finally {
       setBusy(false)
     }
+  }
+
+  async function handleLeave() {
+    if (
+      !(await confirm({
+        title: `Leave "${budget.name}"?`,
+        message: 'You can rejoin later with an invite code.',
+        confirmLabel: 'Leave',
+        destructive: true,
+      }))
+    )
+      return
+    void leaveActiveBudget()
   }
 
   return (
@@ -149,11 +164,7 @@ export default function BudgetDetail() {
         <button
           type="button"
           className="danger-btn"
-          onClick={() => {
-            if (window.confirm(`Leave "${budget.name}"? You can rejoin later with an invite code.`)) {
-              void leaveActiveBudget()
-            }
-          }}
+          onClick={() => void handleLeave()}
         >
           Leave budget
         </button>

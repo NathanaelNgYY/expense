@@ -18,7 +18,12 @@ const KB = 1024
 
 const BUDGETS = [
   { label: 'initial JS', kind: 'js', budgetKb: 143 },
-  { label: 'CSS', kind: 'css', budgetKb: 12 },
+  // The always-available ConfirmDialog + LazyFallback styles (M1/M2) are deliberately in the
+  // main chunk (see docs/superpowers/specs/2026-07-16-m1-m2-m4-ux-a11y-design.md). The old 12
+  // KiB budget sat exactly at the pre-change actual with zero headroom, so that CSS pushed it
+  // over. 13 KiB is set just above the 12.3 KiB post-change actual, preserving the same
+  // regression-catching intent as the M14 JS budget (a small deliberate margin, not open-ended).
+  { label: 'CSS', kind: 'css', budgetKb: 13 },
 ]
 
 const html = readFileSync(join(DIST_DIR, 'index.html'), 'utf8')

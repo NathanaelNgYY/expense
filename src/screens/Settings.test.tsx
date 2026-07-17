@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import { fireEvent, screen } from '@testing-library/react'
 import Settings from './Settings'
 import { EntriesProvider } from '../EntriesContext'
 import { ThemeProvider } from '../theme/ThemeContext'
+import { ConfirmProvider } from '../components/ConfirmDialog'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
 
 // Settings is now a navigation shell: it owns the hub, the subscreen switch and the month reset.
@@ -69,11 +71,13 @@ function renderSettings(
 
   act(() => {
     root.render(
-      <ThemeProvider>
-        <EntriesProvider>
-          <Settings onBack={onBack} onOpenPoker={onOpenPoker} onOpenShared={onOpenShared} />
-        </EntriesProvider>
-      </ThemeProvider>,
+      <ConfirmProvider>
+        <ThemeProvider>
+          <EntriesProvider>
+            <Settings onBack={onBack} onOpenPoker={onOpenPoker} onOpenShared={onOpenShared} />
+          </EntriesProvider>
+        </ThemeProvider>
+      </ConfirmProvider>,
     )
   })
 
@@ -245,7 +249,6 @@ describe('Settings hub', () => {
     const thisMonth: Seed = { id: 'now-1', amount: 12, category: 'lunch', note: 'Rice', date: `${month}-05` }
     const alsoThisMonth: Seed = { id: 'now-2', amount: 8, category: 'transport', note: 'Bus', date: `${month}-06` }
     const lastYear: Seed = { id: 'old-1', amount: 8, category: 'lunch', note: 'Noodles', date: '2020-01-05' }
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))
 
     const rendered = renderSettings([thisMonth, alsoThisMonth, lastYear])
     root = rendered.root
@@ -255,11 +258,13 @@ describe('Settings hub', () => {
         new MouseEvent('click', { bubbles: true }),
       )
     })
+
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveAccessibleName('Delete 2 entries from this month?')
+    expect(screen.getByText('You can undo this while Settings remains open.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
     await waitFor(() => readCachedEntries().every(entry => !entry.id.startsWith('now-')))
 
-    expect(confirm).toHaveBeenCalledWith(
-      'Delete 2 entries from this month? You can undo this while Settings remains open.',
-    )
     expect(readCachedEntries().map(entry => entry.id)).toEqual(['old-1'])
     expect(rendered.container).toHaveTextContent('Deleted 2 entries')
     expect(findButton(rendered.container, 'Undo')).toBeEnabled()
@@ -284,15 +289,17 @@ describe('Settings hub', () => {
       date: `${month}-06`,
       dedupeKey: 'apple-pay:transaction-2',
     }
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(true))
-
     const rendered = renderSettings([first, second])
     root = rendered.root
 
     await act(async () => {
       findButton(rendered.container, 'Reset This Month').click()
     })
-    await waitFor(() => readCachedEntries().length === 0)
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
+    // Wider budget than the default 2000ms: the confirm dialog round trip adds a couple of
+    // render/microtask hops before removeEntry fires, and that's occasionally tight under
+    // full-suite parallel load (this test alone is never slow).
+    await waitFor(() => readCachedEntries().length === 0, 5000)
 
     await act(async () => {
       findButton(rendered.container, 'Undo').click()
@@ -306,16 +313,16 @@ describe('Settings hub', () => {
     )).toBe(false)
   })
 
-  it('keeps the current month when the reset confirmation is declined', () => {
+  it('keeps the current month when the reset confirmation is declined', async () => {
     const now = new Date()
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     const thisMonth: Seed = { id: 'now-1', amount: 12, category: 'lunch', note: 'Rice', date: `${month}-05` }
-    vi.stubGlobal('confirm', vi.fn().mockReturnValue(false))
 
     const rendered = renderSettings([thisMonth])
     root = rendered.root
 
     click(findButton(rendered.container, 'Reset This Month'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
 
     expect(readCachedEntries().map(entry => entry.id)).toEqual(['now-1'])
   })
@@ -328,14 +335,12 @@ describe('Settings hub', () => {
       note: 'Noodles',
       date: '2020-01-05',
     }
-    vi.stubGlobal('confirm', vi.fn())
-
     const rendered = renderSettings([oldEntry])
     root = rendered.root
 
     click(findButton(rendered.container, 'Reset This Month'))
 
-    expect(confirm).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(rendered.container).toHaveTextContent('No entries to reset this month')
     expect(readCachedEntries()).toEqual([oldEntry])
   })

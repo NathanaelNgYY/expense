@@ -92,8 +92,11 @@ test('Settings month reset can be undone without losing entries', async ({ page 
   ])
   await page.goto('/')
   await page.getByRole('button', { name: 'Settings' }).click()
-  page.once('dialog', dialog => dialog.accept())
   await page.getByRole('button', { name: "Reset This Month's Data" }).click()
+  // The reset guard is the in-app ConfirmDialog (M2), not a native confirm.
+  const confirmDialog = page.getByRole('dialog')
+  await expect(confirmDialog).toContainText('Delete 2 entries from this month?')
+  await confirmDialog.getByRole('button', { name: 'Delete' }).click()
 
   await expect(page.getByRole('status')).toContainText('Deleted 2 entries')
   await page.getByRole('button', { name: 'Undo' }).click()

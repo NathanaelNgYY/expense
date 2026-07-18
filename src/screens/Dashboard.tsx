@@ -3,6 +3,8 @@ import { Check, ChevronDown, ChevronUp, Minus, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
 import BudgetUsageRing from '../components/BudgetUsageRing'
+import BudgetPassStack, { type BudgetPass } from '../components/dashboard/BudgetPassStack'
+import SharedBudgetDashboard from '../components/dashboard/SharedBudgetDashboard'
 import SyncStatus from '../components/SyncStatus'
 import { downloadJsonBackup } from '../dataTransfer'
 import { useBudgetConfig } from '../BudgetConfigContext'
@@ -25,17 +27,14 @@ import type { Category, Entry } from '../types'
 import { useEntries } from '../EntriesContext'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
 import {
-  computeMemberTotals,
   currentSgtMonth,
   entriesForMonth as sharedEntriesForMonth,
   totalSpent as sharedTotalSpent,
 } from '../sharedBudgets/memberTotals'
-import type { SharedEntry } from '../sharedBudgets/types'
 
 interface Props {
   onAddEntry: () => void
 }
-
 const COMMITTED_CATEGORIES: Category[] = ['savings', 'investments']
 const COMMITTED_CATEGORY_SET = new Set<Category>(COMMITTED_CATEGORIES)
 
@@ -46,10 +45,6 @@ type ExpandKey = string
 
 function entrySort(a: Entry, b: Entry): number {
   return b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
-}
-
-function sharedEntrySort(a: SharedEntry, b: SharedEntry): number {
-  return b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)
 }
 
 export default function Dashboard({ onAddEntry }: Props) {
@@ -139,16 +134,7 @@ export default function Dashboard({ onAddEntry }: Props) {
   // `amount` is money spent; `limit` is the ceiling it is spent against. The card leads with
   // what the user actually came to find out — how much is left — and keeps spent as support.
   // A shared budget with no ceiling has no "left", so it falls back to leading with spent.
-  interface PassInfo {
-    title: string
-    subtitle: string
-    amount: number | null
-    limit: number | null
-    pct: number
-    usageLabel: 'allocated' | 'spent'
-  }
-
-  function passInfo(item: PassItem): PassInfo {
+  function passInfo(item: PassItem): Omit<BudgetPass, 'id'> {
     if (item.kind === 'personal') {
       return {
         title: 'Personal',
@@ -168,6 +154,18 @@ export default function Dashboard({ onAddEntry }: Props) {
       return { title: item.name, subtitle: 'Shared', amount: spent, limit, pct, usageLabel: 'spent' }
     }
     return { title: item.name, subtitle: 'Shared', amount: null, limit: null, pct: 0, usageLabel: 'spent' }
+  }
+
+  const budgetPasses: BudgetPass[] = passItems.map(item => ({
+    id: item.kind === 'personal' ? 'personal' : item.id,
+    ...passInfo(item),
+  }))
+
+  function selectPassById(id: string) {
+    const item = passItems.find(candidate =>
+      candidate.kind === 'personal' ? id === 'personal' : candidate.id === id,
+    )
+    if (item) selectPass(item)
   }
 
   function toggleCategory(category: ExpandKey) {
@@ -241,66 +239,7 @@ export default function Dashboard({ onAddEntry }: Props) {
 
       <SyncStatus sync={sync} onRetry={() => void refresh()} onBackup={downloadJsonBackup} />
 
-      <div className="pass-stack" style={{ height: `${168 + (passItems.length - 1) * 22}px` }}>
-        {passItems.map((item, depth) => {
-          const info = passInfo(item)
-          const key = item.kind === 'personal' ? 'personal' : item.id
-          const loaded = info.amount !== null
-          const capped = loaded && info.limit !== null && info.limit > 0
-          const remaining = capped ? info.limit! - info.amount! : null
-          const overspent = remaining !== null && remaining < 0
-
-          return (
-            <div
-              key={key}
-              className="pass"
-              style={{
-                transform: `translateY(${depth * 22}px) scale(${1 - depth * 0.04})`,
-                opacity: depth === 0 ? 1 : 1 - depth * 0.25,
-                zIndex: passItems.length - depth,
-              }}
-            >
-              <div className="pass-title">{info.title}</div>
-              <div className="pass-subtitle">{info.subtitle}</div>
-              {!loaded ? (
-                <div className="pass-amt">Tap to open</div>
-              ) : capped ? (
-                <>
-                  <div className="pass-amt-label">{overspent ? 'Over budget by' : 'Left to spend'}</div>
-                  <div className={`pass-amt ${overspent ? 'pass-amt--over' : ''}`}>
-                    {formatSGDWhole(Math.abs(remaining!))}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="pass-amt-label">Spent this month</div>
-                  <div className="pass-amt">{formatSGDWhole(info.amount!)}</div>
-                </>
-              )}
-              <div className="progress-bar pass-bar">
-                <div
-                  className="progress-fill"
-                  style={overspent ? { width: '100%', background: 'var(--red)' } : { width: `${info.pct}%` }}
-                />
-              </div>
-              {capped && (
-                <div className="pass-meta">
-                  {formatSGDWhole(info.amount!)} of {formatSGDWhole(info.limit!)} {info.usageLabel}
-                </div>
-              )}
-              {depth !== 0 && (
-                <button
-                  type="button"
-                  className="pass-tap-veil"
-                  onClick={() => selectPass(item)}
-                  aria-label={`Switch to ${info.title}`}
-                />
-              )}
-            </div>
-          )
-        })}
-      </div>
-      {passItems.length > 1 && <p className="stack-hint muted">tap a card behind to bring it forward</p>}
+      <BudgetPassStack passes={budgetPasses} onSelect={selectPassById} />
 
       {viewScope === 'shared' && (
         <SharedBudgetDashboard
@@ -520,130 +459,6 @@ export default function Dashboard({ onAddEntry }: Props) {
       </div>
         </>
       )}
-    </div>
-  )
-}
-
-function SharedBudgetDashboard({
-  selectedBudgetId,
-  selectedBudgetName,
-}: {
-  selectedBudgetId: string | null
-  selectedBudgetName: string | null
-}) {
-  const { budgets, active, error } = useSharedBudgets()
-
-  if (budgets.length === 0) {
-    return <p className="muted">Create or join a shared budget from the Shared tab.</p>
-  }
-
-  if (!selectedBudgetId || !active || active.budget.id !== selectedBudgetId) {
-    return <p className="muted">Loading {selectedBudgetName ?? 'shared budget'}...</p>
-  }
-
-  const { budget, entries, categories, members } = active
-  const month = currentSgtMonth()
-  const monthEntries = sharedEntriesForMonth(entries, month)
-  const spent = sharedTotalSpent(monthEntries)
-  const pct =
-    budget.monthlyLimit !== null && budget.monthlyLimit > 0
-      ? Math.min(100, (spent / budget.monthlyLimit) * 100)
-      : spent > 0
-        ? 100
-        : 0
-  const memberTotals = computeMemberTotals(monthEntries, members)
-  const nameOf = new Map(members.map(m => [m.userId, m.displayName]))
-
-  return (
-    <div className="shared-dashboard">
-      <div className="card summary-card">
-        <div className="summary-card-top">
-          <div>
-            <span className="summary-label">{budget.name}</span>
-            <strong className="summary-amount summary-amount--large">
-              {formatSGD(spent)}
-            </strong>
-          </div>
-          <div className="summary-pill">{monthEntries.length} entries</div>
-        </div>
-        <div className="progress-bar" aria-hidden="true">
-          <div
-            className="progress-fill"
-            style={{
-              width: `${pct}%`,
-              background:
-                budget.monthlyLimit !== null && spent > budget.monthlyLimit
-                  ? 'var(--red)'
-                  : 'var(--green)',
-            }}
-          />
-        </div>
-        <div className="summary-card-bottom">
-          <span className="muted">
-            {budget.monthlyLimit !== null
-              ? `${formatSGD(spent)} of ${formatSGD(budget.monthlyLimit)}`
-              : 'No monthly limit set'}
-          </span>
-        </div>
-      </div>
-
-      <h3 className="section-title">Members</h3>
-      <div className="ios-list">
-        {memberTotals.map(total => (
-          <div key={total.userId} className="settings-row">
-            <span className="settings-label">{total.displayName}</span>
-            <strong>{formatSGD(total.total)}</strong>
-          </div>
-        ))}
-      </div>
-
-      <h3 className="section-title">Categories</h3>
-      {categories.length === 0 ? (
-        <p className="muted">No shared categories yet. Add them from Settings.</p>
-      ) : (
-        <div className="ios-list">
-          {categories.map(category => {
-            const categoryEntries = monthEntries.filter(entry => entry.categoryId === category.id)
-            const categorySpent = sharedTotalSpent(categoryEntries)
-            const hasBudget = category.budgetAmount !== null && category.budgetAmount > 0
-            const over = hasBudget && categorySpent > category.budgetAmount!
-            return (
-              <div key={category.id} className="settings-row shared-category-summary-row">
-                <span className="settings-label icon-label">
-                  <BudgetIcon name={category.icon} />
-                  {category.label}
-                </span>
-                <span className={over ? 'cat-status cat-status--over' : 'cat-status cat-status--ok'}>
-                  {hasBudget
-                    ? `${formatSGD(categorySpent)} / ${formatSGD(category.budgetAmount!)}`
-                    : formatSGD(categorySpent)}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      <h3 className="section-title">Entries</h3>
-      <div className="shared-entries">
-        {monthEntries.length === 0 ? (
-          <p className="muted">No shared expenses this month.</p>
-        ) : (
-          monthEntries.sort(sharedEntrySort).map(entry => (
-            <div key={entry.id} className="shared-entry-row">
-              <div className="shared-entry-main">
-                <span>{entry.note || 'No note'}</span>
-                <span className="muted">
-                  {nameOf.get(entry.userId) ?? 'Former member'} -{' '}
-                  {format(fromLocalDateString(entry.date), 'EEE, MMM d')}
-                </span>
-              </div>
-              <strong>{formatSGD(entry.amount)}</strong>
-            </div>
-          ))
-        )}
-      </div>
-      {error && <p className="form-error">{error}</p>}
     </div>
   )
 }

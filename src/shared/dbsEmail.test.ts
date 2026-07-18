@@ -44,11 +44,13 @@ To:    LFH SEAFOOD (UEN ending 006C)
 If unauthorised, please call our DBS hotline.`
 
   it('parses a real PayNow alert (no space after SGD, strips UEN, ignores From line)', () => {
-    const result = parseDbsEmail(PAYNOW)
+    const result = parseDbsEmail(PAYNOW, '2026-06-07T03:00:00Z')
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.amount).toBe(5.7)
       expect(result.merchant).toBe('LFH SEAFOOD')
+      expect(result.recipientKind).toBe('business')
+      expect(result.occurredAt).toBe('2026-06-05T10:15:00.000Z')
     }
   })
 
@@ -78,12 +80,45 @@ To:    KHXX JIX SHEXX (MOBILE ending 5998)
 If unauthorised, please call our DBS hotline. To view transaction details, please login to digibank.`
 
   it('parses a person-to-person PayNow alert (strips "MOBILE ending" parenthetical)', () => {
-    const result = parseDbsEmail(PAYNOW_MOBILE)
+    const result = parseDbsEmail(PAYNOW_MOBILE, '2026-06-12T03:00:00Z')
     expect(result.ok).toBe(true)
     if (result.ok) {
       expect(result.amount).toBe(7.2)
       expect(result.merchant).toBe('KHXX JIX SHEXX')
       expect(result.channel).toBe('paynow')
+      expect(result.recipientKind).toBe('person')
+      expect(result.occurredAt).toBe('2026-06-10T05:28:00.000Z')
     }
+  })
+
+  it('parses a flattened PayNow email body without relying on line breaks', () => {
+    const flattened = PAYNOW.replace(/\s*\n\s*/g, ' ')
+    const result = parseDbsEmail(flattened, '2026-06-07T03:00:00Z')
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.merchant).toBe('LFH SEAFOOD')
+      expect(result.recipientKind).toBe('business')
+    }
+  })
+
+  it('parses the payee from an inline transfer sentence', () => {
+    const result = parseDbsEmail(
+      'You have made a PayNow transfer of SGD 5.70 to AH HUAT KOPI on 11 Jul.',
+      '2026-07-12T03:00:00Z',
+    )
+
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.merchant).toBe('AH HUAT KOPI')
+  })
+
+  it('infers the previous year for a late December alert received in January', () => {
+    const result = parseDbsEmail(
+      PAYNOW.replace('05 Jun 18:15', '31 Dec 23:55'),
+      '2027-01-02T03:00:00Z',
+    )
+
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.occurredAt).toBe('2026-12-31T15:55:00.000Z')
   })
 })

@@ -220,6 +220,78 @@ describe('edge ingest handler', () => {
     if (result.status !== 'saved') return
     expect(result.entry.source).toBe('dbs-email')
     expect(result.entry.amount).toBe(5.7)
+    expect(result.entry.merchant).toBe('AH HUAT KOPI')
+    expect(result.entry.category).toBe('lunch')
+  })
+
+  it('uses the DBS transaction time instead of a delayed email receipt time', async () => {
+    const store = new InMemoryStore()
+    const result = await handleIngest(
+      {
+        sourceKind: 'dbs_email',
+        rawBody: `We refer to your PAYNOW dated 05 Jun.
+Date & Time: 05 Jun 18:15 (SGT)
+Amount: SGD5.70
+To: LFH SEAFOOD (UEN ending 006C)`,
+        occurredAt: '2026-06-07T03:00:00Z',
+      },
+      store,
+      makeId,
+    )
+
+    expect(result.status).toBe('saved')
+    if (result.status !== 'saved') return
+    expect(result.entry.occurredAt).toBe('2026-06-05T10:15:00.000Z')
+    expect(result.entry.date).toBe('2026-06-05')
+  })
+
+  it('puts a first-time person-to-person PayNow transfer in Others', async () => {
+    const store = new InMemoryStore()
+    const result = await handleIngest(
+      {
+        sourceKind: 'dbs_email',
+        rawBody: `We refer to your PAYNOW dated 10 Jun.
+Date & Time: 10 Jun 13:28 (SGT)
+Amount: SGD7.20
+To: KHXX JIX SHEXX (MOBILE ending 5998)`,
+        occurredAt: '2026-06-12T03:00:00Z',
+      },
+      store,
+      makeId,
+    )
+
+    expect(result.status).toBe('saved')
+    if (result.status === 'saved') expect(result.entry.category).toBe('others')
+  })
+
+  it('prefers a learned friend category over the person-to-person fallback', async () => {
+    const store = new InMemoryStore()
+    await store.put({
+      id: 'friend-history',
+      amount: 9,
+      category: 'lunch',
+      note: 'PayNow Â· KHXX JIX SHEXX',
+      date: '2026-06-01',
+      source: 'dbs-email',
+      merchant: 'KHXX JIX SHEXX',
+      dedupeKey: 'friend-history',
+    })
+
+    const result = await handleIngest(
+      {
+        sourceKind: 'dbs_email',
+        rawBody: `We refer to your PAYNOW dated 10 Jun.
+Date & Time: 10 Jun 13:28 (SGT)
+Amount: SGD7.20
+To: KHXX JIX SHEXX (MOBILE ending 5998)`,
+        occurredAt: '2026-06-12T03:00:00Z',
+      },
+      store,
+      makeId,
+    )
+
+    expect(result.status).toBe('saved')
+    if (result.status === 'saved') expect(result.entry.category).toBe('lunch')
   })
 
   it('deduplicates the same DBS email body when the automation re-fires later', async () => {

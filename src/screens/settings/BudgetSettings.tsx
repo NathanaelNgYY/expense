@@ -23,19 +23,7 @@ interface Props {
   onDone: () => void
 }
 
-type BudgetFieldKey = Exclude<keyof BudgetConfig, 'monthlyIncome' | 'others'>
-
-const BUDGET_FIELDS: Array<{ key: BudgetFieldKey; label: string }> = [
-  { key: 'lunch', label: 'Lunch' },
-  { key: 'transport', label: 'Transport' },
-  { key: 'savings', label: 'Savings' },
-  { key: 'investments', label: 'Investments' },
-  { key: 'buffer', label: 'Buffer' },
-]
-
-// Basic categories the user can rename / re-icon. Buffer is a computed budget
-// concept, not a tag, so it stays fixed.
-const EDITABLE_BASICS = new Set<string>(['lunch', 'transport', 'savings', 'investments'])
+const BUDGET_FIELDS: Category[] = ['lunch', 'transport', 'savings', 'investments', 'others']
 
 export default function BudgetSettings({ onDone }: Props) {
   const budget = useBudgetConfig()
@@ -51,7 +39,7 @@ export default function BudgetSettings({ onDone }: Props) {
   const confirm = useConfirm()
 
   const customTotal = customCategories.reduce((sum, c) => sum + (c.budget ?? 0), 0)
-  const total = BUDGET_FIELDS.reduce((sum, field) => sum + config[field.key], 0) + customTotal
+  const total = BUDGET_FIELDS.reduce((sum, key) => sum + config[key], 0) + customTotal
   const totalMismatch = Math.abs(total - config.monthlyIncome) > 0.01
 
   // Budget edits live in local state until Save. Without this the user could edit a field,
@@ -93,7 +81,7 @@ export default function BudgetSettings({ onDone }: Props) {
     setConfig(currentConfig => ({
       ...currentConfig,
       [key]: nextValue,
-      ...(key === 'buffer' ? { others: nextValue } : {}),
+      ...(key === 'others' ? { buffer: nextValue } : {}),
     }))
   }
 
@@ -191,10 +179,9 @@ export default function BudgetSettings({ onDone }: Props) {
           <h3 className="section-title">Monthly Budgets (S$)</h3>
 
           <div className="ios-list">
-            {BUDGET_FIELDS.map(({ key, label }) => {
-              const editable = EDITABLE_BASICS.has(key)
-              const displayLabel = editable ? categoryLabel(key, overrides) : label
-              const displayIcon = editable ? categoryIcon(key, overrides) : key
+            {BUDGET_FIELDS.map(key => {
+              const displayLabel = categoryLabel(key, overrides)
+              const displayIcon = categoryIcon(key, overrides)
               return (
                 <div key={key}>
                   <div className="settings-row">
@@ -213,16 +200,14 @@ export default function BudgetSettings({ onDone }: Props) {
                         inputMode="decimal"
                         onChange={event => handleChange(key, event.target.value)}
                       />
-                      {editable && (
-                        <button
-                          type="button"
-                          className="category-edit-btn"
-                          aria-label={`Edit ${displayLabel}`}
-                          onClick={() => setEditingId(key)}
-                        >
-                          <Pencil size={16} strokeWidth={2.3} aria-hidden="true" />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className="category-edit-btn"
+                        aria-label={`Edit ${displayLabel}`}
+                        onClick={() => setEditingId(key)}
+                      >
+                        <Pencil size={16} strokeWidth={2.3} aria-hidden="true" />
+                      </button>
                     </div>
                   </div>
                   {editingId === key && (

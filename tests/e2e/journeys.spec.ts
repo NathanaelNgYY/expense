@@ -20,7 +20,7 @@ test('first-run user records a personal expense', async ({ page }) => {
   ]))
 })
 
-test('Others spending is presented as monthly Buffer usage', async ({ page }) => {
+test('Others is the only flexible-budget UI', async ({ page }) => {
   await prepareApp(page, [{
     id: 'others-1',
     amount: 100,
@@ -31,10 +31,10 @@ test('Others spending is presented as monthly Buffer usage', async ({ page }) =>
   await page.goto('/')
 
   const othersCard = page.getByRole('button', { name: /Others/ })
-  await expect(othersCard).toContainText('spent from Buffer')
-  await expect(othersCard).toContainText('Uses monthly Buffer')
-  await expect(othersCard).not.toContainText('S$136.00 left')
-  await expect(othersCard).not.toContainText('Budget S$236')
+  await expect(othersCard).toContainText('S$136.00 left')
+  await expect(othersCard).toContainText('Budget S$236')
+  await expect(page.locator('.buffer-card')).toHaveCount(0)
+  await expect(page.getByText('Buffer', { exact: true })).toHaveCount(0)
 })
 
 test('Add entry accepts a past expense date without visiting History', async ({ page }) => {

@@ -165,21 +165,22 @@ describe('Dashboard category expense history', () => {
     expect(list).toHaveTextContent('S$100.00')
   })
 
-  it('presents Others spending as usage of the single monthly Buffer', () => {
+  it('presents Others as the only flexible-budget UI', () => {
     const rendered = renderWithEntries([
       entry({ amount: 100, category: 'others', date: '2026-05-06' }),
+      entry({ amount: 300, category: 'lunch', date: '2026-05-06' }),
     ])
     root = rendered.root
 
     const others = categoryCard(rendered.container, 'Others')
     expect(others).toHaveTextContent('S$100.00')
-    expect(others).toHaveTextContent('spent from Buffer')
-    expect(others).toHaveTextContent('Uses monthly Buffer')
-    expect(others).not.toHaveTextContent('S$136.00 left')
-    expect(others).not.toHaveTextContent('Budget S$236')
+    expect(others).toHaveTextContent('S$100.00 left')
+    expect(others).toHaveTextContent('Budget S$236')
+    expect(rendered.container.querySelector('.buffer-card')).toBeNull()
+    expect(rendered.container).not.toHaveTextContent('Buffer')
   })
 
-  it('does not present Others overspending as a second category overage', () => {
+  it('shows an exhausted flexible budget on Others without a second card', () => {
     const rendered = renderWithEntries([
       entry({ amount: 300, category: 'others', date: '2026-05-06' }),
     ])
@@ -187,9 +188,8 @@ describe('Dashboard category expense history', () => {
 
     const others = categoryCard(rendered.container, 'Others')
     expect(others).toHaveTextContent('S$300.00')
-    expect(others).toHaveTextContent('spent from Buffer')
-    expect(others).not.toHaveTextContent('S$64.00 over')
-    expect(rendered.container.querySelector('.buffer-card')).toHaveTextContent('S$64.00 over')
+    expect(others).toHaveTextContent('S$64.00 over')
+    expect(rendered.container.querySelector('.buffer-card')).toBeNull()
   })
 
   it('limits category dropdown expenses to the past two weeks', () => {

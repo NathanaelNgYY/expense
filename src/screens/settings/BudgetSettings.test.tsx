@@ -291,14 +291,27 @@ describe('BudgetSettings', () => {
     expect(saved[0]).toMatchObject({ label: 'Fitness', icon: 'Heart', budget: 30 })
   })
 
-  it('does not offer rename/delete for the Buffer basic category', () => {
+  it('shows Others instead of Buffer and keeps its compatibility values synchronized', () => {
     const rendered = renderBudget()
     root = rendered.root
     const { container } = rendered
 
+    const othersInput = container.querySelector<HTMLInputElement>('#budget-others')
+    expect(othersInput).not.toBeNull()
+    expect(container.querySelector('#budget-buffer')).toBeNull()
+    expect(container).not.toHaveTextContent('Buffer')
+
     const editButtons = [...container.querySelectorAll('button')].map(b => b.getAttribute('aria-label'))
     expect(editButtons).toContain('Edit Lunch')
-    expect(editButtons).not.toContain('Edit Buffer')
+    expect(editButtons).toContain('Edit Others')
+
+    changeInput(othersInput!, '300')
+    clickSave(container)
+
+    expect(JSON.parse(localStorage.getItem('budget_config') ?? '{}')).toMatchObject({
+      others: 300,
+      buffer: 300,
+    })
   })
 
   it('hides the scope switch when there are no shared budgets', () => {

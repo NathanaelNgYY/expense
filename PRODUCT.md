@@ -19,7 +19,7 @@ automatically (Apple Pay / DBS-email iOS Shortcuts), so screen time is glance-he
 ## Product Purpose
 
 A mobile-first expense tracker: log spend, see category budgets (Lunch, Transport, Savings,
-Investments, Others), a computed monthly buffer that absorbs overages, and a spend
+Investments, Others), with Others acting as the flexible monthly category that absorbs overages, and a spend
 forecast/safe-to-spend figure. Also supports shared budgets between multiple people and a
 "Poker" session ledger. Success = the user trusts the numbers enough to make a spend
 decision from the dashboard without digging into History.

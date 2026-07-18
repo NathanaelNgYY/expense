@@ -155,10 +155,10 @@ export default function FirstRunBudgetOnboarding({ onFinish }: Props) {
                 </span>
               </label>
             ))}
-            <div className="onboarding__buffer-row">
+            <div className="onboarding__auto-pocket-row">
               <span className="onboarding__pocket-label">
-                <BudgetIcon name="buffer" />
-                <span><strong>Buffer</strong><small>Fills itself</small></span>
+                <BudgetIcon name="others" />
+                <span><strong>Others</strong><small>Fills itself</small></span>
               </span>
               <strong>{formatSGDWhole(config.buffer)}</strong>
             </div>
@@ -199,7 +199,7 @@ export default function FirstRunBudgetOnboarding({ onFinish }: Props) {
             <dl>
               <div><dt>Lunch + transport</dt><dd>{formatSGDWhole(everyday)}</dd></div>
               <div><dt>Savings + investments</dt><dd>{formatSGDWhole(future)}</dd></div>
-              <div><dt>Automatic buffer</dt><dd>{formatSGDWhole(config.buffer)}</dd></div>
+              <div><dt>Others</dt><dd>{formatSGDWhole(config.buffer)}</dd></div>
             </dl>
             <p>Ready for this month</p>
           </div>

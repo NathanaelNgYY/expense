@@ -80,17 +80,19 @@ export async function handleIngest(
         : {}),
     }
   } else if (body?.sourceKind === 'dbs_email') {
-    const parsed = parseDbsEmail(body.rawBody ?? '')
+    const parsed = parseDbsEmail(body.rawBody ?? '', body.occurredAt)
     if (!parsed.ok) {
       return { status: 'error', reason: parsed.reason === 'invalid-amount' ? 'invalid-dbs-amount' : 'no-amount' }
     }
+    const occurredAt = parsed.occurredAt ?? body.occurredAt
+    const learnedCategory = await automaticCategory(store, parsed.merchant, occurredAt)
     input = {
       sourceKind: 'dbs_email',
       amount: parsed.amount,
       merchant: parsed.merchant,
       channel: parsed.channel,
-      learnedCategory: await automaticCategory(store, parsed.merchant, body.occurredAt),
-      occurredAt: body.occurredAt,
+      learnedCategory: learnedCategory ?? (parsed.recipientKind === 'person' ? 'others' : null),
+      occurredAt,
       currency: body.currency,
       eventFingerprint: await fingerprintIngestEvent(body.idempotencyKey?.trim() ?? body.rawBody),
     }

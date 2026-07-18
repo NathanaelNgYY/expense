@@ -38,6 +38,7 @@ The highest-risk identity, ingestion visibility, migration recovery, crash recov
 | Dashboard pass visual restraint | Complete and deployed | Personal and shared budget passes now use the active theme's flat elevated surface instead of four decorative gradients. Theme-specific shape and shadow treatments remain, while amount and budget-state colors keep the hierarchy. | `docs/testing/pass-card-visual-restraint.tdd.md`, `src/passCardStyle.test.ts`, `src/index.css`, `src/themes.css` |
 | M1, M2, M4 — blank lazy loads, native confirm(), amount announcement spam | Complete | Lazy screens show a 150ms-delayed themed spinner; all four destructive/discard confirms use an in-app iOS-style dialog on native <dialog> (Cancel focused; Esc/backdrop cancel); the Add-entry amount announces once, 1s after typing pauses, via a hidden debounced live region. | `docs/testing/m1-m2-m4-ux-a11y.tdd.md`, `src/components/LazyFallback.tsx`, `src/components/ConfirmDialog.tsx`, `src/screens/AddEntry.tsx` |
 | M3, M5, M6 — tab-bar semantics, desktop presentation, short screens | Complete | The tab bar exposes aria-current="page" with arrow/Home/End focus movement; wide viewports frame the 430px column with a themed backdrop and elevation; a 9-screen × 4-theme × 2-viewport short-screen audit found no qualifying defects (content that looked clipped is reachable inside the `.screen` scroll container), and a 320×568 e2e check guards against regressions. | `docs/testing/m3-m5-m6-ui-polish.tdd.md`, `docs/testing/m6-short-screen-audit.md`, `src/components/TabBar.tsx` |
+| Dashboard / History maintainability | Complete | Route-level state and persistence remain in the screens while pass cards, shared-budget detail, ledger rows, filters, and the calendar are focused components. Dashboard fell from 649 to 464 lines and History from 677 to 416 without changing behavior. | `docs/testing/dashboard-history-split.tdd.md`, `src/components/dashboard/`, `src/components/history/` |
 
 ## Fresh audit — N-series backlog (2026-07-17)
 
@@ -61,8 +62,7 @@ health at audit time was strong: 65 test files / 539 tests green, lint + typeche
 ## Next recommended work
 
 1. Verify the N5 real-world items (Apple Pay capture on a physical iPhone; BUDGET-TRACKER-2 resolution; CrUX field CWV).
-2. Split `Dashboard.tsx` and `History.tsx` as a separate maintainability pass.
-3. Revisit N4 forecast smoothing only if a forecast is surfaced again.
+2. Revisit N4 forecast smoothing only if a forecast is surfaced again.
 
 (N1–N3 are complete; see the N-series table above.)
 
@@ -74,13 +74,13 @@ health at audit time was strong: 65 test files / 539 tests green, lint + typeche
 
 ## Verification baseline
 
-- Current suite: 67 test files, 552 tests passed (N3 added commitment semantics and allocation-copy tests).
+- Current suite: 70 test files, 559 tests passed.
 - Lint and production build pass.
-- Whole-project coverage: 85.09% statements, 77.75% branches, 84.09% functions, 88.57% lines. The existing CI thresholds remain enforced and were not lowered.
+- Whole-project coverage: 85.46% statements, 78.08% branches, 84.76% functions, 88.93% lines. The existing CI thresholds remain enforced and were not lowered.
 - Live RLS: 53 isolation tests across 10 tables and 2 SECURITY DEFINER RPCs pass against a real Postgres locally and in the parallel `rls` CI job. These replaced `supabase/tests/ingest_visibility.test.ts`, which asserted that migration files *contained* policy substrings and would have stayed green if a policy were later dropped.
-- Browser E2E: 11 mobile Chromium checks pass across seven critical journeys, Axe WCAG A/AA scans on all primary screens and Settings tools, keyboard focus, accessible names, measured 44px targets, and no-overflow checks at 320×568 (added by M6), 375×667, and 390×844. They run in a parallel `e2e` CI job without contacting deployed Supabase.
+- Browser E2E: 12 mobile Chromium checks pass across critical journeys, Axe WCAG A/AA scans on all primary screens and Settings tools, keyboard focus, accessible names, measured 44px targets, and no-overflow checks at 320×568 (added by M6), 375×667, and 390×844. They run in a parallel `e2e` CI job without contacting deployed Supabase.
 - Physical accessibility: the deployed weekly History rows passed an iPhone VoiceOver check on 2026-07-14.
-- Initial payload check: 137.7 KiB gzip JavaScript and 12.3 KiB gzip CSS, against CI budgets of 143 and 13. JavaScript includes the entry file plus eagerly preloaded React and Supabase chunks; Sentry, onboarding, Insights, and other lazy route chunks are excluded from the ordinary returning-user first-render path. Automatic Tracking and its 0.87 KiB gzip meal-rule stylesheet remain inside the lazy Settings chunk. The CSS budget was raised from 12 to 13 KiB when M1/M2 added the always-available `LazyFallback`/`ConfirmDialog` styles to the main chunk: the prior 12 KiB budget sat exactly at the pre-change 12.0 KiB actual with zero headroom, so that necessary main-chunk CSS (+0.3 KiB) tripped the gate; 13 KiB is set just above the new 12.3 KiB actual, preserving the same deliberate-margin intent as the M14 JS budget rather than tracking the actual exactly. M5's wide-viewport backdrop/elevation rules fit inside this same headroom with no budget change. See `docs/testing/m1-m2-m4-ux-a11y.tdd.md`, `docs/testing/m3-m5-m6-ui-polish.tdd.md`.
+- Initial payload check: 138.3 KiB gzip JavaScript and 12.3 KiB gzip CSS, against CI budgets of 143 and 13. JavaScript includes the entry file plus eagerly preloaded React and Supabase chunks; Sentry, onboarding, Insights, and other lazy route chunks are excluded from the ordinary returning-user first-render path. Automatic Tracking and its 0.87 KiB gzip meal-rule stylesheet remain inside the lazy Settings chunk. The CSS budget was raised from 12 to 13 KiB when M1/M2 added the always-available `LazyFallback`/`ConfirmDialog` styles to the main chunk: the prior 12 KiB budget sat exactly at the pre-change 12.0 KiB actual with zero headroom, so that necessary main-chunk CSS (+0.3 KiB) tripped the gate; 13 KiB is set just above the new 12.3 KiB actual, preserving the same deliberate-margin intent as the M14 JS budget rather than tracking the actual exactly. M5's wide-viewport backdrop/elevation rules fit inside this same headroom with no budget change. See `docs/testing/m1-m2-m4-ux-a11y.tdd.md`, `docs/testing/m3-m5-m6-ui-polish.tdd.md`.
 - Production performance lab baseline (three-run Lighthouse 13 medians): mobile score 94, FCP 1.934s, LCP 2.505s, TBT 121ms, CLS 0; desktop score 100, FCP 0.390s, LCP 0.617s, TBT 0ms, CLS 0. INP requires field/interaction data and was not inferred from TBT.
 - `deno check` of the ingest Edge Function passes. It previously did not: `IngestInput.learnedCategory` was typed `Category` while `categoryFromHistory` returns `string | null` (custom categories), and nothing typechecked `supabase/functions/`, so CI never saw it.
 - gitleaks: 218 commits scanned, no leaks.

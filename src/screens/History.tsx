@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { format } from 'date-fns'
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, Undo2, X } from 'lucide-react'
-import HistoryEntryList, {
-  type EditDraft,
-  sourceLabel,
-} from '../components/history/HistoryEntryList'
+import HistoryEntryList, { type EditDraft } from '../components/history/HistoryEntryList'
+import { sourceLabel } from '../components/history/historyEntryModel'
 import HistoryLedgerFilters, {
   type CategoryFilter,
   type SourceFilter,

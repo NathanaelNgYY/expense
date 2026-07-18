@@ -4,6 +4,7 @@ import BudgetIcon from '../BudgetIcon'
 import { fromLocalDateString, isFutureDateString } from '../../dates'
 import { formatSGD } from '../../format'
 import type { Entry } from '../../types'
+import { sourceLabel } from './historyEntryModel'
 
 export interface EditDraft {
   amountText: string
@@ -16,17 +17,6 @@ interface CategoryOption {
   id: string
   label: string
   icon: string
-}
-
-export function sourceLabel(entry: Entry): string {
-  switch (entry.source) {
-    case 'apple-pay':
-      return 'Apple Pay'
-    case 'dbs-email':
-      return 'DBS email'
-    default:
-      return 'Manual'
-  }
 }
 
 interface Props {

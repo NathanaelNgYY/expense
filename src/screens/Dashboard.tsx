@@ -462,4 +462,3 @@ export default function Dashboard({ onAddEntry }: Props) {
     </div>
   )
 }
-

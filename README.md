@@ -101,9 +101,11 @@ Keep this as the original four-field payload. Do **not** add `idempotencyKey`: t
   - Request Body (JSON):
     - `sourceKind`: `dbs_email`
     - `rawBody`: the email's body text
-    - `occurredAt`: Current Date, ISO 8601
+    - `occurredAt`: Current Date, ISO 8601 (recommended but optional)
 
-The server extracts the amount and merchant from `rawBody` and fingerprints that unchanged email body, so a re-fired email automation remains idempotent without another Shortcut field. Apple Pay uses a one-minute fallback based on merchant and amount. This catches quick re-fires, but two identical real purchases in the same minute can be merged and a retry that crosses a minute boundary can be saved twice. A non-Shortcuts client may send `idempotencyKey` only when it has a genuinely stable, unique external event identifier.
+The server extracts the amount, payee, and DBS `Date & Time` from `rawBody`, then fingerprints that unchanged email body, so a re-fired email automation remains idempotent without another Shortcut field. This means a DBS alert that arrives late is still recorded on the transaction's actual date. Business/UEN PayNow recipients use the same merchant rules and correction history as Apple Pay; first-time person-to-person recipients marked `MOBILE` start in Others, and a later category correction is reused for that recipient. Email delivery still controls when the automation can run because iOS has no native PayNow trigger.
+
+Apple Pay uses a one-minute fallback based on merchant and amount. This catches quick re-fires, but two identical real purchases in the same minute can be merged and a retry that crosses a minute boundary can be saved twice. A non-Shortcuts client may send `idempotencyKey` only when it has a genuinely stable, unique external event identifier.
 
 ### Testing & troubleshooting ingestion (no Apple Pay needed)
 

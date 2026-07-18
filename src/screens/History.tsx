@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { format } from 'date-fns'
-import { CalendarDays, ChevronLeft, ChevronRight, Copy, Plus, Search, SlidersHorizontal, Trash2, Undo2, X } from 'lucide-react'
-import BudgetIcon from '../components/BudgetIcon'
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, Undo2, X } from 'lucide-react'
+import HistoryEntryList, {
+  type EditDraft,
+  sourceLabel,
+} from '../components/history/HistoryEntryList'
+import HistoryLedgerFilters, {
+  type CategoryFilter,
+  type SourceFilter,
+} from '../components/history/HistoryLedgerFilters'
+import SpendingCalendar from '../components/history/SpendingCalendar'
 import { formatSGD } from '../format'
 import { entriesForMonth } from '../compute'
 import {
@@ -22,32 +30,11 @@ interface Props {
   onAddForDate?: (date: string) => void
 }
 
-interface EditDraft {
-  amountText: string
-  category: string | null
-  note: string
-  date: string
-}
-
 interface InitialHistoryState {
   year: number
   month: number
   editingEntryId: string | null
   editDraft: EditDraft | null
-}
-
-type CategoryFilter = 'all' | 'uncategorized' | string
-type SourceFilter = 'all' | 'manual' | 'apple-pay' | 'dbs-email'
-
-function sourceLabel(entry: Entry): string {
-  switch (entry.source) {
-    case 'apple-pay':
-      return 'Apple Pay'
-    case 'dbs-email':
-      return 'DBS email'
-    default:
-      return 'Manual'
-  }
 }
 
 function minDateForMonth(year: number, month: number): string {
@@ -300,7 +287,6 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
     spendByDay.set(day, (spendByDay.get(day) ?? 0) + entry.amount)
   }
   const maxDaySpend = Math.max(1, ...spendByDay.values())
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
   const todayStr = toLocalDateString(now)
   const dayFilterEntryCount = dayFilterDate
     ? monthEntries.filter(entry => entry.date === dayFilterDate).length
@@ -356,110 +342,33 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
           </span>
         </aside>
       )}
-      <section className="history-ledger-tools" aria-label="Transaction search and filters">
-        <div className="history-search-row">
-          <label className="history-search">
-            <Search size={18} aria-hidden="true" />
-            <input
-              type="search"
-              value={searchQuery}
-              aria-label="Search transactions"
-              placeholder="Search note or merchant"
-              onChange={event => setSearchQuery(event.target.value)}
-            />
-            {searchQuery && (
-              <button type="button" onClick={() => setSearchQuery('')} aria-label="Clear search">
-                <X size={16} aria-hidden="true" />
-              </button>
-            )}
-          </label>
-          <button
-            type="button"
-            className={`history-filter-toggle${showFilters ? ' history-filter-toggle--active' : ''}`}
-            onClick={() => setShowFilters(current => !current)}
-            aria-label={showFilters ? 'Hide transaction filters' : 'Show transaction filters'}
-            aria-expanded={showFilters}
-          >
-            <SlidersHorizontal size={18} aria-hidden="true" />
-            {activeFilterCount > 0 && <span className="history-filter-count">{activeFilterCount}</span>}
-          </button>
-        </div>
-
-        {showFilters && (
-          <div className="history-filter-panel">
-            <label className="form-field" htmlFor="history-category-filter">
-              <span>Category</span>
-              <select
-                id="history-category-filter"
-                className="history-filter-select"
-                value={categoryFilter}
-                onChange={event => setCategoryFilter(event.target.value)}
-              >
-                <option value="all">All categories</option>
-                <option value="uncategorized">Uncategorized</option>
-                {categoryOptions.map(option => (
-                  <option key={option.id} value={option.id}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-            <label className="form-field" htmlFor="history-source-filter">
-              <span>Source</span>
-              <select
-                id="history-source-filter"
-                className="history-filter-select"
-                value={sourceFilter}
-                onChange={event => setSourceFilter(event.target.value as SourceFilter)}
-              >
-                <option value="all">All sources</option>
-                <option value="manual">Manual</option>
-                <option value="apple-pay">Apple Pay</option>
-                <option value="dbs-email">DBS email</option>
-              </select>
-            </label>
-            <div className="history-date-filters">
-              <label className="form-field" htmlFor="history-date-from">
-                <span>From</span>
-                <input
-                  id="history-date-from"
-                  type="date"
-                  className="history-filter-date"
-                  value={dateFrom}
-                  min={dateMin}
-                  max={dateTo || dateMax}
-                  onChange={event => {
-                    setDateFrom(event.target.value)
-                    setDayFilterDate(null)
-                  }}
-                />
-              </label>
-              <label className="form-field" htmlFor="history-date-to">
-                <span>To</span>
-                <input
-                  id="history-date-to"
-                  type="date"
-                  className="history-filter-date"
-                  value={dateTo}
-                  min={dateFrom || dateMin}
-                  max={dateMax}
-                  onChange={event => {
-                    setDateTo(event.target.value)
-                    setDayFilterDate(null)
-                  }}
-                />
-              </label>
-            </div>
-            <button type="button" className="history-clear-filters" onClick={clearFilters}>
-              Clear filters
-            </button>
-          </div>
-        )}
-
-        <p className="history-result-count" role="status">
-          {filteredEntries.length === monthEntries.length
-            ? `${monthEntries.length} ${monthEntries.length === 1 ? 'transaction' : 'transactions'}`
-            : `${filteredEntries.length} of ${monthEntries.length} transactions`}
-        </p>
-      </section>
+      <HistoryLedgerFilters
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        showFilters={showFilters}
+        onShowFiltersChange={setShowFilters}
+        activeFilterCount={activeFilterCount}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        sourceFilter={sourceFilter}
+        onSourceFilterChange={setSourceFilter}
+        dateFrom={dateFrom}
+        onDateFromChange={value => {
+          setDateFrom(value)
+          setDayFilterDate(null)
+        }}
+        dateTo={dateTo}
+        onDateToChange={value => {
+          setDateTo(value)
+          setDayFilterDate(null)
+        }}
+        dateMin={dateMin}
+        dateMax={dateMax}
+        categoryOptions={categoryOptions}
+        filteredCount={filteredEntries.length}
+        totalCount={monthEntries.length}
+        onClearFilters={clearFilters}
+      />
 
       {ledgerMessage && (
         <div className="entry-ledger-feedback" role="status">
@@ -473,204 +382,36 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
         </div>
       )}
 
-      {monthEntries.length === 0 ? (
-        <div className="empty-state">No entries for {monthLabel} yet.</div>
-      ) : filteredEntries.length === 0 ? (
-        <div className="empty-state">
-          No matching transactions. Try clearing a filter or using a different search.
-        </div>
-      ) : (
-        <div className="entry-list">
-          {filteredEntries.map(entry => {
-            const isEditing = editingEntryId === entry.id && editDraft
-            const editAmount = editDraft ? Number(editDraft.amountText) : Number.NaN
-            const canSaveEdit =
-              Boolean(editDraft) &&
-              Number.isFinite(editAmount) &&
-              editAmount > 0 &&
-              editDraft!.date >= dateMin &&
-              editDraft!.date <= dateMax &&
-              !isFutureDateString(editDraft!.date)
-
-            return (
-              <div key={entry.id} className="entry-edit-shell">
-                <button
-                  type="button"
-                  className="entry-row entry-row-button"
-                  onClick={() => startEditingEntry(entry)}
-                  aria-expanded={Boolean(isEditing)}
-                >
-                  <span className="entry-main">
-                    <span className="entry-category icon-label">
-                      <BudgetIcon name={entry.category ? iconForCategory(entry.category) : 'uncategorized'} />
-                      {entry.category ? labelForCategory(entry.category) : 'Uncategorized'}
-                    </span>
-                    <span className="entry-date">
-                      {format(fromLocalDateString(entry.date), 'EEE, MMM d')} &middot; {sourceLabel(entry)}
-                    </span>
-                    {entry.merchant && <span className="entry-merchant">{entry.merchant}</span>}
-                    {entry.note && <span className="entry-note">{entry.note}</span>}
-                  </span>
-                  <strong className="entry-amount">{formatSGD(entry.amount)}</strong>
-                </button>
-
-                {isEditing && (
-                  <div className="entry-detail-panel" aria-label="Transaction details">
-                    <div className="entry-detail-heading">
-                      <div>
-                        <h4 className="entry-edit-title">Transaction details</h4>
-                        <p className="entry-detail-source">
-                          {sourceLabel(entry)}{entry.merchant ? ` · ${entry.merchant}` : ''}
-                        </p>
-                      </div>
-                      <strong className="entry-detail-amount">{formatSGD(entry.amount)}</strong>
-                    </div>
-
-                    <div className="entry-edit-panel" aria-label="Edit expense">
-                    <div className="field-grid">
-                      <label className="form-field" htmlFor="edit-entry-date">
-                        <span>Date</span>
-                        <span className="date-input-shell">
-                          <span className="date-input-value">
-                            {format(fromLocalDateString(editDraft.date), 'MMM d, yyyy')}
-                          </span>
-                          <input
-                            id="edit-entry-date"
-                            type="date"
-                            className="date-input date-input--native"
-                            value={editDraft.date}
-                            min={dateMin}
-                            max={dateMax}
-                            onChange={event => handleEditDraftChange({ date: event.target.value })}
-                          />
-                        </span>
-                      </label>
-                      <label className="form-field" htmlFor="edit-entry-amount">
-                        <span>Amount</span>
-                        <input
-                          id="edit-entry-amount"
-                          type="number"
-                          className="amount-input"
-                          value={editDraft.amountText}
-                          min="0"
-                          step="0.01"
-                          inputMode="decimal"
-                          onChange={event => handleEditDraftChange({ amountText: event.target.value })}
-                        />
-                      </label>
-                    </div>
-
-                    <p className="category-label">
-                      Category <span className="muted">(optional)</span>
-                    </p>
-                    <div className="chips chips--compact">
-                      {categoryOptions.map(opt => (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          className={`chip chip--compact ${editDraft.category === opt.id ? 'chip--selected' : ''}`}
-                          onClick={() =>
-                            handleEditDraftChange({
-                              category: editDraft.category === opt.id ? null : opt.id,
-                            })
-                          }
-                        >
-                          <BudgetIcon name={opt.icon} />
-                          <span>{opt.label}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    <input
-                      id="edit-entry-note"
-                      type="text"
-                      className="note-input"
-                      aria-label="Note (optional)"
-                      placeholder="Note (optional)"
-                      value={editDraft.note}
-                      onChange={event => handleEditDraftChange({ note: event.target.value })}
-                    />
-
-                    <div className="entry-edit-actions">
-                      <button className="export-btn" type="button" onClick={cancelEditingEntry}>
-                        Cancel
-                      </button>
-                      <button
-                        className="save-btn history-save-btn"
-                        type="button"
-                        onClick={() => handleSaveEditedEntry(entry)}
-                        disabled={!canSaveEdit}
-                      >
-                        Save Changes
-                      </button>
-                    </div>
-                    </div>
-
-                    <div className="entry-detail-actions">
-                      <button type="button" className="export-btn" onClick={() => void handleDuplicateEntry(entry)}>
-                        <Copy size={16} aria-hidden="true" />
-                        Duplicate
-                      </button>
-                      <button
-                        type="button"
-                        className="entry-delete-btn"
-                        onClick={() => setConfirmingDeleteId(entry.id)}
-                      >
-                        <Trash2 size={16} aria-hidden="true" />
-                        Delete
-                      </button>
-                    </div>
-
-                    {confirmingDeleteId === entry.id && (
-                      <div className="entry-delete-confirm" role="alert">
-                        <span>Delete this transaction?</span>
-                        <div>
-                          <button type="button" onClick={() => setConfirmingDeleteId(null)}>Keep it</button>
-                          <button type="button" onClick={() => void handleDeleteEntry(entry)}>Delete transaction</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-      {/* Analysis sits beneath the ledger: someone opening History wants the transaction
-          list first. Calendar taps bring the chosen day back to that ledger. */}
-      <details className="history-analysis">
-        <summary className="history-analysis__summary">Calendar</summary>
-        <div className="history-analysis__body">
-        <div className="cal-grid history__calendar" role="grid" aria-label="Daily spending">
-          {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => {
-            const dateStr = toLocalDateString(new Date(year, month, day))
-            const spend = spendByDay.get(day) ?? 0
-            const alpha = spend > 0 ? 0.15 + Math.min(1, spend / maxDaySpend) * 0.65 : 0.06
-            const isToday = dateStr === todayStr
-            const isSelected = dateStr === dayFilterDate
-
-            return (
-              <button
-                key={day}
-                type="button"
-                className={`cal-cell${isToday ? ' cal-cell--today' : ''}${isSelected ? ' cal-cell--selected' : ''}`}
-                style={{
-                  background: `color-mix(in srgb, var(--primary) ${Math.round(alpha * 100)}%, transparent)`,
-                }}
-                onClick={() => handleDateChange(dateStr)}
-                aria-label={`${format(new Date(year, month, day), 'MMM d')}, ${formatSGD(spend)} spent`}
-                aria-pressed={isSelected}
-              >
-                {day}
-              </button>
-            )
-          })}
-        </div>
-        <p className="cal-caption muted">lighter = heavier spend day &middot; ring = today &middot; tap a day to filter the ledger</p>
-
-        </div>
-      </details>
+      <HistoryEntryList
+        entries={filteredEntries}
+        monthEntryCount={monthEntries.length}
+        monthLabel={monthLabel}
+        editingEntryId={editingEntryId}
+        editDraft={editDraft}
+        dateMin={dateMin}
+        dateMax={dateMax}
+        categoryOptions={categoryOptions}
+        labelForCategory={labelForCategory}
+        iconForCategory={iconForCategory}
+        confirmingDeleteId={confirmingDeleteId}
+        onStartEditing={startEditingEntry}
+        onDraftChange={handleEditDraftChange}
+        onCancelEditing={cancelEditingEntry}
+        onSave={entry => void handleSaveEditedEntry(entry)}
+        onDuplicate={entry => void handleDuplicateEntry(entry)}
+        onRequestDelete={setConfirmingDeleteId}
+        onCancelDelete={() => setConfirmingDeleteId(null)}
+        onDelete={entry => void handleDeleteEntry(entry)}
+      />
+      <SpendingCalendar
+        year={year}
+        month={month}
+        spendByDay={spendByDay}
+        maxDaySpend={maxDaySpend}
+        today={todayStr}
+        selectedDate={dayFilterDate}
+        onSelectDate={handleDateChange}
+      />
 
     </div>
   )

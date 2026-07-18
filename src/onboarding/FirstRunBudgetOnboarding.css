@@ -194,7 +194,7 @@
 }
 
 .onboarding__pockets > label,
-.onboarding__buffer-row {
+.onboarding__auto-pocket-row {
   min-height: 64px;
   display: flex;
   align-items: center;
@@ -223,7 +223,7 @@
 }
 
 .onboarding__pocket-label strong,
-.onboarding__buffer-row > strong {
+.onboarding__auto-pocket-row > strong {
   color: var(--text);
   font-size: 15px;
   font-weight: 600;
@@ -250,7 +250,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.onboarding__buffer-row > strong {
+.onboarding__auto-pocket-row > strong {
   color: var(--green);
   font-variant-numeric: tabular-nums;
 }
@@ -341,7 +341,7 @@
   }
 
   .onboarding__pockets > label,
-  .onboarding__buffer-row {
+  .onboarding__auto-pocket-row {
     min-height: 56px;
   }
 }

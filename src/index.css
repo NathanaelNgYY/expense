@@ -761,7 +761,6 @@ input:focus-visible {
 
 .summary-card-top,
 .summary-card-bottom,
-.buffer-row,
 .cat-row-top,
 .cat-row-bottom,
 .week-strip,
@@ -947,27 +946,6 @@ input:focus-visible {
   margin: 0 0 4px;
 }
 
-/* ─── Buffer card ────────────────────────────────────────── */
-
-.buffer-card {
-  border-radius: 22px;
-  border-color: rgba(217, 164, 65, 0.2);
-}
-
-.buffer-card .ui-icon,
-.buffer-amount {
-  color: var(--warning);
-}
-
-.buffer-card--danger {
-  border-color: rgba(201, 106, 90, 0.25);
-}
-
-.buffer-card--danger .ui-icon {
-  color: var(--red);
-}
-
-.buffer-title,
 .cat-name {
   color: var(--text);
   font-size: 17px;
@@ -978,15 +956,6 @@ input:focus-visible {
   color: var(--primary);
 }
 
-.buffer-amount {
-  font-size: 17px;
-  font-weight: 700;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
-}
-
-.buffer-sub,
 .over-note {
   color: var(--text-secondary);
   font-size: 13px;

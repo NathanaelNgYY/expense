@@ -272,8 +272,7 @@ input:focus-visible,
 }
 
 .summary-card,
-.forecast-card,
-.buffer-card {
+.forecast-card {
   background: var(--carbon-surface);
   border-color: var(--carbon-separator);
   border-radius: 16px;
@@ -289,19 +288,6 @@ input:focus-visible,
   border-color: color-mix(in srgb, var(--carbon-brick) 35%, transparent);
 }
 
-.buffer-card {
-  border-color: color-mix(in srgb, var(--carbon-amber) 30%, transparent);
-}
-
-.buffer-card--danger {
-  border-color: color-mix(in srgb, var(--carbon-brick) 35%, transparent);
-}
-
-.buffer-card .ui-icon,
-.buffer-amount {
-  color: var(--carbon-amber);
-}
-
 .summary-label {
   color: var(--carbon-text-secondary);
 }
@@ -309,7 +295,6 @@ input:focus-visible,
 .summary-amount,
 .summary-amount--large,
 .forecast-value,
-.buffer-title,
 .cat-name,
 .month-nav-label,
 .week-amount,
@@ -336,7 +321,6 @@ input:focus-visible,
   color: var(--carbon-copper);
 }
 
-.buffer-sub,
 .over-note {
   color: var(--carbon-text-secondary);
 }

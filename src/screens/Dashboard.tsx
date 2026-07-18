@@ -94,7 +94,6 @@ export default function Dashboard({ onAddEntry }: Props) {
   ).amountPerDay
 
   const monthLabel = now.toLocaleString('default', { month: 'long', year: 'numeric' })
-  const totalOverage = config.buffer - buffer
   const selectedSharedBudgetId =
     selectedBudgetId ?? shared.active?.budget.id ?? shared.budgets[0]?.id ?? null
   const selectedSharedBudget = shared.budgets.find(b => b.id === selectedSharedBudgetId) ?? null
@@ -310,7 +309,7 @@ export default function Dashboard({ onAddEntry }: Props) {
         />
       )}
 
-      {/* A brand-new user's dashboard is otherwise five rows of S$0.00 and a buffer they
+      {/* A brand-new user's dashboard is otherwise five rows of S$0.00 that they
           have no way to interpret. Give them the one action that makes the rest mean
           something, and show the budget breakdown once there is spending to break down. */}
       {viewScope === 'personal' && entries.length === 0 && (
@@ -335,38 +334,9 @@ export default function Dashboard({ onAddEntry }: Props) {
           <strong className="home-safe-amount">
             {formatSGD(Math.max(0, safePerDay))}
           </strong>
-          <span className="muted">{formatRemaining(buffer)} in your monthly buffer</span>
+          <span className="muted">{formatRemaining(buffer)} in your Others budget</span>
         </div>
       </section>
-
-      <div className={`card buffer-card ${buffer <= 0 ? 'buffer-card--danger' : ''}`}>
-        <div className="buffer-row">
-          <span className="buffer-title icon-label">
-            <BudgetIcon name="buffer" />
-            Buffer
-          </span>
-          <span
-            className="buffer-amount"
-            style={{ color: buffer <= 0 ? 'var(--red)' : 'var(--yellow)' }}
-          >
-            {formatRemaining(buffer)}
-          </span>
-        </div>
-        <div className="progress-bar" style={{ marginTop: 8 }}>
-          <div
-            className="progress-fill"
-            style={{
-              width: `${Math.min(100, Math.max(0, (buffer / config.buffer) * 100))}%`,
-              background: buffer <= 0 ? 'var(--red)' : 'var(--yellow)',
-            }}
-          />
-        </div>
-        {totalOverage > 0 && (
-          <p className="buffer-sub muted">
-            {formatSGD(totalOverage)} used by others and overages
-          </p>
-        )}
-      </div>
 
       <h3 className="section-title">Categories</h3>
       {categoryIds.map(cat => {
@@ -396,7 +366,7 @@ export default function Dashboard({ onAddEntry }: Props) {
             ? Math.min(100, (spent / budget) * 100)
             : 0
         const statusLabel = usesBuffer
-          ? 'spent from Buffer'
+          ? formatRemaining(buffer)
           : committed
             ? spent >= budget
               ? 'Committed'
@@ -462,12 +432,12 @@ export default function Dashboard({ onAddEntry }: Props) {
               <span className="cat-row-bottom">
                 <span className="muted">
                   {usesBuffer
-                    ? 'Uses monthly Buffer'
+                    ? `Budget ${formatSGDWhole(config.buffer)}`
                     : hasBudget
                     ? `${committed ? 'Monthly commitment' : 'Budget'} ${formatSGDWhole(budget)}`
                     : 'No budget set'}
                 </span>
-                {over && <span className="over-note">Taken from buffer</span>}
+                {over && <span className="over-note">Covered by flexible budget</span>}
               </span>
             </button>
 

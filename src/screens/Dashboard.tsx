@@ -343,10 +343,10 @@ export default function Dashboard({ onAddEntry }: Props) {
         const spent = spend[cat]
         const deficit = deficits[cat]
         const budget = budgets[cat]
-        const usesBuffer = cat === 'others'
+        const isFlexible = cat === 'others'
         const hasBudget = budget > 0
-        const over = !usesBuffer && hasBudget && deficit < 0
-        const bufferExhausted = usesBuffer && buffer <= 0
+        const over = !isFlexible && hasBudget && deficit < 0
+        const flexibleBudgetExhausted = isFlexible && buffer <= 0
         const committed = COMMITTED_CATEGORY_SET.has(cat as Category)
         const expanded = expandedCategory === cat
         const categoryEntries = currentMonthEntries
@@ -358,14 +358,14 @@ export default function Dashboard({ onAddEntry }: Props) {
           )
           .sort(entrySort)
         const categoryLabel = labelFor(cat)
-        const pct = usesBuffer
+        const pct = isFlexible
           ? config.buffer > 0
             ? Math.min(100, (spent / config.buffer) * 100)
             : 0
           : hasBudget
             ? Math.min(100, (spent / budget) * 100)
             : 0
-        const statusLabel = usesBuffer
+        const statusLabel = isFlexible
           ? formatRemaining(buffer)
           : committed
             ? spent >= budget
@@ -403,7 +403,7 @@ export default function Dashboard({ onAddEntry }: Props) {
                   </span>
                   <span
                     className={
-                      over || bufferExhausted
+                      over || flexibleBudgetExhausted
                         ? 'cat-status cat-status--over'
                         : committed
                           ? 'cat-status cat-status--committed'
@@ -419,9 +419,9 @@ export default function Dashboard({ onAddEntry }: Props) {
                   className="progress-fill"
                   style={{
                     width: `${pct}%`,
-                    background: over || bufferExhausted
+                    background: over || flexibleBudgetExhausted
                       ? 'var(--red)'
-                      : usesBuffer
+                      : isFlexible
                         ? 'var(--yellow)'
                         : committed
                           ? 'var(--blue)'
@@ -431,7 +431,7 @@ export default function Dashboard({ onAddEntry }: Props) {
               </span>
               <span className="cat-row-bottom">
                 <span className="muted">
-                  {usesBuffer
+                  {isFlexible
                     ? `Budget ${formatSGDWhole(config.buffer)}`
                     : hasBudget
                     ? `${committed ? 'Monthly commitment' : 'Budget'} ${formatSGDWhole(budget)}`

@@ -19,6 +19,7 @@ redundant Buffer UI and use the existing Others category as the single visible f
 | GREEN | Removed the standalone card, moved the true flexible balance into Others, and replaced user-facing Buffer fields/copy with Others while synchronizing compatibility values. | Same focused Vitest command | **PASS:** 3 files, 36 tests. |
 | Browser | Exercised the updated Others journey in the mobile Chromium project. | `npx playwright test tests/e2e/journeys.spec.ts --grep "Others is the only flexible-budget UI"` | **PASS:** 1 test. The mocked/offline run logged an expected Supabase fetch failure without affecting the journey. |
 | Quality | Checked static analysis and the production bundle. | `npm run lint`; `npm run build` | **PASS:** lint clean; TypeScript and Vite production build complete. |
+| Regression | Ran the complete non-instrumented Vitest suite. | `npm test` | **PASS:** 68 files, 553 tests. |
 
 ## Test specification
 

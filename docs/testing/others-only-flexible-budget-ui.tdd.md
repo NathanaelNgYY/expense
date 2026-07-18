@@ -47,4 +47,4 @@ redundant Buffer UI and use the existing Others category as the single visible f
 
 - RED checkpoint: `99ad7c4 test: reproduce redundant Buffer UI`
 - GREEN checkpoint: `14d8fa9 fix: consolidate flexible budget UI into Others`
-
+- Refactor checkpoint: `bbc5061 refactor: align dashboard naming with Others model` (Dashboard test: 17/17 pass.)

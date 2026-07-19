@@ -23,6 +23,24 @@ describe('guessCategory', () => {
     expect(guessCategory('Tangled Fresh Pasta To Go')).toBe('lunch')
     expect(guessCategory('Kopitiam Investment Pte L')).toBe('lunch')
   })
+  it('classifies a broad set of Singapore F&B brands and outlet labels', () => {
+    const merchants = [
+      'A&W Singapore #02-209',
+      'Bengawan Solo Pte Ltd',
+      'CHAGEE SG',
+      'Crystal Jade La Mian Xiao Long Bao',
+      'Jollibean #01-12',
+      'Luckin Coffee Singapore',
+      'McCafe Compass One',
+      'Mr Coconut Pte Ltd',
+      'PlayMade by Wanpo',
+      'The Soup Spoon',
+      'Tori-Q Pte Ltd',
+      'Twelve Cupcakes',
+    ]
+
+    for (const merchant of merchants) expect(guessCategory(merchant), merchant).toBe('lunch')
+  })
   it('distinguishes GrabFood from Grab transport captures', () => {
     expect(guessCategory('GrabFood')).toBe('lunch')
     expect(guessCategory('Grab Ride')).toBe('transport')

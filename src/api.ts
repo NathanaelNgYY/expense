@@ -6,6 +6,7 @@ import {
   isAutomaticCategoryRuleList,
   type AutomaticCategoryRule,
 } from './shared/automaticCategoryRules'
+import { normalizeCategoryMerchant } from './shared/category'
 
 export class ApiError extends Error {
   status: number
@@ -245,7 +246,7 @@ const ENTRY_PATCH_COLUMNS: ReadonlyArray<[keyof Entry, string]> = [
 ]
 
 export async function updateEntryApi(id: string, patch: Partial<Entry>): Promise<Entry> {
-  await ensureUserId()
+  const userId = await ensureUserId()
   // id and dedupe_key are identity, never patched — same rule the old server enforced.
   const row: Record<string, unknown> = {}
   for (const [key, column] of ENTRY_PATCH_COLUMNS) {
@@ -259,7 +260,32 @@ export async function updateEntryApi(id: string, patch: Partial<Entry>): Promise
     .maybeSingle()
   if (error) throwFrom(error, status)
   if (!data) throw new ApiError(404, 'entry not found')
-  return rowToEntry(data as EntryRow)
+  const entry = rowToEntry(data as EntryRow)
+  if ('category' in patch && entry.merchant) {
+    const normalizedMerchant = normalizeCategoryMerchant(entry.merchant)
+    if (normalizedMerchant) {
+      const preferenceQuery = getSupabase().from('merchant_category_preferences')
+      if (patch.category == null) {
+        const { error: preferenceError, status: preferenceStatus } = await preferenceQuery
+          .delete()
+          .eq('user_id', userId)
+          .eq('normalized_merchant', normalizedMerchant)
+        if (preferenceError) throwFrom(preferenceError, preferenceStatus)
+      } else {
+        const { error: preferenceError, status: preferenceStatus } = await preferenceQuery.upsert(
+          {
+            user_id: userId,
+            normalized_merchant: normalizedMerchant,
+            merchant_label: entry.merchant,
+            category_id: patch.category,
+          },
+          { onConflict: 'user_id,normalized_merchant' },
+        )
+        if (preferenceError) throwFrom(preferenceError, preferenceStatus)
+      }
+    }
+  }
+  return entry
 }
 
 export async function deleteEntryApi(id: string): Promise<void> {

@@ -12,6 +12,7 @@ import { fingerprintIngestEvent } from '../../../src/shared/dedupe.ts'
 export interface IngestStore {
   list(): Promise<Entry[]>
   listAutomaticCategoryRules?(): Promise<AutomaticCategoryRule[]>
+  categoryPreferenceForMerchant?(merchant: string): Promise<string | null>
   has(dedupeKey: string): Promise<boolean>
   put(entry: Entry): Promise<void>
   recordCapture?(sourceKind: IngestBody['sourceKind']): Promise<void>
@@ -22,6 +23,13 @@ async function automaticCategory(
   merchant: string,
   occurredAt: string | undefined,
 ): Promise<string | null> {
+  try {
+    const preference = await store.categoryPreferenceForMerchant?.(merchant)
+    if (preference) return preference
+  } catch {
+    // A preference lookup failure must not block transaction capture. History
+    // and the built-in merchant pack remain available as safe fallbacks.
+  }
   const history = await store.list()
   let rules: AutomaticCategoryRule[] = []
   try {

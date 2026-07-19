@@ -9,6 +9,7 @@ import {
   isAutomaticCategoryRuleList,
   type AutomaticCategoryRule,
 } from '../../../src/shared/automaticCategoryRules.ts'
+import { normalizeCategoryMerchant } from '../../../src/shared/category.ts'
 import {
   API_RATE_LIMIT,
   AUTH_FAILURE_RATE_LIMIT,
@@ -74,6 +75,19 @@ class SupabaseEntryStore implements IngestStore {
     }
     const rules = data?.food_time_rules
     return isAutomaticCategoryRuleList(rules) ? rules : []
+  }
+
+  async categoryPreferenceForMerchant(merchant: string): Promise<string | null> {
+    const normalizedMerchant = normalizeCategoryMerchant(merchant)
+    if (!normalizedMerchant) return null
+    const { data, error } = await this.client
+      .from('merchant_category_preferences')
+      .select('category_id')
+      .eq('user_id', this.userId)
+      .eq('normalized_merchant', normalizedMerchant)
+      .maybeSingle()
+    if (error) throw new Error(error.message)
+    return typeof data?.category_id === 'string' ? data.category_id : null
   }
 
   async has(dedupeKey: string): Promise<boolean> {

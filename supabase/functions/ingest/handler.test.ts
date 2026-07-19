@@ -36,6 +36,12 @@ class BrokenPreferencesStore extends InMemoryStore {
   }
 }
 
+class MerchantPreferenceStore extends InMemoryStore {
+  async categoryPreferenceForMerchant(merchant: string): Promise<string | null> {
+    return merchant.toLowerCase().includes('cray ventures') ? 'cat_dinner' : null
+  }
+}
+
 const makeId = () => 'fixed-id'
 
 describe('edge ingest handler', () => {
@@ -355,6 +361,29 @@ To: KHXX JIX SHEXX (MOBILE ending 5998)`,
     expect(result.status).toBe('saved')
     if (result.status !== 'saved') return
     expect(result.entry.category).toBe('lunch')
+  })
+
+  it('uses an explicit merchant preference before history and generic merchant guesses', async () => {
+    const store = new MerchantPreferenceStore()
+    await store.put({
+      id: 'old-history',
+      amount: 8,
+      category: 'lunch',
+      note: 'Apple Pay · Cray Ventures',
+      date: '2026-07-01',
+      source: 'apple-pay',
+      merchant: 'Cray Ventures Pte Ltd',
+      dedupeKey: 'old-history',
+    })
+
+    const result = await handleIngest(
+      { sourceKind: 'apple_pay', amount: 18, merchant: 'CRAY VENTURES PRIVATE LIMITED #02', occurredAt: '2026-07-18T11:30:00Z' },
+      store,
+      makeId,
+    )
+
+    expect(result.status).toBe('saved')
+    if (result.status === 'saved') expect(result.entry.category).toBe('cat_dinner')
   })
 
   it('uses a custom dinner category for a recognized food merchant in the configured SGT window', async () => {

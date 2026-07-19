@@ -18,6 +18,7 @@ interface Props {
   onBack?: () => void
   onOpenPoker: () => void
   onOpenShared: () => void
+  initialSubscreen?: Extract<SettingsSubscreen, 'hub' | 'automatic'>
 }
 
 // Two levels, no router: the hub pushes one subscreen at a time and every subscreen comes
@@ -50,8 +51,8 @@ function NavRow({ icon, label, sub, onClick }: NavRowProps) {
   )
 }
 
-export default function Settings({ onBack, onOpenPoker, onOpenShared }: Props) {
-  const [subscreen, setSubscreen] = useState<SettingsSubscreen>('hub')
+export default function Settings({ onBack, onOpenPoker, onOpenShared, initialSubscreen = 'hub' }: Props) {
+  const [subscreen, setSubscreen] = useState<SettingsSubscreen>(initialSubscreen)
   const [resetSnapshot, setResetSnapshot] = useState<Entry[] | null>(null)
   const [resetMessage, setResetMessage] = useState<string | null>(null)
   const { entries, removeEntry, restoreEntry } = useEntries()

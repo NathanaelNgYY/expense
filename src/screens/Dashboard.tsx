@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, ChevronDown, ChevronUp, Minus, X } from 'lucide-react'
+import { AlertTriangle, Check, ChevronDown, ChevronRight, ChevronUp, Minus, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
 import BudgetUsageRing from '../components/BudgetUsageRing'
@@ -23,6 +23,7 @@ import {
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
 import { sgtToday } from '../shared/sgtDate'
 import { formatSGD, formatSGDWhole, formatRemaining } from '../format'
+import { getCaptureHealthWarning } from '../captureHealth'
 import type { Category, Entry } from '../types'
 import { useEntries } from '../EntriesContext'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
@@ -34,6 +35,7 @@ import {
 
 interface Props {
   onAddEntry: () => void
+  onOpenAutomaticTracking: () => void
 }
 const COMMITTED_CATEGORIES: Category[] = ['savings', 'investments']
 const COMMITTED_CATEGORY_SET = new Set<Category>(COMMITTED_CATEGORIES)
@@ -47,7 +49,7 @@ function entrySort(a: Entry, b: Entry): number {
   return b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
 }
 
-export default function Dashboard({ onAddEntry }: Props) {
+export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props) {
   const [expandedCategory, setExpandedCategory] = useState<ExpandKey | null>(null)
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
   const [viewScope, setViewScope] = useState<'personal' | 'shared'>('personal')
@@ -70,6 +72,7 @@ export default function Dashboard({ onAddEntry }: Props) {
   const uncategorizedTotal = uncategorizedEntries.reduce((sum, entry) => sum + entry.amount, 0)
   const uncategorizedExpanded = expandedCategory === 'uncategorized'
   const todayDate = toLocalDateString(now)
+  const captureHealthWarning = getCaptureHealthWarning(entries, todayDate)
   const recentExpenseStartDate = toLocalDateString(addDays(now, -14))
   const monthTotal = currentMonthEntries.reduce((sum, entry) => sum + entry.amount, 0)
   const spend = monthlySpendByCategory(entries, now.getFullYear(), now.getMonth(), customCategories)
@@ -238,6 +241,30 @@ export default function Dashboard({ onAddEntry }: Props) {
       </header>
 
       <SyncStatus sync={sync} onRetry={() => void refresh()} onBackup={downloadJsonBackup} />
+
+      {viewScope === 'personal' && captureHealthWarning && (
+        <section
+          className="capture-health-warning"
+          role="status"
+          aria-labelledby="capture-health-warning-title"
+        >
+          <AlertTriangle className="capture-health-warning__icon" aria-hidden="true" size={20} />
+          <div className="capture-health-warning__copy">
+            <h2 id="capture-health-warning-title">Automatic captures may have stopped</h2>
+            <p>
+              No automatic captures since{' '}
+              <time dateTime={captureHealthWarning.lastCaptureDate}>
+                {format(fromLocalDateString(captureHealthWarning.lastCaptureDate), 'MMM d')}
+              </time>.
+              {' '}Your Shortcut may need attention.
+            </p>
+          </div>
+          <button type="button" onClick={onOpenAutomaticTracking}>
+            <span>Check <span className="sr-only">Automatic Tracking</span></span>
+            <ChevronRight aria-hidden="true" size={17} />
+          </button>
+        </section>
+      )}
 
       <BudgetPassStack passes={budgetPasses} onSelect={selectPassById} />
 

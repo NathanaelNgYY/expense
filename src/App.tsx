@@ -46,6 +46,7 @@ function AppShell() {
   )
   const [addEntryDate, setAddEntryDate] = useState<string | undefined>()
   const [settingsTool, setSettingsTool] = useState<'poker' | 'shared' | null>(null)
+  const [settingsSubscreen, setSettingsSubscreen] = useState<'hub' | 'automatic'>('hub')
   // Lives in the shell, not in AddEntry: the confirmation has to outlive the screen that
   // triggered it, because saving navigates straight home.
   const [toast, setToast] = useState<ToastEntry | null>(null)
@@ -65,7 +66,14 @@ function AppShell() {
   function handleTabChange(nextTab: Tab) {
     setAddEntryDate(undefined)
     if (nextTab !== 'settings') setSettingsTool(null)
+    setSettingsSubscreen('hub')
     setTab(nextTab)
+  }
+
+  function handleOpenAutomaticTracking() {
+    setSettingsTool(null)
+    setSettingsSubscreen('automatic')
+    setTab('settings')
   }
 
   function handleAddForDate(date: string) {
@@ -100,13 +108,20 @@ function AppShell() {
       <main>
         <Suspense fallback={<LazyFallback />}>
           {tab === 'home' && (
-            <Dashboard onAddEntry={() => setTab('add')} />
+            <Dashboard
+              onAddEntry={() => setTab('add')}
+              onOpenAutomaticTracking={handleOpenAutomaticTracking}
+            />
           )}
           {tab === 'add' && <AddEntry initialDate={addEntryDate} onSave={handleSave} />}
           {tab === 'history' && <History onAddForDate={handleAddForDate} />}
           {tab === 'insights' && <Insights />}
           {tab === 'settings' && settingsTool === null && (
-            <Settings onOpenPoker={() => setSettingsTool('poker')} onOpenShared={() => setSettingsTool('shared')} />
+            <Settings
+              initialSubscreen={settingsSubscreen}
+              onOpenPoker={() => setSettingsTool('poker')}
+              onOpenShared={() => setSettingsTool('shared')}
+            />
           )}
           {tab === 'settings' && settingsTool !== null && (
             <div className="screen settings-tool-shell">

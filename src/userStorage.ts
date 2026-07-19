@@ -8,6 +8,8 @@ const USER_SCOPED_KEYS = [
   'budget_config',
   'budget_custom_categories',
   'budget_category_overrides',
+  'budget_wallets_v2',
+  'budget_active_currency',
   'poker_sessions',
   'poker_custom_stakes',
   'sync_queue',

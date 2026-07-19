@@ -1,14 +1,20 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import {
-  getBudgetConfig,
-  getCategoryOverrides,
-  getCustomCategories,
-  saveBudgetConfig,
-  saveCategoryOverrides,
-  saveCustomCategories,
+  getActiveCurrency,
+  getWalletMap,
+  saveActiveCurrency,
+  saveWalletMap,
 } from './storage'
-import type { BudgetConfig, CategoryOverrides, CustomCategory } from './types'
+import type {
+  BudgetConfig,
+  CategoryOverrides,
+  CurrencyCode,
+  CustomCategory,
+  WalletMap,
+  WalletSnapshot,
+} from './types'
 import { subscribeActiveUser } from './userStorage'
+import { normalizeCurrencyCode } from './shared/currency'
 
 interface BudgetSnapshot {
   config: BudgetConfig
@@ -17,6 +23,11 @@ interface BudgetSnapshot {
 }
 
 interface BudgetConfigContextValue extends BudgetSnapshot {
+  wallets: WalletMap
+  currencies: CurrencyCode[]
+  activeCurrency: CurrencyCode
+  setActiveCurrency: (currency: CurrencyCode) => void
+  createWallet: (currency: CurrencyCode, snapshot: WalletSnapshot) => void
   saveConfig: (config: BudgetConfig) => void
   saveCustomCategories: (categories: CustomCategory[]) => void
   saveOverrides: (overrides: CategoryOverrides) => void
@@ -24,50 +35,83 @@ interface BudgetConfigContextValue extends BudgetSnapshot {
   reload: () => void
 }
 
-function readSnapshot(): BudgetSnapshot {
+interface WalletState {
+  wallets: WalletMap
+  activeCurrency: CurrencyCode
+}
+
+function readState(): WalletState {
+  const wallets = getWalletMap()
   return {
-    config: getBudgetConfig(),
-    customCategories: getCustomCategories(),
-    overrides: getCategoryOverrides(),
+    wallets,
+    activeCurrency: getActiveCurrency(wallets),
   }
 }
 
 const BudgetConfigContext = createContext<BudgetConfigContextValue | null>(null)
 
 export function BudgetConfigProvider({ children }: { children: ReactNode }) {
-  const [snapshot, setSnapshot] = useState<BudgetSnapshot>(readSnapshot)
+  const [state, setState] = useState<WalletState>(readState)
+  const snapshot = state.wallets[state.activeCurrency]
+  const persistSnapshot = useCallback((next: WalletSnapshot) => {
+    setState(current => {
+      const wallets = { ...current.wallets, [current.activeCurrency]: next }
+      saveWalletMap(wallets)
+      return { ...current, wallets }
+    })
+  }, [])
 
   const reload = useCallback(() => {
-    setSnapshot(readSnapshot())
+    setState(readState())
   }, [])
 
   useEffect(() => subscribeActiveUser(reload), [reload])
 
   const saveConfig = useCallback((config: BudgetConfig) => {
-    saveBudgetConfig(config)
-    setSnapshot(current => ({ ...current, config }))
-  }, [])
+    persistSnapshot({ ...snapshot, config })
+  }, [persistSnapshot, snapshot])
 
   const saveCategories = useCallback((customCategories: CustomCategory[]) => {
-    saveCustomCategories(customCategories)
-    setSnapshot(current => ({ ...current, customCategories }))
-  }, [])
+    persistSnapshot({ ...snapshot, customCategories })
+  }, [persistSnapshot, snapshot])
 
   const saveOverrides = useCallback((overrides: CategoryOverrides) => {
-    saveCategoryOverrides(overrides)
-    setSnapshot(current => ({ ...current, overrides }))
-  }, [])
+    persistSnapshot({ ...snapshot, overrides })
+  }, [persistSnapshot, snapshot])
 
   const saveBudgets = useCallback((next: BudgetSnapshot) => {
-    saveBudgetConfig(next.config)
-    saveCustomCategories(next.customCategories)
-    saveCategoryOverrides(next.overrides)
-    setSnapshot(next)
+    persistSnapshot(next)
+  }, [persistSnapshot])
+
+  const setActive = useCallback((currency: CurrencyCode) => {
+    const normalized = normalizeCurrencyCode(currency)
+    if (!normalized) return
+    setState(current => {
+      if (!current.wallets[normalized]) return current
+      saveActiveCurrency(normalized)
+      return { ...current, activeCurrency: normalized }
+    })
+  }, [])
+
+  const createWallet = useCallback((currency: CurrencyCode, next: WalletSnapshot) => {
+    const normalized = normalizeCurrencyCode(currency)
+    if (!normalized) throw new TypeError('Currency must be a three-letter code')
+    setState(current => {
+      const wallets = { ...current.wallets, [normalized]: next }
+      saveWalletMap(wallets)
+      saveActiveCurrency(normalized)
+      return { wallets, activeCurrency: normalized }
+    })
   }, [])
 
   return (
     <BudgetConfigContext.Provider value={{
       ...snapshot,
+      wallets: state.wallets,
+      currencies: Object.keys(state.wallets),
+      activeCurrency: state.activeCurrency,
+      setActiveCurrency: setActive,
+      createWallet,
       saveConfig,
       saveCustomCategories: saveCategories,
       saveOverrides,

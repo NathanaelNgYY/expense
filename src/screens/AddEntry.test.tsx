@@ -3,7 +3,8 @@ import { act } from 'react'
 import { fireEvent, render, screen } from '../test-utils'
 import AddEntry from './AddEntry'
 import { EntriesProvider } from '../EntriesContext'
-import { getEntries } from '../storage'
+import { getEntries, saveActiveCurrency, saveWalletMap } from '../storage'
+import { DEFAULT_BUDGET } from '../types'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
 
 // Pin "today" to a fixed SGT date so the default-date assertions are independent of the
@@ -82,6 +83,33 @@ describe('AddEntry', () => {
     expect(dateInput).toHaveValue('2026-08-01')
     expect(dateInput).toHaveAttribute('max', '2026-08-01')
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
+  })
+
+  it('uses the active wallet symbol and stamps its currency on the saved entry', async () => {
+    saveWalletMap({
+      SGD: { config: DEFAULT_BUDGET, customCategories: [], overrides: {} },
+      MYR: {
+        config: { ...DEFAULT_BUDGET, monthlyIncome: 3000 },
+        customCategories: [],
+        overrides: {},
+      },
+    })
+    saveActiveCurrency('MYR')
+
+    await act(async () => {
+      renderWithEntries()
+    })
+
+    expect(screen.getByLabelText('Entered amount')).toHaveTextContent('RM0.00')
+    act(() => screen.getByRole('button', { name: '5' }).click())
+
+    await act(async () => {
+      screen.getByRole('button', { name: 'Save' }).click()
+    })
+
+    expect(getEntries()).toEqual([
+      expect.objectContaining({ amount: 5, currency: 'MYR' }),
+    ])
   })
 
   it('uses a date selected from History and exposes it in the date control', async () => {

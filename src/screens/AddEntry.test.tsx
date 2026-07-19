@@ -166,8 +166,8 @@ describe('AddEntry', () => {
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Refund' }))
-    fireEvent.click(screen.getByRole('button', { name: '5', exact: true }))
-    fireEvent.click(screen.getByRole('button', { name: 'Lunch', exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: /^5$/ }))
+    fireEvent.click(screen.getByRole('button', { name: /^Lunch$/ }))
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save refund' }))

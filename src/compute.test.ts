@@ -474,6 +474,18 @@ describe('monthlySpendForecast', () => {
     })
   })
 
+  it('uses one elapsed day when previewing a future month', () => {
+    const entries = [e({ date: '2026-06-02', amount: 30 })]
+
+    expect(monthlySpendForecast(entries, 2026, 5, new Date('2026-05-06T12:00:00'))).toEqual({
+      spentToDate: 30,
+      dailyAverage: 30,
+      daysElapsed: 1,
+      daysInMonth: 30,
+      projectedTotal: 900,
+    })
+  })
+
   it('can exclude commitment categories from spending pace', () => {
     const entries = [
       e({ amount: 55, category: 'lunch', date: '2026-05-03' }),
@@ -514,6 +526,16 @@ describe('safeToSpendPerDay', () => {
       remainingBudget: -100,
       daysRemaining: 26,
       amountPerDay: -100 / 26,
+    })
+  })
+
+  it('spreads a future month budget across every day in that month', () => {
+    const entries = [e({ date: '2026-06-02', amount: 30 })]
+
+    expect(safeToSpendPerDay(entries, 2026, 5, 300, new Date('2026-05-06T12:00:00'))).toEqual({
+      remainingBudget: 270,
+      daysRemaining: 30,
+      amountPerDay: 9,
     })
   })
 

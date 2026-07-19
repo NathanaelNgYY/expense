@@ -31,7 +31,7 @@ misclassifying the credit as income.
 | App build | `npm run build` | PASS | TypeScript and Vite production build completed; PWA service worker generated. |
 | Edge Function types | `npm run typecheck:functions` | PASS | Deno checked ingest and shared rate-limit modules. |
 | Bundle gate | `npm run size` | PASS | Initial JS 140.0 KB gzip / 143 KB; CSS 12.8 KB gzip / 13 KB. |
-| Local migration | `npx supabase db reset --local --no-seed` | PASS | Clean rebuild applied `20260719100121_add_entry_kind.sql` and all later migrations. |
+| Local migration | `npx supabase db reset --local --no-seed` | PASS | Clean rebuild applied the monotonic `20260719180000_add_entry_kind.sql` after all earlier migrations. |
 | RLS | `npm run test:rls` | PASS | 7 files / 58 tests, including refund updates, legacy defaults, invalid-kind rejection, and cross-user isolation. |
 | DB advisor | `npx supabase db advisors --local --type security --level warn --fail-on error` | PASS | No security issues found. |
 | Browser E2E | `npm run test:e2e` | PASS | 13 mobile Chromium journeys, including refund capture and restored spending room. |

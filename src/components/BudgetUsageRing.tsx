@@ -1,15 +1,9 @@
 import type { CSSProperties } from 'react'
+import { formatSGD } from '../format'
 
 interface Props {
   allocated: number
   total: number
-}
-
-function formatCurrency(value: number): string {
-  return `S$${value.toLocaleString('en-SG', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
 }
 
 export default function BudgetUsageRing({ allocated, total }: Props) {
@@ -27,7 +21,7 @@ export default function BudgetUsageRing({ allocated, total }: Props) {
       <span className="budget-usage-ring__inner">
         <strong>{percentage}%</strong>
         <small>
-          {formatCurrency(allocated)} / {formatCurrency(total)}
+          {formatSGD(allocated)} / {formatSGD(total)}
         </small>
       </span>
     </div>

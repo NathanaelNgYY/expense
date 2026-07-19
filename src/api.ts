@@ -1,4 +1,4 @@
-import type { Entry, PokerSession } from './types'
+import type { Entry, EntryKind, PokerSession } from './types'
 import { getSupabase, isSupabaseConfigured } from './lib/supabaseClient'
 import { buildDedupeKey } from './shared/dedupe'
 import type { IngestSourceKind, IngestStatus } from './ingestVisibility'
@@ -139,6 +139,7 @@ interface EntryRow {
   id: string
   user_id: string
   amount: number | string
+  kind: string
   category: string | null
   note: string
   date: string
@@ -158,6 +159,7 @@ function rowToEntry(row: EntryRow): Entry {
   return {
     id: row.id,
     amount: num(row.amount),
+    kind: row.kind === 'refund' ? 'refund' : 'expense',
     category: row.category,
     note: row.note,
     date: row.date,
@@ -175,6 +177,7 @@ function entryToRow(entry: Entry, userId: string): EntryRow {
     id: entry.id,
     user_id: userId,
     amount: entry.amount,
+    kind: entry.kind ?? 'expense',
     category: entry.category,
     note: entry.note,
     date: entry.date,
@@ -191,6 +194,7 @@ function entryToRow(entry: Entry, userId: string): EntryRow {
 
 export interface NewManualEntry {
   amount: number
+  kind?: EntryKind
   category: string | null
   note: string
   date: string
@@ -214,6 +218,7 @@ export async function createEntryApi(input: NewManualEntry | Entry): Promise<Ent
   const entry: Entry = {
     id,
     amount: input.amount,
+    kind: partial.kind ?? 'expense',
     category: input.category,
     note: input.note,
     date: input.date,
@@ -235,6 +240,7 @@ export async function createEntryApi(input: NewManualEntry | Entry): Promise<Ent
 
 const ENTRY_PATCH_COLUMNS: ReadonlyArray<[keyof Entry, string]> = [
   ['amount', 'amount'],
+  ['kind', 'kind'],
   ['category', 'category'],
   ['note', 'note'],
   ['date', 'date'],

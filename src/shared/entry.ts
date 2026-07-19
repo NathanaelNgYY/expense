@@ -50,6 +50,7 @@ export function buildEntryFromIngest(
   return {
     id: makeId(),
     amount: input.amount,
+    kind: 'expense',
     category,
     note,
     date,

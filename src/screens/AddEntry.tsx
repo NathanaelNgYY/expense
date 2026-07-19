@@ -9,11 +9,13 @@ import { useEntries } from '../EntriesContext'
 import { useBudgetConfig } from '../BudgetConfigContext'
 import { buildCategoryOptions } from '../categoryDisplay'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
+import type { EntryKind } from '../types'
 
 /** What was just logged, so the shell can confirm it and offer an undo. */
 export interface SavedEntrySummary {
   id: string
   amount: number
+  kind: EntryKind
   categoryLabel: string | null
 }
 
@@ -30,6 +32,7 @@ export default function AddEntry({ initialDate, onSave }: Props) {
   const [digits, setDigits] = useState('0')
   const [animationCue, setAnimationCue] = useState({ key: '', version: 0 })
   const [category, setCategory] = useState<string | null>(null)
+  const [kind, setKind] = useState<EntryKind>('expense')
   const [note, setNote] = useState('')
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
   const [entryDate, setEntryDate] = useState(() => initialDate && initialDate <= today ? initialDate : today)
@@ -43,6 +46,7 @@ export default function AddEntry({ initialDate, onSave }: Props) {
   if (selectedBudgetId !== null && !shared.budgets.some(b => b.id === selectedBudgetId)) {
     setSelectedBudgetId(null)
     setCategory(null)
+    setKind('expense')
   }
 
   const { customCategories, overrides } = useBudgetConfig()
@@ -72,7 +76,13 @@ export default function AddEntry({ initialDate, onSave }: Props) {
 
   const sharedSaveDisabled =
     isSharedDestination && (!selectedSharedBudget || !activeSharedReady || busy)
-  const saveLabel = entryDate === today ? 'Save' : `Add for ${format(fromLocalDateString(entryDate), 'MMM d')}`
+  const saveLabel = kind === 'refund'
+    ? entryDate === today
+      ? 'Save refund'
+      : `Add refund for ${format(fromLocalDateString(entryDate), 'MMM d')}`
+    : entryDate === today
+      ? 'Save'
+      : `Add for ${format(fromLocalDateString(entryDate), 'MMM d')}`
 
   useEffect(() => {
     if (!isSharedDestination || !selectedBudgetId || activeSharedReady) return
@@ -131,6 +141,7 @@ export default function AddEntry({ initialDate, onSave }: Props) {
     void addPersonalEntry({
       id,
       amount,
+      kind,
       category,
       note,
       date: entryDate,
@@ -138,6 +149,7 @@ export default function AddEntry({ initialDate, onSave }: Props) {
     onSave({
       id,
       amount,
+      kind,
       categoryLabel: category ? categoryOptions.find(o => o.id === category)?.label ?? null : null,
     })
   }
@@ -170,9 +182,26 @@ export default function AddEntry({ initialDate, onSave }: Props) {
               onClick={() => {
                 setSelectedBudgetId(budget.id)
                 setCategory(null)
+                setKind('expense')
               }}
             >
               {budget.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!isSharedDestination && (
+        <div className="scope-switch" role="group" aria-label="Entry type">
+          {(['expense', 'refund'] as const).map(option => (
+            <button
+              key={option}
+              type="button"
+              className={kind === option ? 'scope-switch-btn scope-switch-btn--active' : 'scope-switch-btn'}
+              aria-pressed={kind === option}
+              onClick={() => setKind(option)}
+            >
+              {option === 'expense' ? 'Expense' : 'Refund'}
             </button>
           ))}
         </div>
@@ -215,7 +244,7 @@ export default function AddEntry({ initialDate, onSave }: Props) {
           <input
             type="date"
             className="add-entry-date__input"
-            aria-label="Expense date"
+            aria-label="Entry date"
             value={entryDate}
             max={today}
             onChange={event => {
@@ -240,8 +269,8 @@ export default function AddEntry({ initialDate, onSave }: Props) {
         ))}
       </div>
 
-      <section className="add-entry__categories" aria-labelledby="expense-category-label">
-        <p id="expense-category-label" className="category-label">
+      <section className="add-entry__categories" aria-labelledby="entry-category-label">
+        <p id="entry-category-label" className="category-label">
           Category <span className="muted">(optional)</span>
         </p>
         {isSharedDestination && !activeSharedReady ? (

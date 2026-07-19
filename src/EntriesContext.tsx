@@ -207,6 +207,7 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
     const optimistic: Entry = {
       id: input.id ?? crypto.randomUUID(),
       amount: input.amount,
+      kind: input.kind ?? 'expense',
       category: input.category,
       note: input.note,
       date: input.date,

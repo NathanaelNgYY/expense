@@ -43,3 +43,10 @@ export function formatSignedSGD(value: number): string {
   if (value === 0) return formatSGD(0)
   return `${value > 0 ? '+' : '-'}S$${GROUPED.format(Math.abs(value))}`
 }
+
+/** Ledger convention: refunds are positive credits while stored amounts stay positive. */
+export function formatEntryAmount(entry: Pick<Entry, 'amount' | 'kind'>): string {
+  return isRefund(entry) ? `+${formatSGD(entry.amount)}` : formatSGD(entry.amount)
+}
+import type { Entry } from './types'
+import { isRefund } from './shared/entryAmount'

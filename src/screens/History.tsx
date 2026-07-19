@@ -21,6 +21,7 @@ import { useBudgetConfig } from '../BudgetConfigContext'
 import { buildCategoryOptions, categoryIcon, categoryLabel } from '../categoryDisplay'
 import { useEntries } from '../EntriesContext'
 import type { Entry } from '../types'
+import { entryKind, entryNetAmount } from '../shared/entryAmount'
 
 interface Props {
   initialEditingEntryId?: string | null
@@ -53,6 +54,7 @@ function entrySort(a: Entry, b: Entry): number {
 function editDraftForEntry(entry: Entry): EditDraft {
   return {
     amountText: entry.amount.toFixed(2),
+    kind: entryKind(entry),
     category: entry.category,
     note: entry.note,
     date: entry.date,
@@ -122,6 +124,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
         entry.amount.toFixed(2),
         entry.category ? labelForCategory(entry.category) : 'Uncategorized',
         sourceLabel(entry),
+        entryKind(entry) === 'refund' ? 'Refund' : 'Expense',
       ].some(value => value.toLocaleLowerCase().includes(normalizedQuery))
     const matchesCategory =
       categoryFilter === 'all' ||
@@ -138,7 +141,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
     Number(sourceFilter !== 'all') +
     Number(Boolean(dateFrom)) +
     Number(Boolean(dateTo))
-  const monthTotal = monthEntries.reduce((sum, entry) => sum + entry.amount, 0)
+  const monthTotal = monthEntries.reduce((sum, entry) => sum + entryNetAmount(entry), 0)
   const dateMin = minDateForMonth(year, month)
   const dateMax = maxDateForMonth(year, month)
 
@@ -213,6 +216,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
 
     await editEntry(entry.id, {
       amount,
+      kind: editDraft.kind,
       category: editDraft.category,
       note: editDraft.note.trim(),
       date: entryDate,
@@ -226,6 +230,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
   async function handleDuplicateEntry(entry: Entry) {
     await addEntry({
       amount: entry.amount,
+      kind: entryKind(entry),
       category: entry.category,
       note: entry.note,
       date: entry.date,
@@ -282,7 +287,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
   const spendByDay = new Map<number, number>()
   for (const entry of monthEntries) {
     const day = fromLocalDateString(entry.date).getDate()
-    spendByDay.set(day, (spendByDay.get(day) ?? 0) + entry.amount)
+    spendByDay.set(day, (spendByDay.get(day) ?? 0) + entryNetAmount(entry))
   }
   const maxDaySpend = Math.max(1, ...spendByDay.values())
   const todayStr = toLocalDateString(now)
@@ -326,7 +331,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
             <CalendarDays size={18} aria-hidden="true" />
             <span>
               <strong>{format(fromLocalDateString(dayFilterDate), 'EEE, MMM d')}</strong>
-              <small>{dayFilterEntryCount} {dayFilterEntryCount === 1 ? 'expense' : 'expenses'}</small>
+              <small>{dayFilterEntryCount} {dayFilterEntryCount === 1 ? 'transaction' : 'transactions'}</small>
             </span>
           </span>
           <span className="history-day-filter__actions">

@@ -21,6 +21,7 @@ interface EntryRow {
   id: string
   user_id: string
   amount: number | string
+  kind: string
   category: string | null
   note: string
   date: string
@@ -52,6 +53,7 @@ class SupabaseEntryStore implements IngestStore {
     return ((data ?? []) as EntryRow[]).map(row => ({
       id: row.id,
       amount: typeof row.amount === 'number' ? row.amount : parseFloat(row.amount),
+      kind: row.kind === 'refund' ? 'refund' : 'expense',
       category: row.category,
       note: row.note,
       date: row.date,
@@ -109,6 +111,7 @@ class SupabaseEntryStore implements IngestStore {
         id: entry.id,
         user_id: this.userId,
         amount: entry.amount,
+        kind: entry.kind ?? 'expense',
         category: entry.category,
         note: entry.note,
         date: entry.date,

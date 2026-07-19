@@ -165,6 +165,27 @@ describe('api client', () => {
     expect(options).toEqual({ onConflict: 'id', ignoreDuplicates: true })
   })
 
+  it('persists a merchant category preference when an automatic capture is categorized', async () => {
+    const { fake, builder: entryBuilder } = stubSupabase({ data: serverRow, error: null, status: 200 })
+    const preferenceBuilder = makeBuilder({ data: null, error: null, status: 200 })
+    fake.from.mockImplementation((table: string) =>
+      table === 'merchant_category_preferences' ? preferenceBuilder : entryBuilder,
+    )
+
+    await updateEntryApi('e1', { category: 'cat_dinner' })
+
+    expect(fake.from).toHaveBeenCalledWith('merchant_category_preferences')
+    expect(preferenceBuilder.upsert).toHaveBeenCalledWith(
+      {
+        user_id: 'u1',
+        normalized_merchant: 'kopitiam',
+        merchant_label: 'Kopitiam',
+        category_id: 'cat_dinner',
+      },
+      { onConflict: 'user_id,normalized_merchant' },
+    )
+  })
+
   it('signs in anonymously when there is no session, once for concurrent calls', async () => {
     const { signInAnonymously } = stubSupabase({ data: [], error: null, status: 200 }, null)
     await Promise.all([fetchEntries(), fetchEntries()])

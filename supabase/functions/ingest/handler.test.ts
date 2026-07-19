@@ -42,9 +42,27 @@ class MerchantPreferenceStore extends InMemoryStore {
   }
 }
 
+class CurrencyPreferenceStore extends InMemoryStore {
+  lookups: string[] = []
+  async categoryPreferenceForMerchant(_merchant: string, currency: string): Promise<string | null> {
+    this.lookups.push(currency)
+    return currency === 'MYR' ? 'cat_mamak' : 'lunch'
+  }
+}
+
 const makeId = () => 'fixed-id'
 
 describe('edge ingest handler', () => {
+  it('looks up learned merchant categories within the captured currency', async () => {
+    const store = new CurrencyPreferenceStore()
+    const result = await handleIngest(
+      { sourceKind: 'apple_pay', amount: 8, merchant: 'Kopitiam', currency: ' myr ', idempotencyKey: 'myr-kopi' },
+      store,
+      makeId,
+    )
+    expect(store.lookups).toEqual(['MYR'])
+    expect(result.status === 'saved' && result.entry.category).toBe('cat_mamak')
+  })
   it('uses a generated id in the default production path', async () => {
     const store = new InMemoryStore()
     const result = await handleIngest(

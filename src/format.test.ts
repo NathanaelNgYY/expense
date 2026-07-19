@@ -1,5 +1,28 @@
 import { describe, expect, test } from 'vitest'
-import { formatSGD, formatSGDWhole, formatRemaining, formatSignedSGD } from './format'
+import {
+  formatMoney,
+  formatMoneyWhole,
+  formatRemaining,
+  formatSGD,
+  formatSGDWhole,
+  formatSignedSGD,
+} from './format'
+
+describe('formatMoney', () => {
+  test('uses wallet-specific symbols and currency precision', () => {
+    expect(formatMoney(1234.5, 'MYR')).toBe('RM1,234.50')
+    expect(formatMoney(2000, 'JPY')).toBe('¥2,000')
+    expect(formatMoneyWhole(180000, 'JPY')).toBe('¥180,000')
+  })
+
+  test('falls back to the normalized code without throwing for unknown currencies', () => {
+    expect(formatMoney(12.5, 'XYZ')).toBe('XYZ 12.50')
+  })
+
+  test('places a negative sign before the currency symbol', () => {
+    expect(formatMoney(-230, 'MYR')).toBe('-RM230.00')
+  })
+})
 
 describe('formatSGD', () => {
   test('groups thousands', () => {
@@ -38,6 +61,10 @@ describe('formatRemaining', () => {
 
   test('exactly zero is spent, not over', () => {
     expect(formatRemaining(0)).toBe('S$0.00 left')
+  })
+
+  test('describes remaining money in the active wallet currency', () => {
+    expect(formatRemaining(230, 'MYR')).toBe('RM230.00 left')
   })
 })
 

@@ -18,9 +18,60 @@ import {
   savePokerSessions,
   getCustomStakes,
   saveCustomStakes,
+  getWalletMap,
+  saveWalletMap,
+  getActiveCurrency,
+  saveActiveCurrency,
 } from './storage'
 import { userStorageKey } from './userStorage'
 import { DEFAULT_BUDGET, type Entry, type CustomCategory, type PokerSession } from './types'
+
+describe('currency wallet storage', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('lazily exposes legacy budget settings as the SGD wallet without rewriting storage', () => {
+    const legacy = { ...DEFAULT_BUDGET, monthlyIncome: 2200 }
+    localStorage.setItem('budget_config', JSON.stringify(legacy))
+    localStorage.setItem('budget_custom_categories', JSON.stringify([
+      { id: 'cat_gym', label: 'Gym', budget: 80, icon: 'Dumbbell' },
+    ]))
+
+    expect(getWalletMap()).toEqual({
+      SGD: {
+        config: legacy,
+        customCategories: [{ id: 'cat_gym', label: 'Gym', budget: 80, icon: 'Dumbbell' }],
+        overrides: {},
+      },
+    })
+    expect(localStorage.getItem('budget_wallets_v2')).toBeNull()
+  })
+
+  it('round-trips multiple wallet snapshots and active currency', () => {
+    const wallets = {
+      SGD: { config: DEFAULT_BUDGET, customCategories: [], overrides: {} },
+      MYR: {
+        config: { ...DEFAULT_BUDGET, monthlyIncome: 3000, lunch: 500 },
+        customCategories: [],
+        overrides: { lunch: { label: 'Meals' } },
+      },
+    }
+
+    saveWalletMap(wallets)
+    saveActiveCurrency('myr')
+
+    expect(getWalletMap()).toEqual(wallets)
+    expect(getActiveCurrency(wallets)).toBe('MYR')
+  })
+
+  it('falls back safely when the stored active wallet no longer exists', () => {
+    const wallets = {
+      JPY: { config: DEFAULT_BUDGET, customCategories: [], overrides: {} },
+    }
+    localStorage.setItem('budget_active_currency', 'MYR')
+
+    expect(getActiveCurrency(wallets)).toBe('JPY')
+  })
+})
 
 function entry(overrides: Partial<Entry> = {}): Entry {
   return {

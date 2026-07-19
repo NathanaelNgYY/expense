@@ -8,7 +8,7 @@ import Dashboard from './screens/Dashboard'
 import AddEntry from './screens/AddEntry'
 import type { SavedEntrySummary } from './screens/AddEntry'
 import { EntriesProvider, useEntries } from './EntriesContext'
-import { BudgetConfigProvider } from './BudgetConfigContext'
+import { BudgetConfigProvider, useBudgetConfig } from './BudgetConfigContext'
 import { SharedBudgetsProvider } from './sharedBudgets/SharedBudgetsContext'
 import { ThemeProvider } from './theme/ThemeContext'
 import AppErrorBoundary from './components/AppErrorBoundary'
@@ -18,6 +18,8 @@ import { downloadJsonBackup } from './dataTransfer'
 import { reportReactError } from './monitoring'
 import { shouldShowBudgetOnboarding } from './onboarding/onboardingState'
 import { lazyWithRetry } from './lazyWithRetry'
+import UncategorizedReviewDialog from './components/UncategorizedReviewDialog'
+import { buildCategoryOptions } from './categoryDisplay'
 
 // lazyWithRetry (not bare React.lazy): a stale chunk after a deploy — or a
 // transient mobile-network blip — would otherwise crash the lazy route to the
@@ -47,7 +49,9 @@ function AppShell() {
   // Lives in the shell, not in AddEntry: the confirmation has to outlive the screen that
   // triggered it, because saving navigates straight home.
   const [toast, setToast] = useState<ToastEntry | null>(null)
-  const { removeEntry } = useEntries()
+  const { entries, editEntry, removeEntry } = useEntries()
+  const { customCategories, overrides } = useBudgetConfig()
+  const categoryOptions = buildCategoryOptions(overrides, customCategories)
 
   function handleSave(saved?: SavedEntrySummary) {
     setTab('home')
@@ -117,6 +121,11 @@ function AppShell() {
         </Suspense>
       </main>
       {toast && <SaveToast entry={toast} onUndo={handleUndo} onDismiss={dismissToast} />}
+      <UncategorizedReviewDialog
+        entries={entries}
+        categoryOptions={categoryOptions}
+        onCategorize={(entry, categoryId) => editEntry(entry.id, { category: categoryId })}
+      />
       <TabBar active={tab} onChange={handleTabChange} />
     </div>
   )

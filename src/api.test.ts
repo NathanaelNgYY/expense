@@ -62,7 +62,10 @@ function stubSupabase(result: FakeResult, session: { user: { id: string } } | nu
       getSession: vi.fn().mockResolvedValue({ data: { session } }),
       signInAnonymously,
     },
-    from: vi.fn(() => builder),
+    from: vi.fn((table?: string) => {
+      void table
+      return builder
+    }),
   }
   vi.mocked(getSupabase).mockReturnValue(fake as unknown as ReturnType<typeof getSupabase>)
   return { fake, builder, signInAnonymously }
@@ -168,7 +171,7 @@ describe('api client', () => {
   it('persists a merchant category preference when an automatic capture is categorized', async () => {
     const { fake, builder: entryBuilder } = stubSupabase({ data: serverRow, error: null, status: 200 })
     const preferenceBuilder = makeBuilder({ data: null, error: null, status: 200 })
-    fake.from.mockImplementation((table: string) =>
+    fake.from.mockImplementation((table?: string) =>
       table === 'merchant_category_preferences' ? preferenceBuilder : entryBuilder,
     )
 

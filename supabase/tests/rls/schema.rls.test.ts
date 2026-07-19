@@ -7,6 +7,7 @@ const TABLES = [
   'ingest_tokens',
   'ingest_status',
   'automatic_category_preferences',
+  'merchant_category_preferences',
   'profiles',
   'budgets',
   'budget_members',

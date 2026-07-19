@@ -93,6 +93,30 @@ describe('App', () => {
     expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument()
   })
 
+  it('opens payment review on PWA entry and categorizes an Apple Pay capture in place', async () => {
+    localStorage.setItem('budget_onboarding_version', '1')
+    localStorage.setItem('budget_entries', JSON.stringify([{
+      id: 'uncategorized-wallet-entry',
+      amount: 12.8,
+      category: null,
+      note: 'Apple Pay · Mystery Noodles',
+      date: '2026-07-19',
+      source: 'apple-pay',
+      merchant: 'Mystery Noodles Pte Ltd',
+    }]))
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(screen.getByRole('dialog', { name: 'Payment needs a category' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Lunch' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    const cached = JSON.parse(localStorage.getItem('budget_entries') ?? '[]')
+    expect(cached[0]).toMatchObject({ id: 'uncategorized-wallet-entry', category: 'lunch' })
+  })
+
   it('does not interrupt a direct Add entry launch', async () => {
     window.history.replaceState({}, '', '/?add=true')
     await act(async () => {

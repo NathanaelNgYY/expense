@@ -22,11 +22,12 @@ import {
 } from '../compute'
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
 import { sgtToday } from '../shared/sgtDate'
-import { formatSGD, formatSGDWhole, formatRemaining } from '../format'
+import { formatEntryAmount, formatSGD, formatSGDWhole, formatRemaining } from '../format'
 import { getCaptureHealthWarning } from '../captureHealth'
 import type { Category, Entry } from '../types'
 import { useEntries } from '../EntriesContext'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
+import { entryNetAmount, isRefund } from '../shared/entryAmount'
 import {
   currentSgtMonth,
   entriesForMonth as sharedEntriesForMonth,
@@ -69,18 +70,22 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
   // from an unknown payee). Shown in full — unlike category lists, we don't trim to the
   // last 2 weeks, since the whole point is to find and categorize every stray entry.
   const uncategorizedEntries = currentMonthEntries.filter(entry => entry.category == null).sort(entrySort)
-  const uncategorizedTotal = uncategorizedEntries.reduce((sum, entry) => sum + entry.amount, 0)
+  const uncategorizedTotal = uncategorizedEntries.reduce((sum, entry) => sum + entryNetAmount(entry), 0)
   const uncategorizedExpanded = expandedCategory === 'uncategorized'
   const todayDate = toLocalDateString(now)
   const captureHealthWarning = getCaptureHealthWarning(entries, todayDate)
   const recentExpenseStartDate = toLocalDateString(addDays(now, -14))
-  const monthTotal = currentMonthEntries.reduce((sum, entry) => sum + entry.amount, 0)
+  const monthTotal = currentMonthEntries.reduce((sum, entry) => sum + entryNetAmount(entry), 0)
   const spend = monthlySpendByCategory(entries, now.getFullYear(), now.getMonth(), customCategories)
   const deficits = categoryDeficits(spend, config, customCategories)
   const buffer = bufferRemaining(deficits, config)
   const thisWeek = weeklyTotal(entries, now)
   const monthlyIncome = config.monthlyIncome
-  const budgetUsedPct = monthlyIncome > 0 ? Math.min(100, (monthTotal / monthlyIncome) * 100) : monthTotal > 0 ? 100 : 0
+  const budgetUsedPct = monthlyIncome > 0
+    ? Math.max(0, Math.min(100, (monthTotal / monthlyIncome) * 100))
+    : monthTotal > 0
+      ? 100
+      : 0
   const spendableBudget = config.lunch + config.transport + config.buffer + customBudgetTotal(customCategories)
   const safePerDay = safeToSpendPerDay(
     entries,
@@ -217,7 +222,9 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
           {entry.note && <span className="category-expense-note">{entry.note}</span>}
         </span>
         <span className="category-expense-trailing">
-          <strong className="category-expense-amount">{formatSGD(entry.amount)}</strong>
+          <strong className={`category-expense-amount${isRefund(entry) ? ' entry-amount--refund' : ''}`}>
+            {formatEntryAmount(entry)}
+          </strong>
           <button
             type="button"
             className="expense-delete-btn"
@@ -326,10 +333,10 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
         const categoryLabel = labelFor(cat)
         const pct = isFlexible
           ? config.buffer > 0
-            ? Math.min(100, (spent / config.buffer) * 100)
+            ? Math.max(0, Math.min(100, (spent / config.buffer) * 100))
             : 0
           : hasBudget
-            ? Math.min(100, (spent / budget) * 100)
+            ? Math.max(0, Math.min(100, (spent / budget) * 100))
             : 0
         const statusLabel = isFlexible
           ? formatRemaining(buffer)

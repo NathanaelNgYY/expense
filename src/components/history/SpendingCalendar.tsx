@@ -45,7 +45,7 @@ export default function SpendingCalendar({
                   background: `color-mix(in srgb, var(--primary) ${Math.round(alpha * 100)}%, transparent)`,
                 }}
                 onClick={() => onSelectDate(dateString)}
-                aria-label={`${format(date, 'MMM d')}, ${formatSGD(spend)} spent`}
+                aria-label={`${format(date, 'MMM d')}, ${formatSGD(spend)} net spent`}
                 aria-pressed={isSelected}
               >
                 {day}

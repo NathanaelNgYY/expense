@@ -447,6 +447,11 @@ input:focus-visible,
   color: var(--carbon-text);
 }
 
+.entry-amount--refund,
+.entry-kind-badge {
+  color: var(--green);
+}
+
 .entry-edit-panel {
   background: var(--carbon-surface);
   border-color: color-mix(in srgb, var(--carbon-copper) 30%, transparent);

@@ -83,14 +83,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function parseEntry(raw: unknown, index: number): Entry {
   if (!isRecord(raw)) throw new Error(`Entry ${index + 1} is not an object.`)
-  const { id, amount, category, note, date } = raw
+  const { id, amount, category, note, date, kind } = raw
   if (typeof id !== 'string' || id.length === 0) throw new Error(`Entry ${index + 1} is missing an id.`)
   if (typeof amount !== 'number' || !Number.isFinite(amount)) throw new Error(`Entry ${index + 1} has an invalid amount.`)
   if (typeof date !== 'string' || !DATE_RE.test(date)) throw new Error(`Entry ${index + 1} has an invalid date (expected YYYY-MM-DD).`)
   if (category !== null && category !== undefined && typeof category !== 'string') throw new Error(`Entry ${index + 1} has an invalid category.`)
+  if (kind !== undefined && kind !== 'expense' && kind !== 'refund') throw new Error(`Entry ${index + 1} has an invalid kind.`)
   const entry: Entry = {
     id,
     amount,
+    kind: kind === 'refund' ? 'refund' : 'expense',
     category: typeof category === 'string' ? category : null,
     note: typeof note === 'string' ? note : '',
     date,

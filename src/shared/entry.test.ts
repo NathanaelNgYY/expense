@@ -18,6 +18,7 @@ describe('buildEntryFromIngest', () => {
     expect(entry).toMatchObject({
       id: 'fixed-id',
       amount: 4.5,
+      kind: 'expense',
       category: 'lunch',
       note: 'Apple Pay · Ya Kun Kaya Toast',
       date: '2026-06-09',

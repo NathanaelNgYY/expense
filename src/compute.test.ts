@@ -67,6 +67,42 @@ describe('monthlySpendByCategory', () => {
 
     expect((result as Record<string, number>).others).toBe(200)
   })
+
+  it('nets refunds against the category they restore', () => {
+    const result = monthlySpendByCategory([
+      e({ id: 'expense', amount: 40, category: 'lunch' }),
+      e({ id: 'refund', amount: 12.5, category: 'lunch', kind: 'refund' }),
+    ], 2026, 4)
+
+    expect(result.lunch).toBe(27.5)
+  })
+})
+
+describe('refund-aware spending analytics', () => {
+  const entries = [
+    e({ id: 'expense-1', amount: 20, date: '2026-05-04', category: 'lunch' }),
+    e({ id: 'expense-2', amount: 10, date: '2026-05-05', category: 'lunch' }),
+    e({ id: 'refund', amount: 6, date: '2026-05-05', category: 'lunch', kind: 'refund' }),
+  ]
+
+  it('nets refunds from weekly totals, forecasts, and safe-to-spend', () => {
+    const referenceDate = new Date(2026, 4, 5)
+
+    expect(weeklyTotal(entries, referenceDate)).toBe(24)
+    expect(lunchWeeklySpend(entries, referenceDate)).toBe(24)
+    expect(monthlySpendForecast(entries, 2026, 4, referenceDate).spentToDate).toBe(24)
+    expect(safeToSpendPerDay(entries, 2026, 4, 100, referenceDate).remainingBudget).toBe(76)
+  })
+
+  it('uses purchases as the average denominator while netting their refunds', () => {
+    expect(averageLunchPerEntry(entries, 2026, 4)).toBe(12)
+  })
+
+  it('does not report a refund-only category as the most expensive', () => {
+    const refundOnly = [e({ amount: 30, category: 'transport', kind: 'refund' })]
+
+    expect(mostExpensiveCategory(refundOnly, 2026, 4)).toBeNull()
+  })
 })
 
 describe('categoryDeficits', () => {
@@ -438,6 +474,18 @@ describe('monthlySpendForecast', () => {
     })
   })
 
+  it('uses one elapsed day when previewing a future month', () => {
+    const entries = [e({ date: '2026-06-02', amount: 30 })]
+
+    expect(monthlySpendForecast(entries, 2026, 5, new Date('2026-05-06T12:00:00'))).toEqual({
+      spentToDate: 30,
+      dailyAverage: 30,
+      daysElapsed: 1,
+      daysInMonth: 30,
+      projectedTotal: 900,
+    })
+  })
+
   it('can exclude commitment categories from spending pace', () => {
     const entries = [
       e({ amount: 55, category: 'lunch', date: '2026-05-03' }),
@@ -478,6 +526,16 @@ describe('safeToSpendPerDay', () => {
       remainingBudget: -100,
       daysRemaining: 26,
       amountPerDay: -100 / 26,
+    })
+  })
+
+  it('spreads a future month budget across every day in that month', () => {
+    const entries = [e({ date: '2026-06-02', amount: 30 })]
+
+    expect(safeToSpendPerDay(entries, 2026, 5, 300, new Date('2026-05-06T12:00:00'))).toEqual({
+      remainingBudget: 270,
+      daysRemaining: 30,
+      amountPerDay: 9,
     })
   })
 

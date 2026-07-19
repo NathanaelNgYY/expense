@@ -75,6 +75,7 @@ const serverRow = {
   id: 'e1',
   user_id: 'u1',
   amount: 4.2,
+  kind: 'refund',
   category: 'lunch',
   note: 'kopi',
   date: '2026-07-11',
@@ -145,6 +146,7 @@ describe('api client', () => {
       {
         id: 'e1',
         amount: 4.2,
+        kind: 'refund',
         category: 'lunch',
         note: 'kopi',
         date: '2026-07-11',
@@ -162,10 +164,29 @@ describe('api client', () => {
     const entry = await createEntryApi({ amount: 5, category: 'lunch', note: 'k', date: '2026-06-09', id: 'fixed-id' })
     expect(entry.id).toBe('fixed-id')
     expect(entry.source).toBe('manual')
+    expect(entry.kind).toBe('expense')
     expect(entry.dedupeKey).toBe('manual:fixed-id')
     const [row, options] = builder.upsert.mock.calls[0]
     expect(row).toMatchObject({ id: 'fixed-id', user_id: 'u1', dedupe_key: 'manual:fixed-id' })
     expect(options).toEqual({ onConflict: 'id', ignoreDuplicates: true })
+  })
+
+  it('persists refund kind on create, update, and bulk upsert', async () => {
+    const { builder } = stubSupabase({ data: serverRow, error: null, status: 200 })
+
+    await createEntryApi({ amount: 5, category: 'lunch', note: '', date: '2026-07-19', kind: 'refund' })
+    expect(builder.upsert.mock.calls[0][0]).toMatchObject({ kind: 'refund' })
+
+    await updateEntryApi('e1', { kind: 'refund' })
+    expect(builder.update).toHaveBeenCalledWith(expect.objectContaining({ kind: 'refund' }))
+
+    await bulkUpsertEntries([{
+      id: 'refund-bulk', amount: 8, category: 'lunch', note: '', date: '2026-07-19', kind: 'refund',
+    }])
+    expect(builder.upsert).toHaveBeenLastCalledWith(
+      [expect.objectContaining({ id: 'refund-bulk', kind: 'refund' })],
+      { onConflict: 'id', ignoreDuplicates: true },
+    )
   })
 
   it('persists a merchant category preference when an automatic capture is categorized', async () => {

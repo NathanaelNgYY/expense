@@ -12,6 +12,7 @@ import {
 } from 'date-fns'
 import type { Entry, BudgetConfig, Category, CustomCategory } from './types'
 import { CATEGORIES } from './types'
+import { entryKind, entryNetAmount } from './shared/entryAmount'
 
 export function allCategoryIds(custom: CustomCategory[] = []): string[] {
   return [...CATEGORIES, ...custom.map(c => c.id)]
@@ -95,7 +96,7 @@ export function monthlySpendByCategory(
   const monthly = entriesForMonth(entries, year, month)
   const result = Object.fromEntries(allCategoryIds(custom).map(c => [c, 0])) as Record<string, number>
   for (const entry of monthly) {
-    if (entry.category && entry.category in result) result[entry.category] += entry.amount
+    if (entry.category && entry.category in result) result[entry.category] += entryNetAmount(entry)
   }
   return result
 }
@@ -129,7 +130,7 @@ export function weeklyTotal(entries: Entry[], referenceDate: Date): number {
   const end = endOfWeek(referenceDate, { weekStartsOn: 1 })
   return entries
     .filter(e => isWithinInterval(parseISO(e.date), { start, end }))
-    .reduce((sum, e) => sum + e.amount, 0)
+    .reduce((sum, e) => sum + entryNetAmount(e), 0)
 }
 
 export function lunchWeeklySpend(entries: Entry[], referenceDate: Date): number {
@@ -137,7 +138,7 @@ export function lunchWeeklySpend(entries: Entry[], referenceDate: Date): number 
   const end = endOfWeek(referenceDate, { weekStartsOn: 1 })
   return entries
     .filter(e => e.category === 'lunch' && isWithinInterval(parseISO(e.date), { start, end }))
-    .reduce((sum, e) => sum + e.amount, 0)
+    .reduce((sum, e) => sum + entryNetAmount(e), 0)
 }
 
 export function weeksInMonth(year: number, month: number): Date[] {
@@ -187,8 +188,9 @@ export function averageLunchPerEntry(
   month: number,
 ): number | null {
   const lunchEntries = entriesForMonth(entries, year, month).filter(e => e.category === 'lunch')
-  if (lunchEntries.length < 2) return null
-  return lunchEntries.reduce((sum, e) => sum + e.amount, 0) / lunchEntries.length
+  const purchaseCount = lunchEntries.filter(e => entryKind(e) === 'expense').length
+  if (purchaseCount < 2) return null
+  return lunchEntries.reduce((sum, e) => sum + entryNetAmount(e), 0) / purchaseCount
 }
 
 export function highestSpendingDay(
@@ -199,7 +201,7 @@ export function highestSpendingDay(
   const monthly = entriesForMonth(entries, year, month)
   const byDate = new Map<string, number>()
   for (const entry of monthly) {
-    byDate.set(entry.date, (byDate.get(entry.date) ?? 0) + entry.amount)
+    byDate.set(entry.date, (byDate.get(entry.date) ?? 0) + entryNetAmount(entry))
   }
   if (byDate.size < 2) return null
   const [topDate, topAmount] = [...byDate.entries()].reduce((a, b) => (b[1] > a[1] ? b : a))
@@ -210,7 +212,7 @@ export function topSpendingDayOfWeek(entries: Entry[], year: number, month: numb
   const byDow = [0, 0, 0, 0, 0, 0, 0]
   for (const entry of entriesForMonth(entries, year, month)) {
     const dow = parseISO(entry.date).getDay()
-    byDow[dow] += entry.amount
+    byDow[dow] += entryNetAmount(entry)
   }
   if (byDow.filter(v => v > 0).length < 3) return null
   const topDow = byDow.indexOf(Math.max(...byDow))
@@ -228,8 +230,8 @@ export function monthOverMonthDelta(
   const prevYear = month === 0 ? year - 1 : year
   const prevEntries = entriesForMonth(entries, prevYear, prevMonth)
   if (prevEntries.length === 0) return null
-  const current = entriesForMonth(entries, year, month).reduce((sum, e) => sum + e.amount, 0)
-  const prev = prevEntries.reduce((sum, e) => sum + e.amount, 0)
+  const current = entriesForMonth(entries, year, month).reduce((sum, e) => sum + entryNetAmount(e), 0)
+  const prev = prevEntries.reduce((sum, e) => sum + entryNetAmount(e), 0)
   return current - prev
 }
 
@@ -278,7 +280,7 @@ export function monthlySpendForecast(
   referenceDate: Date = new Date(),
   options: SpendFilterOptions = {},
 ): MonthlySpendForecast {
-  const spentToDate = spendEntriesForMonth(entries, year, month, options).reduce((sum, e) => sum + e.amount, 0)
+  const spentToDate = spendEntriesForMonth(entries, year, month, options).reduce((sum, e) => sum + entryNetAmount(e), 0)
   const daysInMonth = daysInCalendarMonth(year, month)
   const daysElapsed = daysElapsedForForecast(year, month, referenceDate)
   const dailyAverage = spentToDate / daysElapsed
@@ -300,7 +302,7 @@ export function safeToSpendPerDay(
   referenceDate: Date = new Date(),
   options: SpendFilterOptions = {},
 ): SafeToSpendResult {
-  const spent = spendEntriesForMonth(entries, year, month, options).reduce((sum, e) => sum + e.amount, 0)
+  const spent = spendEntriesForMonth(entries, year, month, options).reduce((sum, e) => sum + entryNetAmount(e), 0)
   const remainingBudget = monthlyBudget - spent
   const daysRemaining = daysRemainingForMonth(year, month, referenceDate)
 
@@ -338,8 +340,8 @@ export function monthComparison(
   const highlighted = CATEGORIES.map(category => ({ category, ...categoryDeltas[category] }))
   const increases = highlighted.filter(item => item.delta > 0)
   const decreases = highlighted.filter(item => item.delta < 0)
-  const currentTotal = currentEntries.reduce((sum, e) => sum + e.amount, 0)
-  const previousTotal = previousEntries.reduce((sum, e) => sum + e.amount, 0)
+  const currentTotal = currentEntries.reduce((sum, e) => sum + entryNetAmount(e), 0)
+  const previousTotal = previousEntries.reduce((sum, e) => sum + entryNetAmount(e), 0)
 
   return {
     previousYear,

@@ -9,6 +9,7 @@ describe('CSV entry import and export', () => {
         id: 'entry-1',
         amount: 12.5,
         category: 'lunch',
+        kind: 'refund',
         note: 'Chicken rice, kopi',
         date: '2026-05-11',
       },
@@ -16,6 +17,7 @@ describe('CSV entry import and export', () => {
         id: 'entry-2',
         amount: 4,
         category: null,
+        kind: 'expense',
         note: '  He said "thanks"  ',
         date: '2026-05-12',
       },
@@ -92,6 +94,24 @@ describe('CSV entry import and export', () => {
     ].join('\n')
 
     expect(() => parseEntriesCsv(csv)).toThrow('Row 2 has an invalid date')
+  })
+
+  it('imports the legacy five-column format as expenses', () => {
+    const csv = [
+      '"id","amount","category","note","date"',
+      '"legacy-1","12","lunch","Lunch","2026-05-11"',
+    ].join('\n')
+
+    expect(parseEntriesCsv(csv)[0]).toMatchObject({ id: 'legacy-1', kind: 'expense' })
+  })
+
+  it('rejects an unknown entry kind', () => {
+    const csv = [
+      '"id","amount","category","note","date","kind"',
+      '"bad-1","12","lunch","Lunch","2026-05-11","income"',
+    ].join('\n')
+
+    expect(() => parseEntriesCsv(csv)).toThrow('Row 2 has an invalid kind')
   })
 
   it.each(['=1+1', '+cmd', '-2+3', '@SUM(A1:A2)'])('neutralizes spreadsheet formula note %s on export', note => {

@@ -138,7 +138,7 @@ describe('History entry editing', () => {
       entryButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
 
-    const editPanel = rendered.container.querySelector<HTMLElement>('[aria-label="Edit expense"]')
+    const editPanel = rendered.container.querySelector<HTMLElement>('[aria-label="Edit transaction"]')
     if (!editPanel) throw new Error('Edit panel was not found')
 
     const amountInput = editPanel.querySelector<HTMLInputElement>('#edit-entry-amount')
@@ -319,6 +319,52 @@ describe('History entry editing', () => {
     })
   })
 
+  it('shows refund credits, nets the month total, and preserves kind through edit and duplicate', async () => {
+    const refund = entry({
+      id: 'refund-1',
+      amount: 5,
+      category: 'lunch',
+      note: 'Returned lunch',
+      kind: 'refund',
+    })
+    const rendered = renderWithEntries([
+      entry({ id: 'expense-1', amount: 20, note: 'Lunch purchase' }),
+      refund,
+    ])
+    root = rendered.root
+    await act(async () => {})
+
+    expect(rendered.container.querySelector('.history-summary')).toHaveTextContent('S$15.00')
+    const refundRow = [...rendered.container.querySelectorAll<HTMLButtonElement>('.entry-row-button')]
+      .find(button => button.textContent?.includes('Returned lunch'))
+    if (!refundRow) throw new Error('Refund row was not found')
+    expect(refundRow).toHaveTextContent('Refund')
+    expect(refundRow).toHaveTextContent('+S$5.00')
+
+    act(() => refundRow.click())
+    const detail = rendered.container.querySelector<HTMLElement>('[aria-label="Transaction details"]')
+    if (!detail) throw new Error('Refund detail was not found')
+    expect(detail.querySelector('[aria-label="Entry type"]')).toBeInTheDocument()
+    expect(detail.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')).toHaveTextContent('Refund')
+
+    clickButton(detail, 'Duplicate')
+    await act(async () => {})
+    expect(getEntries().find(candidate => candidate.id !== refund.id && candidate.note === refund.note))
+      .toMatchObject({ amount: 5, kind: 'refund', source: 'manual' })
+
+    const originalRow = [...rendered.container.querySelectorAll<HTMLButtonElement>('.entry-row-button')]
+      .find(button => button.textContent?.includes('Returned lunch') && button.textContent?.includes('Refund'))
+    if (!originalRow) throw new Error('Original refund row was not found')
+    act(() => originalRow.click())
+    const reopened = rendered.container.querySelector<HTMLElement>('[aria-label="Transaction details"]')
+    if (!reopened) throw new Error('Refund detail did not reopen')
+    clickButton(reopened, 'Expense')
+    clickButton(reopened, 'Save Changes')
+    await act(async () => {})
+
+    expect(getEntries().find(candidate => candidate.id === refund.id)).toMatchObject({ kind: 'expense' })
+  })
+
   it('filters the ledger to a tapped calendar day and offers dated entry', async () => {
     const onAddForDate = vi.fn()
     const rendered = renderWithEntries([
@@ -329,7 +375,7 @@ describe('History entry editing', () => {
     root = rendered.root
     await act(async () => {})
 
-    clickButton(rendered.container, 'May 18, S$14.80 spent')
+    clickButton(rendered.container, 'May 18, S$14.80 net spent')
 
     expect(rendered.container.querySelector('[role="dialog"]')).not.toBeInTheDocument()
     expect(rendered.container.querySelectorAll('.entry-row-button')).toHaveLength(2)

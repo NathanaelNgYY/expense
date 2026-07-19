@@ -2,12 +2,14 @@ import { format } from 'date-fns'
 import { Copy, Trash2 } from 'lucide-react'
 import BudgetIcon from '../BudgetIcon'
 import { fromLocalDateString, isFutureDateString } from '../../dates'
-import { formatSGD } from '../../format'
-import type { Entry } from '../../types'
+import { formatEntryAmount } from '../../format'
+import type { Entry, EntryKind } from '../../types'
+import { isRefund } from '../../shared/entryAmount'
 import { sourceLabel } from './historyEntryModel'
 
 export interface EditDraft {
   amountText: string
+  kind: EntryKind
   category: string | null
   note: string
   date: string
@@ -105,8 +107,11 @@ export default function HistoryEntryList({
                 </span>
                 {entry.merchant && <span className="entry-merchant">{entry.merchant}</span>}
                 {entry.note && <span className="entry-note">{entry.note}</span>}
+                {isRefund(entry) && <span className="entry-kind-badge">Refund</span>}
               </span>
-              <strong className="entry-amount">{formatSGD(entry.amount)}</strong>
+              <strong className={`entry-amount${isRefund(entry) ? ' entry-amount--refund' : ''}`}>
+                {formatEntryAmount(entry)}
+              </strong>
             </button>
 
             {isEditing && (
@@ -118,10 +123,25 @@ export default function HistoryEntryList({
                       {sourceLabel(entry)}{entry.merchant ? ` · ${entry.merchant}` : ''}
                     </p>
                   </div>
-                  <strong className="entry-detail-amount">{formatSGD(entry.amount)}</strong>
+                  <strong className={`entry-detail-amount${isRefund(entry) ? ' entry-amount--refund' : ''}`}>
+                    {formatEntryAmount(entry)}
+                  </strong>
                 </div>
 
-                <div className="entry-edit-panel" aria-label="Edit expense">
+                <div className="entry-edit-panel" aria-label="Edit transaction">
+                  <div className="scope-switch" role="group" aria-label="Entry type">
+                    {(['expense', 'refund'] as const).map(kind => (
+                      <button
+                        key={kind}
+                        type="button"
+                        className={editDraft.kind === kind ? 'scope-switch-btn scope-switch-btn--active' : 'scope-switch-btn'}
+                        aria-pressed={editDraft.kind === kind}
+                        onClick={() => onDraftChange({ kind })}
+                      >
+                        {kind === 'expense' ? 'Expense' : 'Refund'}
+                      </button>
+                    ))}
+                  </div>
                   <div className="field-grid">
                     <label className="form-field" htmlFor="edit-entry-date">
                       <span>Date</span>

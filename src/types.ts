@@ -1,10 +1,12 @@
 // src/types.ts
 export type Category = 'lunch' | 'transport' | 'savings' | 'investments' | 'others'
 export type EntrySource = 'manual' | 'apple-pay' | 'dbs-email'
+export type EntryKind = 'expense' | 'refund'
 
 export interface Entry {
   id: string
   amount: number
+  kind?: EntryKind // absent in legacy local caches; interpreted as expense
   category: string | null
   note: string
   date: string // YYYY-MM-DD (local SGT date used by all budget computations)

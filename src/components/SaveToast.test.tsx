@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import SaveToast from './SaveToast'
 
-const ENTRY = { id: 'abc', amount: 5.8, categoryLabel: 'Lunch' }
+const ENTRY = { id: 'abc', amount: 5.8, categoryLabel: 'Lunch', kind: 'expense' as const }
 
 describe('SaveToast', () => {
   beforeEach(() => vi.useFakeTimers())
@@ -22,6 +22,12 @@ describe('SaveToast', () => {
   test('groups thousands in the confirmed amount', () => {
     render(<SaveToast entry={{ ...ENTRY, amount: 1234.5 }} onUndo={vi.fn()} onDismiss={vi.fn()} />)
     expect(screen.getByRole('status')).toHaveTextContent('S$1,234.50')
+  })
+
+  test('confirms a refund as money returned', () => {
+    render(<SaveToast entry={{ ...ENTRY, kind: 'refund' }} onUndo={vi.fn()} onDismiss={vi.fn()} />)
+
+    expect(screen.getByRole('status')).toHaveTextContent('Refunded S$5.80 to Lunch')
   })
 
   test('undo reports the saved entry back to the caller', () => {

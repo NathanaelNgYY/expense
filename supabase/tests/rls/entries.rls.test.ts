@@ -41,10 +41,11 @@ describe('entries RLS', () => {
 
     const { data: updated } = await alice.client
       .from('entries')
-      .update({ amount: 20 })
+      .update({ amount: 20, kind: 'refund' })
       .eq('id', id)
       .select()
     expect(updated).toHaveLength(1)
+    expect(updated![0].kind).toBe('refund')
 
     const { data: deleted } = await alice.client.from('entries').delete().eq('id', id).select()
     expect(deleted).toHaveLength(1)
@@ -117,5 +118,20 @@ describe('entries RLS', () => {
     const { error } = await anonClient().from('entries').select('id')
     expect(error).not.toBeNull()
     expect(error!.code).toBe('42501')
+  })
+
+  it('rejects entry kinds outside expense and refund', async () => {
+    const id = randomUUID()
+    const { error } = await alice.client.from('entries').insert({
+      id,
+      user_id: alice.id,
+      amount: 1,
+      kind: 'income',
+      note: '',
+      date: '2026-07-14',
+      dedupe_key: `invalid-kind-${id}`,
+    })
+
+    expect(error?.code).toBe('23514')
   })
 })

@@ -11,7 +11,7 @@ vi.mock('./api', () => ({
 
 const entry: Entry = {
   id: 'e1', amount: 12.5, category: 'lunch', note: 'kopi', date: '2026-07-01',
-  source: 'manual', dedupeKey: 'manual|2026-07-01|12.5|kopi|e1',
+  kind: 'refund', source: 'manual', dedupeKey: 'manual|2026-07-01|12.5|kopi|e1',
 }
 const poker: PokerSession = {
   id: 'p1', date: '2026-07-02', startTime: '20:00', endTime: '23:00',
@@ -87,6 +87,14 @@ describe('parseImportPayload', () => {
   it('rejects entries with missing or malformed fields', () => {
     const bad = { schemaVersion: 1, exportedAt: 'x', entries: [{ id: '', amount: 'NaN', date: '01/07/2026' }], pokerSessions: [], settings: {} }
     expect(() => parseImportPayload(JSON.stringify(bad))).toThrow(/entr/i)
+  })
+
+  it('defaults legacy JSON entries to expense and rejects unknown kinds', () => {
+    const legacy = { schemaVersion: 1, exportedAt: 'x', entries: [{ ...entry, kind: undefined }], pokerSessions: [], settings: {} }
+    expect(parseImportPayload(JSON.stringify(legacy)).entries[0].kind).toBe('expense')
+
+    const invalid = { ...legacy, entries: [{ ...entry, kind: 'income' }] }
+    expect(() => parseImportPayload(JSON.stringify(invalid))).toThrow(/kind/i)
   })
 
   it('rejects poker sessions with invalid result values', () => {

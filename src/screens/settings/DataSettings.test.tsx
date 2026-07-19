@@ -164,7 +164,7 @@ describe('DataSettings', () => {
     expect(rendered.container).toHaveTextContent('Imported 1 entr')
     expect(bulkUpsertEntries).toHaveBeenCalledTimes(1)
     expect(bulkUpsertEntries).toHaveBeenCalledWith([
-      { id: 'entry-2', amount: 12.5, category: 'lunch', note: 'Chicken rice', date: '2026-05-11' },
+      { id: 'entry-2', amount: 12.5, category: 'lunch', kind: 'expense', note: 'Chicken rice', date: '2026-05-11' },
     ])
   })
 

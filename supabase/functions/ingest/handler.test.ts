@@ -66,6 +66,7 @@ describe('edge ingest handler', () => {
     expect(result.status).toBe('saved')
     if (result.status !== 'saved') return
     expect(result.entry.source).toBe('apple-pay')
+    expect(result.entry.kind).toBe('expense')
     expect(result.entry.merchant).toBe('Ya Kun')
     expect(result.entry.note).toBe('Apple Pay · Ya Kun')
     expect(result.entry.dedupeKey).toBe('apple_pay:2026-07-11T04:00:00.000Z:4.20:ya-kun')

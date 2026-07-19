@@ -1508,6 +1508,21 @@ input:focus-visible {
   font-feature-settings: "tnum";
 }
 
+.entry-amount--refund {
+  color: var(--green);
+}
+
+.entry-kind-badge {
+  width: fit-content;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
 .entry-edit-shell {
   display: flex;
   flex-direction: column;

@@ -37,13 +37,41 @@ test('Others is the only flexible-budget UI', async ({ page }) => {
   await expect(page.getByText('Buffer', { exact: true })).toHaveCount(0)
 })
 
+test('user records a refund that restores personal spending room', async ({ page }) => {
+  const date = currentLocalDate()
+  await prepareApp(page, [{
+    id: 'original-expense',
+    amount: 20,
+    category: 'lunch',
+    note: 'Original lunch',
+    date,
+  }])
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Add entry' }).click()
+  await page.getByRole('button', { name: 'Refund' }).click()
+  await page.getByRole('button', { name: '5', exact: true }).click()
+  await page.getByRole('button', { name: 'Lunch', exact: true }).click()
+  await page.getByRole('button', { name: 'Save refund' }).click()
+
+  await expect(page.locator('.save-toast')).toContainText('Refunded S$5.00 to Lunch')
+  const lunch = page.getByRole('button', { name: /Lunch/ })
+  await expect(lunch).toContainText('S$15.00')
+
+  await page.getByRole('button', { name: 'History' }).click()
+  await expect(page.getByRole('button', { name: /Refund.*\+S\$5\.00/ })).toBeVisible()
+  const entries = await page.evaluate(() => JSON.parse(localStorage.getItem('budget_entries') ?? '[]'))
+  expect(entries).toEqual(expect.arrayContaining([
+    expect.objectContaining({ amount: 5, category: 'lunch', kind: 'refund' }),
+  ]))
+})
+
 test('Add entry accepts a past expense date without visiting History', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 667 })
   await prepareApp(page, [])
   await page.goto('/')
   await page.getByRole('button', { name: 'Add entry' }).click()
 
-  const expenseDate = page.getByLabel('Expense date')
+  const expenseDate = page.getByLabel('Entry date')
   const dateBox = await expenseDate.boundingBox()
   expect(dateBox?.height).toBeGreaterThanOrEqual(44)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)

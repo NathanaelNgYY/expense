@@ -1,7 +1,7 @@
 // src/dataTransfer.ts
 // JSON export/import for moving a user's origin-locked data (localStorage) to a new
 // origin. Export copies; import upserts idempotently — nothing is ever cleared (C2).
-import type { BudgetConfig, CategoryOverrides, CustomCategory, Entry, PokerSession } from './types'
+import type { BudgetConfig, CategoryOverrides, CustomCategory, Entry, PokerSession, WalletMap } from './types'
 import { bulkUpsertEntries, bulkUpsertPokerSessions } from './api'
 import {
   getBudgetConfig,
@@ -10,11 +10,15 @@ import {
   getCustomCategories,
   getCustomStakes,
   getPokerSessions,
+  getWalletMap,
+  getActiveCurrency,
   saveBudgetConfig,
   saveCategoryOverrides,
   saveCustomCategories,
   saveCustomStakes,
   savePokerSessions,
+  saveWalletMap,
+  saveActiveCurrency,
   setCachedEntries,
 } from './storage'
 import { THEME_STORAGE_KEY } from './theme/themeRegistry'
@@ -30,6 +34,8 @@ export interface ExportPayloadV1 {
     categoryOverrides?: CategoryOverrides
     customStakes?: string[]
     theme?: string
+    wallets?: WalletMap
+    activeCurrency?: string
   }
 }
 
@@ -59,6 +65,8 @@ export function buildExportPayload(): ExportPayloadV1 {
       categoryOverrides: Object.keys(categoryOverrides).length > 0 ? categoryOverrides : undefined,
       customStakes: customStakes.length > 0 ? customStakes : undefined,
       theme,
+      wallets: getWalletMap(),
+      activeCurrency: getActiveCurrency(),
     },
   }
 }
@@ -100,7 +108,7 @@ function parseEntry(raw: unknown, index: number): Entry {
   if (typeof raw.source === 'string') entry.source = raw.source as Entry['source']
   if (typeof raw.merchant === 'string') entry.merchant = raw.merchant
   if (typeof raw.occurredAt === 'string') entry.occurredAt = raw.occurredAt
-  if (typeof raw.currency === 'string') entry.currency = raw.currency
+  if (typeof raw.currency === 'string') entry.currency = raw.currency.trim().toUpperCase()
   if (typeof raw.importKey === 'string') entry.importKey = raw.importKey
   if (typeof raw.dedupeKey === 'string') entry.dedupeKey = raw.dedupeKey
   return entry
@@ -142,6 +150,8 @@ export function parseImportPayload(text: string): ExportPayloadV1 {
       categoryOverrides: isRecord(settings.categoryOverrides) ? (settings.categoryOverrides as CategoryOverrides) : undefined,
       customStakes: Array.isArray(settings.customStakes) ? (settings.customStakes as string[]).filter(s => typeof s === 'string') : undefined,
       theme: typeof settings.theme === 'string' ? settings.theme : undefined,
+      wallets: isRecord(settings.wallets) ? (settings.wallets as WalletMap) : undefined,
+      activeCurrency: typeof settings.activeCurrency === 'string' ? settings.activeCurrency.trim().toUpperCase() : undefined,
     },
   }
 }
@@ -160,6 +170,10 @@ function isAbsentLocally(key: string): boolean {
 
 export async function applyImport(payload: ExportPayloadV1): Promise<ImportResult> {
   const { settings } = payload
+  if (settings.wallets && isAbsentLocally('budget_wallets_v2')) {
+    saveWalletMap(settings.wallets)
+    if (settings.activeCurrency) saveActiveCurrency(settings.activeCurrency)
+  }
   if (settings.budgetConfig && isAbsentLocally('budget_config')) saveBudgetConfig(settings.budgetConfig)
   if (settings.customCategories && isAbsentLocally('budget_custom_categories')) saveCustomCategories(settings.customCategories)
   if (settings.categoryOverrides && isAbsentLocally('budget_category_overrides')) saveCategoryOverrides(settings.categoryOverrides)

@@ -20,6 +20,7 @@ import { shouldShowBudgetOnboarding } from './onboarding/onboardingState'
 import { lazyWithRetry } from './lazyWithRetry'
 import UncategorizedReviewDialog from './components/UncategorizedReviewDialog'
 import { buildCategoryOptions } from './categoryDisplay'
+import { entriesForCurrency } from './shared/currency'
 
 // lazyWithRetry (not bare React.lazy): a stale chunk after a deploy — or a
 // transient mobile-network blip — would otherwise crash the lazy route to the
@@ -51,7 +52,8 @@ function AppShell() {
   // triggered it, because saving navigates straight home.
   const [toast, setToast] = useState<ToastEntry | null>(null)
   const { entries, editEntry, removeEntry } = useEntries()
-  const { customCategories, overrides } = useBudgetConfig()
+  const { customCategories, overrides, activeCurrency } = useBudgetConfig()
+  const activeEntries = entriesForCurrency(entries, activeCurrency)
   const categoryOptions = buildCategoryOptions(overrides, customCategories)
 
   function handleSave(saved?: SavedEntrySummary) {
@@ -137,7 +139,7 @@ function AppShell() {
       </main>
       {toast && <SaveToast entry={toast} onUndo={handleUndo} onDismiss={dismissToast} />}
       <UncategorizedReviewDialog
-        entries={entries}
+        entries={activeEntries}
         categoryOptions={categoryOptions}
         onCategorize={(entry, categoryId) => editEntry(entry.id, { category: categoryId })}
       />

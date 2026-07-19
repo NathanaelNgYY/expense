@@ -1,5 +1,6 @@
 import { CATEGORIES } from './types'
 import type { Category, Entry, EntryKind } from './types'
+import { normalizeCurrencyCode } from './shared/currency'
 
 interface MergeResult {
   entries: Entry[]
@@ -8,7 +9,8 @@ interface MergeResult {
 }
 
 const LEGACY_ENTRY_HEADERS = ['id', 'amount', 'category', 'note', 'date']
-const ENTRY_HEADERS = [...LEGACY_ENTRY_HEADERS, 'kind']
+const KIND_ENTRY_HEADERS = [...LEGACY_ENTRY_HEADERS, 'kind']
+const ENTRY_HEADERS = [...KIND_ENTRY_HEADERS, 'currency']
 const CATEGORY_SET = new Set<Category>(CATEGORIES)
 
 function csvCell(value: string | number | null): string {
@@ -90,13 +92,13 @@ function isValidDateString(value: string): boolean {
   )
 }
 
-function parseEntry(row: string[], rowNumber: number, hasKind: boolean): Entry {
-  const expectedCells = hasKind ? ENTRY_HEADERS.length : LEGACY_ENTRY_HEADERS.length
+function parseEntry(row: string[], rowNumber: number, hasKind: boolean, hasCurrency: boolean): Entry {
+  const expectedCells = hasCurrency ? ENTRY_HEADERS.length : hasKind ? KIND_ENTRY_HEADERS.length : LEGACY_ENTRY_HEADERS.length
   if (row.length !== expectedCells) {
     throw new Error(`Row ${rowNumber} has ${row.length} cells instead of ${expectedCells}`)
   }
 
-  const [rawId, rawAmountText, rawCategoryText, note, rawDate, rawKind] = row
+  const [rawId, rawAmountText, rawCategoryText, note, rawDate, rawKind, rawCurrency] = row
   const id = rawId.trim()
   const amountText = rawAmountText.trim()
   const categoryText = rawCategoryText.trim()
@@ -130,7 +132,7 @@ function parseEntry(row: string[], rowNumber: number, hasKind: boolean): Entry {
     throw new Error(`Row ${rowNumber} has an invalid kind`)
   }
 
-  return {
+  const entry: Entry = {
     id,
     amount,
     kind,
@@ -138,13 +140,16 @@ function parseEntry(row: string[], rowNumber: number, hasKind: boolean): Entry {
     note,
     date,
   }
+  const currency = normalizeCurrencyCode(rawCurrency)
+  if (currency) entry.currency = currency
+  return entry
 }
 
 export function entriesToCsv(entries: Entry[]): string {
   return [
     ENTRY_HEADERS.map(csvCell).join(','),
     ...entries.map(entry =>
-      [csvCell(entry.id), csvCell(entry.amount), csvCell(entry.category), spreadsheetSafeCsvCell(entry.note), csvCell(entry.date), csvCell(entry.kind ?? 'expense')].join(','),
+      [csvCell(entry.id), csvCell(entry.amount), csvCell(entry.category), spreadsheetSafeCsvCell(entry.note), csvCell(entry.date), csvCell(entry.kind ?? 'expense'), csvCell(normalizeCurrencyCode(entry.currency) ?? '')].join(','),
     ),
   ].join('\n')
 }
@@ -154,13 +159,14 @@ export function parseEntriesCsv(text: string): Entry[] {
   const header = rows[0]
 
   const normalizedHeader = header?.map(value => value.trim()).join(',')
-  const hasKind = normalizedHeader === ENTRY_HEADERS.join(',')
+  const hasCurrency = normalizedHeader === ENTRY_HEADERS.join(',')
+  const hasKind = hasCurrency || normalizedHeader === KIND_ENTRY_HEADERS.join(',')
   const isLegacy = normalizedHeader === LEGACY_ENTRY_HEADERS.join(',')
   if (!header || (!hasKind && !isLegacy)) {
     throw new Error('CSV must use the exported budget entries format')
   }
 
-  return rows.slice(1).map((row, index) => parseEntry(row, index + 2, hasKind))
+  return rows.slice(1).map((row, index) => parseEntry(row, index + 2, hasKind, hasCurrency))
 }
 
 export function mergeImportedEntries(existingEntries: Entry[], importedEntries: Entry[]): MergeResult {

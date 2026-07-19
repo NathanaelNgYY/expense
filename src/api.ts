@@ -7,6 +7,7 @@ import {
   type AutomaticCategoryRule,
 } from './shared/automaticCategoryRules'
 import { normalizeCategoryMerchant } from './shared/category'
+import { normalizeCurrencyCode } from './shared/currency'
 
 export class ApiError extends Error {
   status: number
@@ -166,7 +167,7 @@ function rowToEntry(row: EntryRow): Entry {
     ...(row.source ? { source: row.source as Entry['source'] } : {}),
     ...(row.merchant ? { merchant: row.merchant } : {}),
     ...(row.occurred_at ? { occurredAt: row.occurred_at } : {}),
-    ...(row.currency ? { currency: row.currency } : {}),
+    ...(normalizeCurrencyCode(row.currency) ? { currency: normalizeCurrencyCode(row.currency)! } : {}),
     ...(row.import_key ? { importKey: row.import_key } : {}),
     dedupeKey: row.dedupe_key,
   }
@@ -199,6 +200,7 @@ export interface NewManualEntry {
   note: string
   date: string
   id?: string // optional; lets imports/migration preserve a stable id so re-runs are idempotent
+  currency?: string
 }
 
 export async function fetchEntries(): Promise<Entry[]> {
@@ -226,7 +228,7 @@ export async function createEntryApi(input: NewManualEntry | Entry): Promise<Ent
     ...(partial.importKey ? { importKey: partial.importKey } : {}),
     ...(partial.merchant ? { merchant: partial.merchant } : {}),
     ...(partial.occurredAt ? { occurredAt: partial.occurredAt } : {}),
-    ...(partial.currency ? { currency: partial.currency } : {}),
+    ...(normalizeCurrencyCode(partial.currency) ? { currency: normalizeCurrencyCode(partial.currency)! } : {}),
     dedupeKey: partial.dedupeKey ?? buildDedupeKey('manual', input.date, input.amount, input.note, id),
   }
   // Upsert-do-nothing on id: a queue replay after a network blip (where the first attempt
@@ -276,6 +278,7 @@ export async function updateEntryApi(id: string, patch: Partial<Entry>): Promise
           .delete()
           .eq('user_id', userId)
           .eq('normalized_merchant', normalizedMerchant)
+          .eq('currency', normalizeCurrencyCode(entry.currency) ?? 'SGD')
         if (preferenceError) throwFrom(preferenceError, preferenceStatus)
       } else {
         const { error: preferenceError, status: preferenceStatus } = await preferenceQuery.upsert(
@@ -284,8 +287,9 @@ export async function updateEntryApi(id: string, patch: Partial<Entry>): Promise
             normalized_merchant: normalizedMerchant,
             merchant_label: entry.merchant,
             category_id: patch.category,
+            currency: normalizeCurrencyCode(entry.currency) ?? 'SGD',
           },
-          { onConflict: 'user_id,normalized_merchant' },
+          { onConflict: 'user_id,normalized_merchant,currency' },
         )
         if (preferenceError) throwFrom(preferenceError, preferenceStatus)
       }

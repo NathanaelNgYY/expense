@@ -8,11 +8,12 @@ import {
   type AutomaticCategoryRule,
 } from '../../../src/shared/automaticCategoryRules.ts'
 import { fingerprintIngestEvent } from '../../../src/shared/dedupe.ts'
+import { entriesForCurrency, normalizeCurrencyCode } from '../../../src/shared/currency.ts'
 
 export interface IngestStore {
   list(): Promise<Entry[]>
   listAutomaticCategoryRules?(): Promise<AutomaticCategoryRule[]>
-  categoryPreferenceForMerchant?(merchant: string): Promise<string | null>
+  categoryPreferenceForMerchant?(merchant: string, currency: string): Promise<string | null>
   has(dedupeKey: string): Promise<boolean>
   put(entry: Entry): Promise<void>
   recordCapture?(sourceKind: IngestBody['sourceKind']): Promise<void>
@@ -22,15 +23,17 @@ async function automaticCategory(
   store: IngestStore,
   merchant: string,
   occurredAt: string | undefined,
+  rawCurrency: string | undefined,
 ): Promise<string | null> {
+  const currency = normalizeCurrencyCode(rawCurrency) ?? 'SGD'
   try {
-    const preference = await store.categoryPreferenceForMerchant?.(merchant)
+    const preference = await store.categoryPreferenceForMerchant?.(merchant, currency)
     if (preference) return preference
   } catch {
     // A preference lookup failure must not block transaction capture. History
     // and the built-in merchant pack remain available as safe fallbacks.
   }
-  const history = await store.list()
+  const history = entriesForCurrency(await store.list(), currency)
   let rules: AutomaticCategoryRule[] = []
   try {
     rules = await store.listAutomaticCategoryRules?.() ?? []
@@ -80,7 +83,7 @@ export async function handleIngest(
       sourceKind: 'apple_pay',
       amount: Math.round(body.amount * 100) / 100,
       merchant,
-      learnedCategory: await automaticCategory(store, merchant, body.occurredAt),
+      learnedCategory: await automaticCategory(store, merchant, body.occurredAt, body.currency),
       occurredAt: body.occurredAt,
       currency: body.currency,
       ...(idempotencyKey
@@ -93,7 +96,7 @@ export async function handleIngest(
       return { status: 'error', reason: parsed.reason === 'invalid-amount' ? 'invalid-dbs-amount' : 'no-amount' }
     }
     const occurredAt = parsed.occurredAt ?? body.occurredAt
-    const learnedCategory = await automaticCategory(store, parsed.merchant, occurredAt)
+    const learnedCategory = await automaticCategory(store, parsed.merchant, occurredAt, 'SGD')
     input = {
       sourceKind: 'dbs_email',
       amount: parsed.amount,
@@ -101,7 +104,7 @@ export async function handleIngest(
       channel: parsed.channel,
       learnedCategory: learnedCategory ?? (parsed.recipientKind === 'person' ? 'others' : null),
       occurredAt,
-      currency: body.currency,
+      currency: 'SGD',
       eventFingerprint: await fingerprintIngestEvent(body.idempotencyKey?.trim() ?? body.rawBody),
     }
   } else {

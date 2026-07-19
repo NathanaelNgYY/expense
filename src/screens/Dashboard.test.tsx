@@ -6,7 +6,7 @@ import { EntriesProvider } from '../EntriesContext'
 import { BudgetConfigProvider } from '../BudgetConfigContext'
 import type { Entry } from '../types'
 import { DEFAULT_BUDGET } from '../types'
-import { saveActiveCurrency, saveWalletMap } from '../storage'
+import { getWalletMap, saveActiveCurrency, saveWalletMap } from '../storage'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
 
 const sharedCtx = vi.hoisted(() => ({
@@ -200,6 +200,23 @@ describe('Dashboard category expense history', () => {
     expect(rendered.container).toHaveTextContent('2 transactions in THB')
     expect(rendered.container).toHaveTextContent('not included in your SGD budget')
     expect(rendered.container.querySelector('.home-safe-amount')).not.toHaveTextContent('฿')
+  })
+
+  it('creates an unconfigured capture wallet without converting its entries', () => {
+    const rendered = renderWithEntries([
+      entry({ id: 'sgd', amount: 12, currency: 'SGD' }),
+      entry({ id: 'thb', amount: 80, currency: 'THB' }),
+    ])
+    root = rendered.root
+
+    clickButton(rendered.container, button => button.textContent?.includes('Create THB wallet') === true)
+    const dialog = rendered.container.querySelector('[role="dialog"]')
+    expect(dialog).toHaveTextContent('Add a currency')
+    clickButton(rendered.container, button => button.textContent?.includes('Create wallet') === true)
+
+    expect(getWalletMap()).toHaveProperty('THB')
+    expect(rendered.container.querySelector('.wallet-switcher-trigger')).toHaveTextContent('THB')
+    expect(rendered.container).toHaveTextContent('฿80.00')
   })
 
   it('shows notes for others expenses', () => {

@@ -1,6 +1,6 @@
 import { format } from 'date-fns'
 import { toLocalDateString } from '../../dates'
-import { formatSGD } from '../../format'
+import { formatMoney } from '../../format'
 
 interface Props {
   year: number
@@ -10,6 +10,7 @@ interface Props {
   today: string
   selectedDate: string | null
   onSelectDate: (date: string) => void
+  currency?: string
 }
 
 export default function SpendingCalendar({
@@ -20,6 +21,7 @@ export default function SpendingCalendar({
   today,
   selectedDate,
   onSelectDate,
+  currency = 'SGD',
 }: Props) {
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
@@ -45,7 +47,7 @@ export default function SpendingCalendar({
                   background: `color-mix(in srgb, var(--primary) ${Math.round(alpha * 100)}%, transparent)`,
                 }}
                 onClick={() => onSelectDate(dateString)}
-                aria-label={`${format(date, 'MMM d')}, ${formatSGD(spend)} net spent`}
+                aria-label={`${format(date, 'MMM d')}, ${formatMoney(spend, currency)} net spent`}
                 aria-pressed={isSelected}
               >
                 {day}

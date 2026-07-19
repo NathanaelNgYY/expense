@@ -79,7 +79,7 @@ class SupabaseEntryStore implements IngestStore {
     return isAutomaticCategoryRuleList(rules) ? rules : []
   }
 
-  async categoryPreferenceForMerchant(merchant: string): Promise<string | null> {
+  async categoryPreferenceForMerchant(merchant: string, currency: string): Promise<string | null> {
     const normalizedMerchant = normalizeCategoryMerchant(merchant)
     if (!normalizedMerchant) return null
     const { data, error } = await this.client
@@ -87,6 +87,7 @@ class SupabaseEntryStore implements IngestStore {
       .select('category_id')
       .eq('user_id', this.userId)
       .eq('normalized_merchant', normalizedMerchant)
+      .eq('currency', currency)
       .maybeSingle()
     if (error) throw new Error(error.message)
     return typeof data?.category_id === 'string' ? data.category_id : null

@@ -5,6 +5,7 @@ import type { DbsChannel } from './dbsEmail.ts'
 import { guessCategory } from './category.ts'
 import { buildDedupeKey } from './dedupe.ts'
 import { sgtDateString } from './sgtDate.ts'
+import { normalizeCurrencyCode } from './currency.ts'
 
 export interface IngestInput {
   sourceKind: 'apple_pay' | 'dbs_email'
@@ -57,7 +58,7 @@ export function buildEntryFromIngest(
     source: SOURCE_MAP[input.sourceKind],
     merchant,
     occurredAt: canonicalOccurredAt,
-    currency: input.currency ?? 'SGD',
+    currency: normalizeCurrencyCode(input.currency) ?? 'SGD',
     dedupeKey: buildDedupeKey(
       input.sourceKind,
       occurrenceMinute.toISOString(),

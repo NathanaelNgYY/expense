@@ -20,6 +20,33 @@ test('first-run user records a personal expense', async ({ page }) => {
   ]))
 })
 
+test('user creates and switches between isolated SGD and MYR wallets', async ({ page }) => {
+  await prepareApp(page, [{
+    id: 'sgd-existing', amount: 12, category: 'lunch', note: 'Singapore lunch',
+    date: currentLocalDate(), currency: 'SGD',
+  }])
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('button', { name: /Budget & Categories/ }).click()
+  await page.getByRole('button', { name: /Switch currency wallet/ }).click()
+  await page.getByRole('button', { name: 'Add currency' }).click()
+  await page.getByLabel('Monthly amount').fill('3000')
+  await page.getByRole('button', { name: 'Create wallet' }).click()
+
+  await page.getByRole('button', { name: 'Add entry' }).click()
+  await page.getByRole('button', { name: '2', exact: true }).click()
+  await page.getByRole('button', { name: '3', exact: true }).click()
+  await page.getByRole('button', { name: 'Lunch', exact: true }).click()
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.locator('.save-toast')).toContainText('Saved RM23.00')
+  await expect(page.locator('.pass-meta')).toContainText('RM23 of RM3,000 allocated')
+
+  await page.getByRole('button', { name: /Switch currency wallet, currently MYR/ }).click()
+  await page.getByRole('button', { name: /Singapore dollar/ }).click()
+  await expect(page.locator('.pass-meta')).toContainText('S$12 of S$1,200 allocated')
+  await expect(page.locator('.pass-meta')).not.toContainText('RM23')
+})
+
 test('Others is the only flexible-budget UI', async ({ page }) => {
   await prepareApp(page, [{
     id: 'others-1',

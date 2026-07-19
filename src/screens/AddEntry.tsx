@@ -10,6 +10,7 @@ import { useBudgetConfig } from '../BudgetConfigContext'
 import { buildCategoryOptions } from '../categoryDisplay'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
 import type { EntryKind } from '../types'
+import { formatMoney } from '../format'
 
 /** What was just logged, so the shell can confirm it and offer an undo. */
 export interface SavedEntrySummary {
@@ -17,6 +18,7 @@ export interface SavedEntrySummary {
   amount: number
   kind: EntryKind
   categoryLabel: string | null
+  currency: string
 }
 
 interface Props {
@@ -49,7 +51,7 @@ export default function AddEntry({ initialDate, onSave }: Props) {
     setKind('expense')
   }
 
-  const { customCategories, overrides } = useBudgetConfig()
+  const { customCategories, overrides, activeCurrency } = useBudgetConfig()
   const selectedSharedBudget = shared.budgets.find(b => b.id === selectedBudgetId) ?? null
   const isSharedDestination = selectedBudgetId !== null
   const activeSharedReady = shared.active?.budget.id === selectedBudgetId
@@ -61,7 +63,8 @@ export default function AddEntry({ initialDate, onSave }: Props) {
   const categoryOptions = isSharedDestination ? sharedCategoryOptions : personalCategoryOptions
 
   const amount = parseFloat(digits) || 0
-  const amountText = `S$${amount.toFixed(2)}`
+  const entryCurrency = isSharedDestination ? selectedSharedBudget?.currency ?? 'SGD' : activeCurrency
+  const amountText = formatMoney(amount, entryCurrency)
   const activeGlyphIndex = getActiveGlyphIndex(digits, amountText, animationCue.key)
 
   // M4: announcing on every keypress spammed screen readers with the full re-read amount.
@@ -145,12 +148,14 @@ export default function AddEntry({ initialDate, onSave }: Props) {
       category,
       note,
       date: entryDate,
+      currency: activeCurrency,
     })
     onSave({
       id,
       amount,
       kind,
       categoryLabel: category ? categoryOptions.find(o => o.id === category)?.label ?? null : null,
+      currency: activeCurrency,
     })
   }
 

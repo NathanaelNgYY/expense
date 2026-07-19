@@ -72,12 +72,16 @@ export function formatRemaining(remaining: number, currency: CurrencyCode = 'SGD
 
 /** For P&L, where the sign carries the meaning. Zero is unsigned: it is neither. */
 export function formatSignedSGD(value: number): string {
-  if (value === 0) return formatSGD(0)
-  return `${value > 0 ? '+' : '-'}${formatSGD(Math.abs(value))}`
+  return formatSignedMoney(value, 'SGD')
+}
+
+export function formatSignedMoney(value: number, currency: CurrencyCode): string {
+  if (value === 0) return formatMoney(0, currency)
+  return `${value > 0 ? '+' : '-'}${formatMoney(Math.abs(value), currency)}`
 }
 
 /** Ledger convention: refunds are positive credits while stored amounts stay positive. */
-export function formatEntryAmount(entry: Pick<Entry, 'amount' | 'kind'>): string {
-  const currency = entryCurrency(entry as Pick<Entry, 'currency'>)
+export function formatEntryAmount(entry: Pick<Entry, 'amount' | 'kind' | 'currency'>): string {
+  const currency = entryCurrency(entry)
   return isRefund(entry) ? `+${formatMoney(entry.amount, currency)}` : formatMoney(entry.amount, currency)
 }

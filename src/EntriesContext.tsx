@@ -14,6 +14,7 @@ import {
 } from './api'
 import { getQueue, setQueue } from './syncQueue'
 import { migrateEntriesIfNeeded, syncPokerSessionsIfNeeded } from './supabaseSync'
+import { normalizeCurrencyCode } from './shared/currency'
 
 /**
  * What the user is owed after they tap Save. Mutations are locally durable the instant
@@ -212,6 +213,7 @@ export function EntriesProvider({ children }: { children: ReactNode }) {
       note: input.note,
       date: input.date,
       source: 'manual',
+      ...(normalizeCurrencyCode(input.currency) ? { currency: normalizeCurrencyCode(input.currency)! } : {}),
     }
     commit([...entriesRef.current, optimistic])
     setQueue([...getQueue(), { op: 'create', entry: optimistic }])

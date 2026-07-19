@@ -39,6 +39,27 @@ test('primary screens have a page heading and no automated WCAG A/AA violations'
   await expect(page.getByText('PayNow has no native Shortcuts trigger')).toBeVisible()
 })
 
+test('currency wallet sheet has no automated WCAG A/AA violations', async ({ page }) => {
+  await prepareApp(page, [
+    { id: 'sgd', amount: 12, category: 'lunch', note: '', date: currentLocalDate(), currency: 'SGD' },
+    { id: 'myr', amount: 20, category: 'lunch', note: '', date: currentLocalDate(), currency: 'MYR' },
+  ])
+  await page.addInitScript(() => {
+    const budget = JSON.parse(localStorage.getItem('budget_config') ?? '{}')
+    localStorage.setItem('budget_wallets_v2', JSON.stringify({
+      SGD: { config: budget, customCategories: [], overrides: {} },
+      MYR: { config: { ...budget, monthlyIncome: 3000 }, customCategories: [], overrides: {} },
+    }))
+  })
+  await page.goto('/')
+  await page.getByRole('button', { name: /Switch currency wallet/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Switch wallet' })).toBeVisible()
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze()
+  expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([])
+})
+
 test('keyboard focus reaches named navigation and form controls', async ({ page }) => {
   await prepareApp(page)
   await page.goto('/')

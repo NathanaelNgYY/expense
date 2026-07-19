@@ -12,7 +12,7 @@ import {
 import { CATEGORIES } from '../types'
 import { categoryLabel } from '../categoryDisplay'
 import { useBudgetConfig } from '../BudgetConfigContext'
-import { formatSGD, formatSignedSGD } from '../format'
+import { formatMoney, formatSignedMoney } from '../format'
 import { fromLocalDateString } from '../dates'
 import type { CustomCategory, Entry } from '../types'
 
@@ -21,6 +21,7 @@ interface Props {
   year: number
   month: number
   customCategories: CustomCategory[]
+  currency?: string
 }
 
 // Below this many entries in the month, "Mostly Wednesdays" and "Most expensive category"
@@ -28,7 +29,7 @@ interface Props {
 // screen look equally made up.
 const MIN_ENTRIES_FOR_INSIGHTS = 15
 
-export default function InsightsSection({ entries, year, month, customCategories }: Props) {
+export default function InsightsSection({ entries, year, month, customCategories, currency = 'SGD' }: Props) {
   const { overrides } = useBudgetConfig()
   const topCat = mostExpensiveCategory(entries, year, month, customCategories)
   const avgLunch = averageLunchPerEntry(entries, year, month)
@@ -50,7 +51,7 @@ export default function InsightsSection({ entries, year, month, customCategories
   const reviewParts = [
     topCat ? `You spent most on ${categoryLabel(topCat.category, overrides, customCategories)}.` : null,
     topDay ? `Biggest day: ${format(fromLocalDateString(topDay.date), 'EEE, MMM d')}.` : null,
-    delta !== null ? `${delta > 0 ? 'Up' : 'Down'} ${formatSGD(Math.abs(delta))} vs last month.` : null,
+    delta !== null ? `${delta > 0 ? 'Up' : 'Down'} ${formatMoney(Math.abs(delta), currency)} vs last month.` : null,
   ].filter(Boolean)
 
   if (!hasEnoughData) {
@@ -84,7 +85,7 @@ export default function InsightsSection({ entries, year, month, customCategories
               Most expensive
             </span>
             <span className="insight-value">
-              {categoryLabel(topCat.category, overrides, customCategories)} — {formatSGD(topCat.amount)}
+              {categoryLabel(topCat.category, overrides, customCategories)} — {formatMoney(topCat.amount, currency)}
             </span>
           </div>
         )}
@@ -94,7 +95,7 @@ export default function InsightsSection({ entries, year, month, customCategories
               <Utensils size={16} strokeWidth={2} aria-hidden="true" />
               Avg lunch
             </span>
-            <span className="insight-value">{formatSGD(avgLunch)} per entry</span>
+            <span className="insight-value">{formatMoney(avgLunch, currency)} per entry</span>
           </div>
         )}
         {topDay && (
@@ -104,7 +105,7 @@ export default function InsightsSection({ entries, year, month, customCategories
               Highest day
             </span>
             <span className="insight-value">
-              {format(fromLocalDateString(topDay.date), 'EEE MMM d')} — {formatSGD(topDay.amount)}
+              {format(fromLocalDateString(topDay.date), 'EEE MMM d')} — {formatMoney(topDay.amount, currency)}
             </span>
           </div>
         )}
@@ -128,7 +129,7 @@ export default function InsightsSection({ entries, year, month, customCategories
               vs last month
             </span>
             <span className="insight-value" style={{ color: delta > 0 ? 'var(--red)' : 'var(--green)' }}>
-              {formatSignedSGD(delta)}
+              {formatSignedMoney(delta, currency)}
             </span>
           </div>
         )}
@@ -143,10 +144,10 @@ export default function InsightsSection({ entries, year, month, customCategories
               className="month-change-total"
               style={{ color: comparison.totalDelta > 0 ? 'var(--red)' : 'var(--green)' }}
             >
-              {formatSignedSGD(comparison.totalDelta)}
+              {formatSignedMoney(comparison.totalDelta, currency)}
             </strong>
             <p className="card-subtitle">
-              {formatSGD(comparison.currentTotal)} this month &middot; {formatSGD(comparison.previousTotal)} last month
+              {formatMoney(comparison.currentTotal, currency)} this month &middot; {formatMoney(comparison.previousTotal, currency)} last month
             </p>
           </div>
           <div className="ios-list">
@@ -158,7 +159,7 @@ export default function InsightsSection({ entries, year, month, customCategories
                 </span>
                 <span className="insight-value" style={{ color: 'var(--red)' }}>
                   {categoryLabel(comparison.biggestIncrease.category, overrides)}{' '}
-                  {formatSignedSGD(comparison.biggestIncrease.delta)}
+                  {formatSignedMoney(comparison.biggestIncrease.delta, currency)}
                 </span>
               </div>
             )}
@@ -170,7 +171,7 @@ export default function InsightsSection({ entries, year, month, customCategories
                 </span>
                 <span className="insight-value" style={{ color: 'var(--green)' }}>
                   {categoryLabel(comparison.biggestDecrease.category, overrides)}{' '}
-                  {formatSignedSGD(comparison.biggestDecrease.delta)}
+                  {formatSignedMoney(comparison.biggestDecrease.delta, currency)}
                 </span>
               </div>
             )}
@@ -187,7 +188,7 @@ export default function InsightsSection({ entries, year, month, customCategories
                     className="insight-value"
                     style={{ color: categoryDelta.delta > 0 ? 'var(--red)' : 'var(--green)' }}
                   >
-                    {formatSignedSGD(categoryDelta.delta)}
+                    {formatSignedMoney(categoryDelta.delta, currency)}
                   </span>
                 </div>
               )

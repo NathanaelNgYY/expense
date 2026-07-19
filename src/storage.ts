@@ -111,6 +111,14 @@ export function getWalletMap(): WalletMap {
 
 export function saveWalletMap(wallets: WalletMap): void {
   setUserStorageItem(WALLETS_KEY, JSON.stringify(wallets))
+  // Keep the original SGD keys as a compatibility mirror for older installs and
+  // backups. Wallet-aware reads use the map; legacy code continues to see SGD.
+  const sgd = wallets[DEFAULT_CURRENCY]
+  if (sgd) {
+    setUserStorageItem(CONFIG_KEY, JSON.stringify(sgd.config))
+    setUserStorageItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(sgd.customCategories))
+    setUserStorageItem(CATEGORY_OVERRIDES_KEY, JSON.stringify(sgd.overrides))
+  }
 }
 
 export function getActiveCurrency(wallets: WalletMap = getWalletMap()): CurrencyCode {

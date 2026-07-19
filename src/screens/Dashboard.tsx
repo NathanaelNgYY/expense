@@ -6,6 +6,7 @@ import BudgetUsageRing from '../components/BudgetUsageRing'
 import BudgetPassStack, { type BudgetPass } from '../components/dashboard/BudgetPassStack'
 import SharedBudgetDashboard from '../components/dashboard/SharedBudgetDashboard'
 import SyncStatus from '../components/SyncStatus'
+import CurrencyWalletMenu from '../components/CurrencyWalletMenu'
 import { downloadJsonBackup } from '../dataTransfer'
 import { useBudgetConfig } from '../BudgetConfigContext'
 import { categoryIcon, categoryLabel } from '../categoryDisplay'
@@ -22,12 +23,13 @@ import {
 } from '../compute'
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
 import { sgtToday } from '../shared/sgtDate'
-import { formatEntryAmount, formatSGD, formatSGDWhole, formatRemaining } from '../format'
+import { formatEntryAmount, formatMoney, formatMoneyWhole, formatRemaining } from '../format'
 import { getCaptureHealthWarning } from '../captureHealth'
 import type { Category, Entry } from '../types'
 import { useEntries } from '../EntriesContext'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
 import { entryNetAmount, isRefund } from '../shared/entryAmount'
+import { entriesForCurrency, unconfiguredCurrencyCounts } from '../shared/currency'
 import {
   currentSgtMonth,
   entriesForMonth as sharedEntriesForMonth,
@@ -55,11 +57,13 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null)
   const [viewScope, setViewScope] = useState<'personal' | 'shared'>('personal')
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
+  const [requestedWalletCurrency, setRequestedWalletCurrency] = useState<string | null>(null)
   const now = sgtToday()
-  const { entries, removeEntry, sync, refresh } = useEntries()
+  const { entries: allEntries, removeEntry, sync, refresh } = useEntries()
   const shared = useSharedBudgets()
   const { openBudget } = shared
-  const { config, customCategories, overrides } = useBudgetConfig()
+  const { config, customCategories, overrides, activeCurrency, currencies } = useBudgetConfig()
+  const entries = entriesForCurrency(allEntries, activeCurrency)
   const categoryIds = allCategoryIds(customCategories)
   const budgets = categoryBudgets(config, customCategories)
   const labelFor = (id: string): string => categoryLabel(id, overrides, customCategories)
@@ -73,7 +77,9 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
   const uncategorizedTotal = uncategorizedEntries.reduce((sum, entry) => sum + entryNetAmount(entry), 0)
   const uncategorizedExpanded = expandedCategory === 'uncategorized'
   const todayDate = toLocalDateString(now)
-  const captureHealthWarning = getCaptureHealthWarning(entries, todayDate)
+  const captureHealthWarning = getCaptureHealthWarning(allEntries, todayDate)
+  const unconfiguredCurrencies = Object.entries(unconfiguredCurrencyCounts(allEntries, currencies))
+  const [unconfiguredCurrency, unconfiguredCount] = unconfiguredCurrencies[0] ?? []
   const recentExpenseStartDate = toLocalDateString(addDays(now, -14))
   const monthTotal = currentMonthEntries.reduce((sum, entry) => sum + entryNetAmount(entry), 0)
   const spend = monthlySpendByCategory(entries, now.getFullYear(), now.getMonth(), customCategories)
@@ -151,6 +157,7 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
         limit: monthlyIncome,
         pct: budgetUsedPct,
         usageLabel: 'allocated',
+        currency: activeCurrency,
       }
     }
     if (shared.active?.budget.id === item.id) {
@@ -159,7 +166,7 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
       const spent = sharedTotalSpent(monthEntries)
       const limit = shared.active.budget.monthlyLimit
       const pct = limit !== null && limit > 0 ? Math.min(100, (spent / limit) * 100) : spent > 0 ? 100 : 0
-      return { title: item.name, subtitle: 'Shared', amount: spent, limit, pct, usageLabel: 'spent' }
+      return { title: item.name, subtitle: 'Shared', amount: spent, limit, pct, usageLabel: 'spent', currency: 'SGD' }
     }
     return { title: item.name, subtitle: 'Shared', amount: null, limit: null, pct: 0, usageLabel: 'spent' }
   }
@@ -243,11 +250,29 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
       <header className="dashboard-header">
         <div>
           <h1 className="month-label"><span className="sr-only">Dashboard: </span>{monthLabel}</h1>
-          <div className="income-label">{formatSGDWhole(monthlyIncome)} / month</div>
+          <div className="income-label">{formatMoneyWhole(monthlyIncome, activeCurrency)} / month</div>
         </div>
+        <CurrencyWalletMenu
+          key={requestedWalletCurrency ?? 'wallet-menu'}
+          entries={allEntries}
+          requestedCurrency={requestedWalletCurrency}
+          onRequestedCurrencyHandled={() => setRequestedWalletCurrency(null)}
+        />
       </header>
 
       <SyncStatus sync={sync} onRetry={() => void refresh()} onBackup={downloadJsonBackup} />
+
+      {viewScope === 'personal' && unconfiguredCurrency && unconfiguredCount && (
+        <section className="unconfigured-currency-banner" role="status">
+          <div>
+            <strong>{unconfiguredCount} transaction{unconfiguredCount === 1 ? '' : 's'} in {unconfiguredCurrency}</strong>
+            <p>These are safe, but not included in your {activeCurrency} budget.</p>
+          </div>
+          <button type="button" onClick={() => setRequestedWalletCurrency(unconfiguredCurrency)}>
+            Create {unconfiguredCurrency} wallet
+          </button>
+        </section>
+      )}
 
       {viewScope === 'personal' && captureHealthWarning && (
         <section
@@ -301,13 +326,13 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
         <>
 
       <section className="home-budget-overview" aria-label="Monthly budget overview">
-        <BudgetUsageRing allocated={monthTotal} total={monthlyIncome} />
+        <BudgetUsageRing allocated={monthTotal} total={monthlyIncome} currency={activeCurrency} />
         <div className="home-budget-overview__copy">
           <span className="summary-label">Safe to spend today</span>
           <strong className="home-safe-amount">
-            {formatSGD(Math.max(0, safePerDay))}
+            {formatMoney(Math.max(0, safePerDay), activeCurrency)}
           </strong>
-          <span className="muted">{formatRemaining(buffer)} in your Others budget</span>
+          <span className="muted">{formatRemaining(buffer, activeCurrency)} in your Others budget</span>
         </div>
       </section>
 
@@ -339,14 +364,14 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
             ? Math.max(0, Math.min(100, (spent / budget) * 100))
             : 0
         const statusLabel = isFlexible
-          ? formatRemaining(buffer)
+          ? formatRemaining(buffer, activeCurrency)
           : committed
             ? spent >= budget
               ? 'Committed'
-              : `${formatSGD(deficit)} to commit`
+              : `${formatMoney(deficit, activeCurrency)} to commit`
             : !hasBudget
               ? ''
-              : formatRemaining(deficit)
+              : formatRemaining(deficit, activeCurrency)
 
         return (
           <article
@@ -367,7 +392,7 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
                 </span>
                 <span className="cat-row-right">
                   <span className="cat-spent-group">
-                    <span className="cat-spent">{formatSGD(spent)}</span>
+                    <span className="cat-spent">{formatMoney(spent, activeCurrency)}</span>
                     {expanded ? (
                       <ChevronUp className="cat-chevron" aria-hidden="true" strokeWidth={2.4} />
                     ) : (
@@ -405,9 +430,9 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
               <span className="cat-row-bottom">
                 <span className="muted">
                   {isFlexible
-                    ? `Budget ${formatSGDWhole(config.buffer)}`
+                    ? `Budget ${formatMoneyWhole(config.buffer, activeCurrency)}`
                     : hasBudget
-                    ? `${committed ? 'Monthly commitment' : 'Budget'} ${formatSGDWhole(budget)}`
+                    ? `${committed ? 'Monthly commitment' : 'Budget'} ${formatMoneyWhole(budget, activeCurrency)}`
                     : 'No budget set'}
                 </span>
                 {over && <span className="over-note">Covered by flexible budget</span>}
@@ -453,7 +478,7 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
               </span>
               <span className="cat-row-right">
                 <span className="cat-spent-group">
-                  <span className="cat-spent">{formatSGD(uncategorizedTotal)}</span>
+                  <span className="cat-spent">{formatMoney(uncategorizedTotal, activeCurrency)}</span>
                   {uncategorizedExpanded ? (
                     <ChevronUp className="cat-chevron" aria-hidden="true" strokeWidth={2.4} />
                   ) : (
@@ -489,7 +514,7 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
 
       <div className="card week-strip">
         <span className="muted">This week</span>
-        <span className="week-amount">{formatSGD(thisWeek)}</span>
+        <span className="week-amount">{formatMoney(thisWeek, activeCurrency)}</span>
       </div>
         </>
       )}

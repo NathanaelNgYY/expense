@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EntriesProvider } from '../EntriesContext'
 import { BudgetConfigProvider } from '../BudgetConfigContext'
 import Insights from './Insights'
+import { DEFAULT_BUDGET } from '../types'
+import { saveActiveCurrency, saveWalletMap } from '../storage'
 
 describe('Insights', () => {
   let root: Root | null = null
@@ -69,5 +71,24 @@ describe('Insights', () => {
     expect(firstWeek).toHaveAccessibleDescription(
       'Total S$10.00 of S$116.13 target. Lunch S$10.00 of S$25.55 target.',
     )
+  })
+
+  it('only analyzes entries in the active currency wallet', async () => {
+    saveWalletMap({
+      SGD: { config: DEFAULT_BUDGET, customCategories: [], overrides: {} },
+      MYR: { config: { ...DEFAULT_BUDGET, monthlyIncome: 3000 }, customCategories: [], overrides: {} },
+    })
+    saveActiveCurrency('MYR')
+    localStorage.setItem('budget_entries', JSON.stringify([
+      { id: 'sgd', amount: 90, category: 'lunch', note: '', date: '2026-05-01', currency: 'SGD' },
+      { id: 'myr', amount: 25, category: 'lunch', note: '', date: '2026-05-01', currency: 'MYR' },
+    ]))
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => root?.render(<BudgetConfigProvider><EntriesProvider><Insights /></EntriesProvider></BudgetConfigProvider>))
+
+    expect(container).toHaveTextContent('RM25.00')
+    expect(container).not.toHaveTextContent('S$90.00')
   })
 })

@@ -37,4 +37,24 @@ describe('local stack schema', () => {
       await deleteUser(user)
     }
   })
+
+  it('exposes the constrained entries kind column with an expense default', async () => {
+    const user = await signedInUser()
+    try {
+      const id = crypto.randomUUID()
+      const { data, error } = await serviceClient().from('entries').insert({
+        id,
+        user_id: user.id,
+        amount: 1,
+        note: '',
+        date: '2026-07-19',
+        dedupe_key: `schema-kind-${id}`,
+      }).select('kind').single()
+
+      expect(error).toBeNull()
+      expect(data?.kind).toBe('expense')
+    } finally {
+      await deleteUser(user)
+    }
+  })
 })

@@ -77,7 +77,7 @@ describe('AddEntry', () => {
       renderWithEntries()
     })
 
-    const dateInput = screen.getByLabelText('Expense date')
+    const dateInput = screen.getByLabelText('Entry date')
     expect(dateInput).toHaveAttribute('type', 'date')
     expect(dateInput).toHaveValue('2026-08-01')
     expect(dateInput).toHaveAttribute('max', '2026-08-01')
@@ -96,7 +96,7 @@ describe('AddEntry', () => {
       )
     })
 
-    expect(screen.getByLabelText('Expense date')).toHaveValue('2026-05-18')
+    expect(screen.getByLabelText('Entry date')).toHaveValue('2026-05-18')
     expect(screen.getByRole('button', { name: 'Add for May 18' })).toBeInTheDocument()
     act(() => {
       screen.getByRole('button', { name: '5' }).click()
@@ -116,7 +116,7 @@ describe('AddEntry', () => {
       renderWithEntries()
     })
 
-    fireEvent.change(screen.getByLabelText('Expense date'), { target: { value: '2026-05-17' } })
+    fireEvent.change(screen.getByLabelText('Entry date'), { target: { value: '2026-05-17' } })
     expect(screen.getByRole('button', { name: 'Add for May 17' })).toBeInTheDocument()
 
     act(() => {
@@ -158,6 +158,24 @@ describe('AddEntry', () => {
 
     const saveButton = screen.getByRole('button', { name: /save/i })
     expect(saveButton).not.toBeDisabled()
+  })
+
+  it('records a personal refund with a positive amount and explicit refund kind', async () => {
+    await act(async () => {
+      renderWithEntries()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refund' }))
+    fireEvent.click(screen.getByRole('button', { name: '5', exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Lunch', exact: true }))
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save refund' }))
+    })
+
+    expect(getEntries()).toEqual([
+      expect.objectContaining({ amount: 5, category: 'lunch', kind: 'refund' }),
+    ])
   })
 
   it('accepts amount input from a physical keyboard', async () => {

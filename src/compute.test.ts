@@ -67,6 +67,42 @@ describe('monthlySpendByCategory', () => {
 
     expect((result as Record<string, number>).others).toBe(200)
   })
+
+  it('nets refunds against the category they restore', () => {
+    const result = monthlySpendByCategory([
+      e({ id: 'expense', amount: 40, category: 'lunch' }),
+      e({ id: 'refund', amount: 12.5, category: 'lunch', kind: 'refund' }),
+    ], 2026, 4)
+
+    expect(result.lunch).toBe(27.5)
+  })
+})
+
+describe('refund-aware spending analytics', () => {
+  const entries = [
+    e({ id: 'expense-1', amount: 20, date: '2026-05-04', category: 'lunch' }),
+    e({ id: 'expense-2', amount: 10, date: '2026-05-05', category: 'lunch' }),
+    e({ id: 'refund', amount: 6, date: '2026-05-05', category: 'lunch', kind: 'refund' }),
+  ]
+
+  it('nets refunds from weekly totals, forecasts, and safe-to-spend', () => {
+    const referenceDate = new Date(2026, 4, 5)
+
+    expect(weeklyTotal(entries, referenceDate)).toBe(24)
+    expect(lunchWeeklySpend(entries, referenceDate)).toBe(24)
+    expect(monthlySpendForecast(entries, 2026, 4, referenceDate).spentToDate).toBe(24)
+    expect(safeToSpendPerDay(entries, 2026, 4, 100, referenceDate).remainingBudget).toBe(76)
+  })
+
+  it('uses purchases as the average denominator while netting their refunds', () => {
+    expect(averageLunchPerEntry(entries, 2026, 4)).toBe(12)
+  })
+
+  it('does not report a refund-only category as the most expensive', () => {
+    const refundOnly = [e({ amount: 30, category: 'transport', kind: 'refund' })]
+
+    expect(mostExpensiveCategory(refundOnly, 2026, 4)).toBeNull()
+  })
 })
 
 describe('categoryDeficits', () => {

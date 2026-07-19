@@ -1,4 +1,4 @@
-import { formatSGDWhole } from '../../format'
+import { formatMoneyWhole } from '../../format'
 
 export interface BudgetPass {
   id: string
@@ -8,6 +8,7 @@ export interface BudgetPass {
   limit: number | null
   pct: number
   usageLabel: 'allocated' | 'spent'
+  currency?: string
 }
 
 interface Props {
@@ -43,13 +44,13 @@ export default function BudgetPassStack({ passes, onSelect }: Props) {
                 <>
                   <div className="pass-amt-label">{overspent ? 'Over budget by' : 'Left to spend'}</div>
                   <div className={`pass-amt ${overspent ? 'pass-amt--over' : ''}`}>
-                    {formatSGDWhole(Math.abs(remaining!))}
+                    {formatMoneyWhole(Math.abs(remaining!), pass.currency ?? 'SGD')}
                   </div>
                 </>
               ) : (
                 <>
                   <div className="pass-amt-label">Spent this month</div>
-                  <div className="pass-amt">{formatSGDWhole(pass.amount!)}</div>
+                  <div className="pass-amt">{formatMoneyWhole(pass.amount!, pass.currency ?? 'SGD')}</div>
                 </>
               )}
               <div className="progress-bar pass-bar">
@@ -60,7 +61,7 @@ export default function BudgetPassStack({ passes, onSelect }: Props) {
               </div>
               {capped && (
                 <div className="pass-meta">
-                  {formatSGDWhole(pass.amount!)} of {formatSGDWhole(pass.limit!)} {pass.usageLabel}
+                  {formatMoneyWhole(pass.amount!, pass.currency ?? 'SGD')} of {formatMoneyWhole(pass.limit!, pass.currency ?? 'SGD')} {pass.usageLabel}
                 </div>
               )}
               {depth !== 0 && (

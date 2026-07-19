@@ -6,6 +6,8 @@ import { EntriesProvider } from '../EntriesContext'
 import { BudgetConfigProvider } from '../BudgetConfigContext'
 import { getEntries } from '../storage'
 import type { Entry } from '../types'
+import { DEFAULT_BUDGET } from '../types'
+import { saveActiveCurrency, saveWalletMap } from '../storage'
 
 function entry(overrides: Partial<Entry> = {}): Entry {
   return {
@@ -107,6 +109,27 @@ describe('History entry editing', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-05-19T12:00:00'))
     localStorage.clear()
+  })
+
+  it('shows only the active wallet and lets an entry move to another configured wallet', async () => {
+    saveWalletMap({
+      SGD: { config: DEFAULT_BUDGET, customCategories: [], overrides: {} },
+      MYR: { config: DEFAULT_BUDGET, customCategories: [], overrides: {} },
+    })
+    saveActiveCurrency('MYR')
+    const rendered = renderWithEntries([
+      entry({ id: 'sgd', note: 'Singapore', amount: 10, currency: 'SGD' }),
+      entry({ id: 'myr', note: 'Malaysia', amount: 20, currency: 'MYR' }),
+    ])
+    root = rendered.root
+    await act(async () => {})
+    expect(rendered.container).toHaveTextContent('Malaysia')
+    expect(rendered.container).not.toHaveTextContent('Singapore')
+    clickButton(rendered.container, 'Malaysia')
+    changeSelect(rendered.container.querySelector<HTMLSelectElement>('#edit-entry-wallet-myr')!, 'SGD')
+    clickButton(rendered.container, 'Save Changes')
+    await act(async () => {})
+    expect(getEntries().find(candidate => candidate.id === 'myr')?.currency).toBe('SGD')
   })
 
   afterEach(() => {

@@ -34,6 +34,8 @@ function Probe() {
   const budget = useBudgetConfig()
   return (
     <>
+      <output aria-label="active-currency">{budget.activeCurrency}</output>
+      <output aria-label="wallet-count">{budget.currencies.length}</output>
       <output aria-label="config">{JSON.stringify(budget.config)}</output>
       <output aria-label="categories">{JSON.stringify(budget.customCategories)}</output>
       <output aria-label="overrides">{JSON.stringify(budget.overrides)}</output>
@@ -51,6 +53,17 @@ function Probe() {
         Save all
       </button>
       <button type="button" onClick={budget.reload}>Reload</button>
+      <button
+        type="button"
+        onClick={() => budget.createWallet('MYR', {
+          config: { ...storedConfig, monthlyIncome: 3600 },
+          customCategories: [],
+          overrides: {},
+        })}
+      >
+        Create MYR
+      </button>
+      <button type="button" onClick={() => budget.setActiveCurrency('SGD')}>Switch SGD</button>
     </>
   )
 }
@@ -149,5 +162,20 @@ describe('BudgetConfigProvider', () => {
     })
 
     expect(screen.getByLabelText('config')).toHaveTextContent(JSON.stringify(storedConfig))
+  })
+
+  it('creates and switches isolated wallet snapshots', () => {
+    renderProbe()
+
+    act(() => screen.getByRole('button', { name: 'Create MYR' }).click())
+
+    expect(screen.getByLabelText('active-currency')).toHaveTextContent('MYR')
+    expect(screen.getByLabelText('wallet-count')).toHaveTextContent('2')
+    expect(screen.getByLabelText('config')).toHaveTextContent('"monthlyIncome":3600')
+
+    act(() => screen.getByRole('button', { name: 'Switch SGD' }).click())
+
+    expect(screen.getByLabelText('active-currency')).toHaveTextContent('SGD')
+    expect(screen.getByLabelText('config')).toHaveTextContent(JSON.stringify(DEFAULT_BUDGET))
   })
 })

@@ -14,8 +14,9 @@ import {
   weeksInMonth,
 } from '../compute'
 import { buildCategoryOptions } from '../categoryDisplay'
-import { formatSGD, formatSGDWhole } from '../format'
+import { formatMoney, formatMoneyWhole } from '../format'
 import { useBudgetConfig } from '../BudgetConfigContext'
+import { entriesForCurrency } from '../shared/currency'
 
 function progressPercent(amount: number, budget: number): number {
   if (budget <= 0) return amount > 0 ? 100 : 0
@@ -26,8 +27,9 @@ export default function Insights() {
   const now = sgtToday()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
-  const { entries } = useEntries()
-  const { config, customCategories, overrides } = useBudgetConfig()
+  const { entries: allEntries } = useEntries()
+  const { config, customCategories, overrides, activeCurrency } = useBudgetConfig()
+  const entries = entriesForCurrency(allEntries, activeCurrency)
   const categoryOptions = buildCategoryOptions(overrides, customCategories)
   const monthEntries = entriesForMonth(entries, year, month)
   const categorySpend = monthlySpendByCategory(entries, year, month, customCategories)
@@ -75,7 +77,7 @@ export default function Insights() {
               <BudgetIcon name={category.icon} />
               {category.label}
             </span>
-            <strong>{formatSGD(categorySpend[category.id] ?? 0)}</strong>
+            <strong>{formatMoney(categorySpend[category.id] ?? 0, activeCurrency)}</strong>
           </div>
         ))}
       </div>
@@ -99,10 +101,10 @@ export default function Insights() {
           >
             <div className="week-bar-header">
               <span className="week-bar-label">{label}</span>
-              <span className="week-bar-total">{formatSGD(total)} / ~{formatSGDWhole(weeklyBudget)}</span>
+              <span className="week-bar-total">{formatMoney(total, activeCurrency)} / ~{formatMoneyWhole(weeklyBudget, activeCurrency)}</span>
             </div>
             <span id={summaryId} className="sr-only">
-              Total {formatSGD(total)} of {formatSGD(weeklyBudget)} target. Lunch {formatSGD(lunch)} of {formatSGD(lunchWeeklyBudget)} target.
+              Total {formatMoney(total, activeCurrency)} of {formatMoney(weeklyBudget, activeCurrency)} target. Lunch {formatMoney(lunch, activeCurrency)} of {formatMoney(lunchWeeklyBudget, activeCurrency)} target.
             </span>
             <div className="progress-bar" style={{ marginTop: 6 }}>
               <div
@@ -114,7 +116,7 @@ export default function Insights() {
               />
             </div>
             <div className="week-bar-lunch">
-              <span className="muted">Lunch {formatSGD(lunch)} / ~{formatSGDWhole(lunchWeeklyBudget)}</span>
+              <span className="muted">Lunch {formatMoney(lunch, activeCurrency)} / ~{formatMoneyWhole(lunchWeeklyBudget, activeCurrency)}</span>
               <div className="progress-bar thin" style={{ marginTop: 4 }}>
                 <div
                   className="progress-fill"
@@ -129,7 +131,7 @@ export default function Insights() {
         )
       })}
 
-      <InsightsSection entries={entries} year={year} month={month} customCategories={customCategories} />
+      <InsightsSection entries={entries} year={year} month={month} customCategories={customCategories} currency={activeCurrency} />
     </div>
   )
 }

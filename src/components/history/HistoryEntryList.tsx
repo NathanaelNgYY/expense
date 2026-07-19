@@ -13,6 +13,7 @@ export interface EditDraft {
   category: string | null
   note: string
   date: string
+  currency: string
 }
 
 interface CategoryOption {
@@ -41,6 +42,7 @@ interface Props {
   onRequestDelete: (id: string) => void
   onCancelDelete: () => void
   onDelete: (entry: Entry) => void
+  currencies: string[]
 }
 
 export default function HistoryEntryList({
@@ -63,6 +65,7 @@ export default function HistoryEntryList({
   onRequestDelete,
   onCancelDelete,
   onDelete,
+  currencies,
 }: Props) {
   if (monthEntryCount === 0) {
     return <div className="empty-state">No entries for {monthLabel} yet.</div>
@@ -201,6 +204,20 @@ export default function HistoryEntryList({
                     value={editDraft.note}
                     onChange={event => onDraftChange({ note: event.target.value })}
                   />
+
+                  {currencies.length >= 2 && (
+                    <label className="form-field" htmlFor={`edit-entry-wallet-${entry.id}`}>
+                      <span>Wallet</span>
+                      <select
+                        id={`edit-entry-wallet-${entry.id}`}
+                        className="settings-input"
+                        value={editDraft.currency}
+                        onChange={event => onDraftChange({ currency: event.target.value, category: null })}
+                      >
+                        {currencies.map(currency => <option key={currency} value={currency}>{currency}</option>)}
+                      </select>
+                    </label>
+                  )}
 
                   <div className="entry-edit-actions">
                     <button className="export-btn" type="button" onClick={onCancelEditing}>Cancel</button>

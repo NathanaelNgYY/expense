@@ -12,12 +12,14 @@ import {
 } from '../../storage'
 import { useBudgetConfig } from '../../BudgetConfigContext'
 import { categoryIcon, categoryLabel } from '../../categoryDisplay'
-import { formatSGD } from '../../format'
+import { formatMoney } from '../../format'
 import { countEntriesForCategory } from '../../compute'
 import { useEntries } from '../../EntriesContext'
 import { CATEGORY_LABELS } from '../../types'
 import type { BudgetConfig, Category, CategoryOverride, CustomCategory } from '../../types'
 import { useSharedBudgets } from '../../sharedBudgets/SharedBudgetsContext'
+import CurrencyWalletMenu from '../../components/CurrencyWalletMenu'
+import { entriesForCurrency } from '../../shared/currency'
 
 interface Props {
   onDone: () => void
@@ -34,7 +36,8 @@ export default function BudgetSettings({ onDone }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [removeError, setRemoveError] = useState('')
-  const { entries } = useEntries()
+  const { entries: allEntries } = useEntries()
+  const entries = entriesForCurrency(allEntries, budget.activeCurrency)
   const shared = useSharedBudgets()
   const confirm = useConfirm()
 
@@ -155,6 +158,15 @@ export default function BudgetSettings({ onDone }: Props) {
         <SharedBudgetSettings onSaved={onDone} />
       ) : (
         <>
+          <section className="settings-wallet-row" aria-label="Currency wallet">
+            <div>
+              <span className="summary-label">Editing wallet</span>
+              <strong>{budget.activeCurrency}</strong>
+            </div>
+            <CurrencyWalletMenu entries={allEntries} alwaysShow disabled={isDirty} />
+          </section>
+          {isDirty && <p className="muted settings-wallet-hint">Save your changes before switching wallets.</p>}
+
           <h3 className="section-title">Income</h3>
 
           <div className="ios-list">
@@ -176,7 +188,7 @@ export default function BudgetSettings({ onDone }: Props) {
             </div>
           </div>
 
-          <h3 className="section-title">Monthly Budgets (S$)</h3>
+          <h3 className="section-title">Monthly Budgets ({budget.activeCurrency})</h3>
 
           <div className="ios-list">
             {BUDGET_FIELDS.map(key => {
@@ -299,9 +311,9 @@ export default function BudgetSettings({ onDone }: Props) {
           )}
 
           <div className="settings-total">
-            Total: {formatSGD(total)}
+            Total: {formatMoney(total, budget.activeCurrency)}
             {totalMismatch && (
-              <span className="settings-total-warning">&ne; {formatSGD(config.monthlyIncome)}</span>
+              <span className="settings-total-warning">&ne; {formatMoney(config.monthlyIncome, budget.activeCurrency)}</span>
             )}
           </div>
 

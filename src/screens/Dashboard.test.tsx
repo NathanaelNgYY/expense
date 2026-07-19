@@ -5,6 +5,8 @@ import Dashboard from './Dashboard'
 import { EntriesProvider } from '../EntriesContext'
 import { BudgetConfigProvider } from '../BudgetConfigContext'
 import type { Entry } from '../types'
+import { DEFAULT_BUDGET } from '../types'
+import { getWalletMap, saveActiveCurrency, saveWalletMap } from '../storage'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
 
 const sharedCtx = vi.hoisted(() => ({
@@ -144,6 +146,77 @@ describe('Dashboard category expense history', () => {
     expect(list).toHaveTextContent('S$12.50')
     expect(list).not.toHaveTextContent('Thu, Apr 30')
     expect(list).not.toHaveTextContent('S$4.00')
+  })
+
+  it('does not render wallet UI for the legacy single-SGD experience', () => {
+    const rendered = renderWithEntries([entry({ amount: 12.5, currency: 'SGD' })])
+    root = rendered.root
+
+    expect(rendered.container.querySelector('.wallet-switcher-trigger')).toBeNull()
+  })
+
+  it('opens the wallet sheet with isolated totals and switches the dashboard wallet', () => {
+    saveWalletMap({
+      SGD: { config: DEFAULT_BUDGET, customCategories: [], overrides: {} },
+      MYR: {
+        config: { ...DEFAULT_BUDGET, monthlyIncome: 3000 },
+        customCategories: [],
+        overrides: {},
+      },
+    })
+    saveActiveCurrency('SGD')
+    const rendered = renderWithEntries([
+      entry({ id: 'sgd', amount: 12, currency: 'SGD' }),
+      entry({ id: 'myr', amount: 230, currency: 'MYR' }),
+    ])
+    root = rendered.root
+
+    const trigger = rendered.container.querySelector<HTMLButtonElement>('.wallet-switcher-trigger')
+    expect(trigger).not.toBeNull()
+    expect(trigger).toHaveTextContent('SGD')
+
+    act(() => trigger?.click())
+    const dialog = rendered.container.querySelector('[role="dialog"]')
+    expect(dialog).toHaveTextContent('S$12.00 spent')
+    expect(dialog).toHaveTextContent('RM230.00 spent')
+
+    const myrButton = [...rendered.container.querySelectorAll('button')]
+      .find(button => button.textContent?.includes('Malaysian ringgit'))
+    act(() => myrButton?.click())
+
+    expect(trigger).toHaveTextContent('MYR')
+    expect(rendered.container).toHaveTextContent('RM230.00')
+    expect(rendered.container).not.toHaveTextContent('S$12.00 spent')
+  })
+
+  it('offers to create a wallet when captured entries use an unconfigured currency', () => {
+    const rendered = renderWithEntries([
+      entry({ amount: 12, currency: 'SGD' }),
+      entry({ id: 'thb-1', amount: 80, currency: 'THB' }),
+      entry({ id: 'thb-2', amount: 40, currency: 'thb' }),
+    ])
+    root = rendered.root
+
+    expect(rendered.container).toHaveTextContent('2 transactions in THB')
+    expect(rendered.container).toHaveTextContent('not included in your SGD budget')
+    expect(rendered.container.querySelector('.home-safe-amount')).not.toHaveTextContent('฿')
+  })
+
+  it('creates an unconfigured capture wallet without converting its entries', () => {
+    const rendered = renderWithEntries([
+      entry({ id: 'sgd', amount: 12, currency: 'SGD' }),
+      entry({ id: 'thb', amount: 80, currency: 'THB' }),
+    ])
+    root = rendered.root
+
+    clickButton(rendered.container, button => button.textContent?.includes('Create THB wallet') === true)
+    const dialog = rendered.container.querySelector('[role="dialog"]')
+    expect(dialog).toHaveTextContent('Add a currency')
+    clickButton(rendered.container, button => button.textContent?.includes('Create wallet') === true)
+
+    expect(getWalletMap()).toHaveProperty('THB')
+    expect(rendered.container.querySelector('.wallet-switcher-trigger')).toHaveTextContent('THB')
+    expect(rendered.container).toHaveTextContent('฿80.00')
   })
 
   it('shows notes for others expenses', () => {

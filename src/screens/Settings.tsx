@@ -13,6 +13,8 @@ import IngestStatusCard from './settings/IngestStatusCard'
 import AutomaticCaptureSettings from './settings/AutomaticCaptureSettings'
 import { useConfirm } from '../components/ConfirmDialog'
 import type { Entry } from '../types'
+import { useBudgetConfig } from '../BudgetConfigContext'
+import { entriesForCurrency } from '../shared/currency'
 
 interface Props {
   onBack?: () => void
@@ -56,13 +58,14 @@ export default function Settings({ onBack, onOpenPoker, onOpenShared, initialSub
   const [resetSnapshot, setResetSnapshot] = useState<Entry[] | null>(null)
   const [resetMessage, setResetMessage] = useState<string | null>(null)
   const { entries, removeEntry, restoreEntry } = useEntries()
+  const { activeCurrency } = useBudgetConfig()
   const { theme } = useTheme()
   const themeName = THEMES.find(option => option.id === theme)?.name ?? THEMES[0].name
   const confirm = useConfirm()
 
   async function handleReset() {
     const now = sgtToday()
-    const toRemove = entries.filter(entry =>
+    const toRemove = entriesForCurrency(entries, activeCurrency).filter(entry =>
       isEntryInMonth(entry.date, now.getFullYear(), now.getMonth()),
     )
     if (toRemove.length === 0) {
@@ -100,7 +103,7 @@ export default function Settings({ onBack, onOpenPoker, onOpenShared, initialSub
 
   return (
     <div className="screen settings">
-      {subscreen === 'budget' && <BudgetSettings onDone={goHub} />}
+      {subscreen === 'budget' && <BudgetSettings key={activeCurrency} onDone={goHub} />}
       {subscreen === 'automatic' && <AutomaticCaptureSettings onDone={goHub} />}
       {subscreen === 'appearance' && <AppearanceSettings onDone={goHub} />}
       {subscreen === 'data' && <DataSettings onDone={goHub} />}
@@ -159,7 +162,7 @@ export default function Settings({ onBack, onOpenPoker, onOpenShared, initialSub
           <section className="danger-zone settings-danger--push" aria-labelledby="danger-zone-title">
             <h3 id="danger-zone-title" className="danger-zone__title">Danger zone</h3>
             <p className="danger-zone__body">
-              Deletes every entry logged this month. Exported CSVs are unaffected.
+              Deletes every {activeCurrency} entry logged this month. Exported CSVs are unaffected.
             </p>
             <button className="danger-btn" type="button" onClick={() => void handleReset()}>
               <Trash2 aria-hidden="true" size={18} strokeWidth={2.3} />

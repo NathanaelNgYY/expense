@@ -83,4 +83,13 @@ describe('buildEntryFromIngest', () => {
     expect(entry.date).toBe('2026-06-09')
     expect(typeof entry.occurredAt).toBe('string')
   })
+
+  it('normalizes an ingest currency at the write boundary', () => {
+    const entry = buildEntryFromIngest(
+      { sourceKind: 'apple_pay', amount: 5, merchant: 'Cafe', currency: ' myr ' },
+      () => 'currency-id',
+      new Date('2026-06-09T08:15:00+08:00'),
+    )
+    expect(entry.currency).toBe('MYR')
+  })
 })

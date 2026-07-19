@@ -28,6 +28,16 @@ export interface BudgetConfig {
   buffer: number
 }
 
+export type CurrencyCode = string
+
+export interface WalletSnapshot {
+  config: BudgetConfig
+  customCategories: CustomCategory[]
+  overrides: CategoryOverrides
+}
+
+export type WalletMap = Record<CurrencyCode, WalletSnapshot>
+
 export const DEFAULT_BUDGET: BudgetConfig = {
   monthlyIncome: 1200,
   lunch: 264,

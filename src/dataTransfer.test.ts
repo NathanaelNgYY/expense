@@ -3,6 +3,8 @@ import { applyImport, buildExportPayload, downloadJsonBackup, parseImportPayload
 import type { ExportPayloadV1 } from './dataTransfer'
 import type { Entry, PokerSession } from './types'
 import * as api from './api'
+import { saveActiveCurrency, saveWalletMap } from './storage'
+import { DEFAULT_BUDGET } from './types'
 
 vi.mock('./api', () => ({
   bulkUpsertEntries: vi.fn().mockResolvedValue(undefined),
@@ -48,6 +50,19 @@ describe('buildExportPayload', () => {
     expect(payload.entries).toEqual([])
     expect(payload.pokerSessions).toEqual([])
     expect(payload.settings.theme).toBeUndefined()
+  })
+
+  it('exports every wallet and the active currency', () => {
+    saveWalletMap({
+      SGD: { config: DEFAULT_BUDGET, customCategories: [], overrides: {} },
+      MYR: { config: { ...DEFAULT_BUDGET, monthlyIncome: 3000 }, customCategories: [], overrides: {} },
+    })
+    saveActiveCurrency('MYR')
+
+    expect(buildExportPayload().settings).toMatchObject({
+      activeCurrency: 'MYR',
+      wallets: { MYR: { config: { monthlyIncome: 3000 } } },
+    })
   })
 })
 
@@ -106,6 +121,16 @@ describe('parseImportPayload', () => {
     const minimal = { schemaVersion: 1, exportedAt: 'x', entries: [], pokerSessions: [] }
     const parsed = parseImportPayload(JSON.stringify(minimal))
     expect(parsed.settings).toEqual({})
+  })
+
+  it('round-trips wallet settings in JSON', () => {
+    saveWalletMap({
+      SGD: { config: DEFAULT_BUDGET, customCategories: [], overrides: {} },
+      JPY: { config: { ...DEFAULT_BUDGET, monthlyIncome: 250000 }, customCategories: [], overrides: {} },
+    })
+    saveActiveCurrency('JPY')
+    const parsed = parseImportPayload(JSON.stringify(buildExportPayload()))
+    expect(parsed.settings).toMatchObject({ activeCurrency: 'JPY', wallets: { JPY: expect.any(Object) } })
   })
 })
 

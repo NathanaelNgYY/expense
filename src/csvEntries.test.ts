@@ -28,6 +28,18 @@ describe('CSV entry import and export', () => {
     expect(parseEntriesCsv(csv)).toEqual(entries)
   })
 
+  it('round-trips multiple currency wallets and normalizes currency codes', () => {
+    const entries: Entry[] = [
+      { id: 'sgd', amount: 12, category: 'lunch', note: 'Kopi', date: '2026-05-11', currency: 'SGD' },
+      { id: 'myr', amount: 23, category: null, note: 'JB', date: '2026-05-12', currency: ' myr ' },
+    ]
+
+    expect(parseEntriesCsv(entriesToCsv(entries))).toEqual([
+      { ...entries[0], kind: 'expense' },
+      { ...entries[1], kind: 'expense', currency: 'MYR' },
+    ])
+  })
+
   it('merges imported entries without duplicating existing ids', () => {
     const existing: Entry[] = [
       {

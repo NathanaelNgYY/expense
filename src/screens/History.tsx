@@ -8,7 +8,7 @@ import HistoryLedgerFilters, {
   type SourceFilter,
 } from '../components/history/HistoryLedgerFilters'
 import SpendingCalendar from '../components/history/SpendingCalendar'
-import { formatSGD } from '../format'
+import { formatMoney } from '../format'
 import { entriesForMonth } from '../compute'
 import {
   clampDateString,
@@ -22,6 +22,7 @@ import { buildCategoryOptions, categoryIcon, categoryLabel } from '../categoryDi
 import { useEntries } from '../EntriesContext'
 import type { Entry } from '../types'
 import { entryKind, entryNetAmount } from '../shared/entryAmount'
+import { entriesForCurrency, entryCurrency } from '../shared/currency'
 
 interface Props {
   initialEditingEntryId?: string | null
@@ -58,6 +59,7 @@ function editDraftForEntry(entry: Entry): EditDraft {
     category: entry.category,
     note: entry.note,
     date: entry.date,
+    currency: entryCurrency(entry),
   }
 }
 
@@ -91,7 +93,9 @@ function initialHistoryState(
 
 export default function History({ initialEditingEntryId = null, onEditHandled, onAddForDate }: Props) {
   const now = sgtToday()
-  const { entries, addEntry, restoreEntry, editEntry, removeEntry } = useEntries()
+  const { entries: allEntries, addEntry, restoreEntry, editEntry, removeEntry } = useEntries()
+  const { customCategories, overrides, activeCurrency, currencies } = useBudgetConfig()
+  const entries = entriesForCurrency(allEntries, activeCurrency)
   const [initialState] = useState(() => initialHistoryState(initialEditingEntryId, now, entries))
   const [year, setYear] = useState(initialState.year)
   const [month, setMonth] = useState(initialState.month)
@@ -109,7 +113,6 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
   const [ledgerMessage, setLedgerMessage] = useState('')
   const dayFilterRef = useRef<HTMLElement>(null)
 
-  const { customCategories, overrides } = useBudgetConfig()
   const categoryOptions = buildCategoryOptions(overrides, customCategories)
   const labelForCategory = (id: string): string => categoryLabel(id, overrides, customCategories)
   const iconForCategory = (id: string): string => categoryIcon(id, overrides, customCategories)
@@ -220,9 +223,10 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
       category: editDraft.category,
       note: editDraft.note.trim(),
       date: entryDate,
+      currency: editDraft.currency,
     })
 
-    setLedgerMessage(`Updated ${formatSGD(amount)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
+    setLedgerMessage(`Updated ${formatMoney(amount, editDraft.currency)} for ${format(fromLocalDateString(entryDate), 'MMM d')}`)
     setEditingEntryId(null)
     setEditDraft(null)
   }
@@ -234,10 +238,11 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
       category: entry.category,
       note: entry.note,
       date: entry.date,
+      currency: entryCurrency(entry),
     })
     setEditingEntryId(null)
     setEditDraft(null)
-    setLedgerMessage(`Duplicated ${formatSGD(entry.amount)} transaction`)
+    setLedgerMessage(`Duplicated ${formatMoney(entry.amount, activeCurrency)} transaction`)
   }
 
   async function handleDeleteEntry(entry: Entry) {
@@ -316,7 +321,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
       <div className="card history-summary history__summary">
         <div>
           <span className="summary-label">Month total</span>
-          <strong className="summary-amount">{formatSGD(monthTotal)}</strong>
+          <strong className="summary-amount">{formatMoney(monthTotal, activeCurrency)}</strong>
         </div>
         <div>
           <span className="summary-label">Entries</span>
@@ -405,6 +410,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
         onRequestDelete={setConfirmingDeleteId}
         onCancelDelete={() => setConfirmingDeleteId(null)}
         onDelete={entry => void handleDeleteEntry(entry)}
+        currencies={currencies}
       />
       <SpendingCalendar
         year={year}
@@ -414,6 +420,7 @@ export default function History({ initialEditingEntryId = null, onEditHandled, o
         today={todayStr}
         selectedDate={dayFilterDate}
         onSelectDate={handleDateChange}
+        currency={activeCurrency}
       />
 
     </div>

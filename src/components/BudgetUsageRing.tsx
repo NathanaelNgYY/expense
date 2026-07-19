@@ -1,12 +1,13 @@
 import type { CSSProperties } from 'react'
-import { formatSGD } from '../format'
+import { formatMoney } from '../format'
 
 interface Props {
   allocated: number
   total: number
+  currency?: string
 }
 
-export default function BudgetUsageRing({ allocated, total }: Props) {
+export default function BudgetUsageRing({ allocated, total, currency = 'SGD' }: Props) {
   const percentage = total > 0 ? Math.max(0, Math.round((allocated / total) * 100)) : 0
   const visualPercentage = Math.min(100, percentage)
   const style = { '--budget-progress': `${visualPercentage}%` } as CSSProperties
@@ -21,7 +22,7 @@ export default function BudgetUsageRing({ allocated, total }: Props) {
       <span className="budget-usage-ring__inner">
         <strong>{percentage}%</strong>
         <small>
-          {formatSGD(allocated)} / {formatSGD(total)}
+          {formatMoney(allocated, currency)} / {formatMoney(total, currency)}
         </small>
       </span>
     </div>

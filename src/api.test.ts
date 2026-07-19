@@ -205,8 +205,9 @@ describe('api client', () => {
         normalized_merchant: 'kopitiam',
         merchant_label: 'Kopitiam',
         category_id: 'cat_dinner',
+        currency: 'SGD',
       },
-      { onConflict: 'user_id,normalized_merchant' },
+      { onConflict: 'user_id,normalized_merchant,currency' },
     )
   })
 

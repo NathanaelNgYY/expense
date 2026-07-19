@@ -171,4 +171,26 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument()
   }, 15_000)
+
+  it('opens Automatic Tracking from a stale-capture warning on Home', async () => {
+    localStorage.setItem('budget_onboarding_version', '1')
+    localStorage.setItem('budget_entries', JSON.stringify([
+      { id: 'capture-1', amount: 5, category: 'lunch', note: '', date: '2020-01-01', source: 'apple-pay' },
+      { id: 'capture-2', amount: 5, category: 'lunch', note: '', date: '2020-01-03', source: 'dbs-email' },
+      { id: 'capture-3', amount: 5, category: 'lunch', note: '', date: '2020-01-05', source: 'apple-pay' },
+    ]))
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(screen.getByRole('status', { name: 'Automatic captures may have stopped' }))
+      .toHaveTextContent('No automatic captures since Jan 5')
+
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Check Automatic Tracking' })))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Automatic tracking' }, { timeout: 10_000 }))
+      .toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page')
+  }, 15_000)
 })

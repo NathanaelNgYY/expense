@@ -65,7 +65,7 @@ function renderWithEntries(entries: unknown[] = []) {
     root.render(
       <BudgetConfigProvider>
         <EntriesProvider>
-          <Dashboard onAddEntry={() => undefined} />
+          <Dashboard onAddEntry={() => undefined} onOpenAutomaticTracking={() => undefined} />
         </EntriesProvider>
       </BudgetConfigProvider>,
     )

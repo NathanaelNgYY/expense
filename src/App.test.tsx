@@ -145,6 +145,26 @@ describe('App', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Add entry' })).toBeInTheDocument()
   })
 
+  it('prefills amount and category from the deep link', async () => {
+    window.history.replaceState({}, '', '/?add=true&category=lunch&amount=5.80')
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(await screen.findByLabelText('Entered amount')).toHaveTextContent('5.80')
+    expect(screen.getByRole('button', { name: /Lunch/ })).toHaveClass('chip--selected')
+  })
+
+  it('prefills the amount but selects no chip for an unknown category', async () => {
+    window.history.replaceState({}, '', '/?add=true&category=petrol&amount=3.20')
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(await screen.findByLabelText('Entered amount')).toHaveTextContent('3.20')
+    expect(screen.getByRole('button', { name: /Lunch/ })).not.toHaveClass('chip--selected')
+  })
+
   it('restores the selected theme on app startup', async () => {
     localStorage.setItem('budget_onboarding_version', '1')
     localStorage.setItem('budget-tracker-theme-v2', 'copper-current')

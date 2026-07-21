@@ -21,6 +21,7 @@ import { lazyWithRetry } from './lazyWithRetry'
 import UncategorizedReviewDialog from './components/UncategorizedReviewDialog'
 import { buildCategoryOptions } from './categoryDisplay'
 import { entriesForCurrency } from './shared/currency'
+import { parseAddDeepLink, resolveCategoryId } from './deepLink'
 
 // lazyWithRetry (not bare React.lazy): a stale chunk after a deploy — or a
 // transient mobile-network blip — would otherwise crash the lazy route to the
@@ -36,12 +37,21 @@ const FirstRunBudgetOnboarding = lazyWithRetry(
 )
 
 function initialTab(): Tab {
-  const params = new URLSearchParams(window.location.search)
-  return params.get('add') === 'true' ? 'add' : 'home'
+  return parseAddDeepLink(window.location.search).add ? 'add' : 'home'
 }
 
 function AppShell() {
+  const { entries, editEntry, removeEntry } = useEntries()
+  const { customCategories, overrides, activeCurrency } = useBudgetConfig()
   const [tab, setTab] = useState<Tab>(initialTab)
+  const [prefill, setPrefill] = useState<{ amount?: number; category: string | null }>(() => {
+    const link = parseAddDeepLink(window.location.search)
+    const options = buildCategoryOptions(overrides, customCategories)
+    return {
+      amount: link.amount,
+      category: link.category ? resolveCategoryId(link.category, options) : null,
+    }
+  })
   const [showOnboarding, setShowOnboarding] = useState(() =>
     shouldShowBudgetOnboarding(initialTab() === 'add'),
   )
@@ -51,14 +61,15 @@ function AppShell() {
   // Lives in the shell, not in AddEntry: the confirmation has to outlive the screen that
   // triggered it, because saving navigates straight home.
   const [toast, setToast] = useState<ToastEntry | null>(null)
-  const { entries, editEntry, removeEntry } = useEntries()
-  const { customCategories, overrides, activeCurrency } = useBudgetConfig()
   const activeEntries = entriesForCurrency(entries, activeCurrency)
   const categoryOptions = buildCategoryOptions(overrides, customCategories)
+
+  const clearPrefill = useCallback(() => setPrefill({ category: null }), [])
 
   function handleSave(saved?: SavedEntrySummary) {
     setTab('home')
     setAddEntryDate(undefined)
+    clearPrefill()
     setToast(saved ?? null)
     window.history.replaceState({}, '', window.location.pathname)
   }
@@ -67,6 +78,7 @@ function AppShell() {
 
   function handleTabChange(nextTab: Tab) {
     setAddEntryDate(undefined)
+    clearPrefill()
     if (nextTab !== 'settings') setSettingsTool(null)
     setSettingsSubscreen('hub')
     setTab(nextTab)
@@ -79,6 +91,7 @@ function AppShell() {
   }
 
   function handleAddForDate(date: string) {
+    clearPrefill()
     setAddEntryDate(date)
     setTab('add')
   }
@@ -115,7 +128,14 @@ function AppShell() {
               onOpenAutomaticTracking={handleOpenAutomaticTracking}
             />
           )}
-          {tab === 'add' && <AddEntry initialDate={addEntryDate} onSave={handleSave} />}
+          {tab === 'add' && (
+            <AddEntry
+              initialDate={addEntryDate}
+              initialAmount={prefill.amount}
+              initialCategory={prefill.category}
+              onSave={handleSave}
+            />
+          )}
           {tab === 'history' && <History onAddForDate={handleAddForDate} />}
           {tab === 'insights' && <Insights />}
           {tab === 'settings' && settingsTool === null && (

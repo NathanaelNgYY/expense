@@ -64,6 +64,20 @@ https://budget-tracker-sooty-ten.vercel.app?add=true
 4. Rename the shortcut to `Log Expense`.
 5. Add it to the home screen.
 
+### Quick-add presets (deep link)
+
+The Add screen can be prefilled from the URL, so an iOS Shortcuts home-screen widget
+can carry a one-tap preset:
+
+`https://<app-url>/?add=true&category=<id-or-name>&amount=<number>`
+
+- `category` matches a category by its name (case-insensitive), e.g. `lunch` or `Groceries`.
+  An unknown name just leaves the category empty.
+- `amount` is in your active wallet currency, up to 2 decimals.
+- The entry is **prefilled, not auto-saved** — you review it and tap Save.
+
+Example — a "Kopi" preset: `…/?add=true&category=lunch&amount=2.20`
+
 ## Background Transaction Ingestion
 
 Transactions are captured automatically by two iOS Shortcuts that POST to the app's API in the background — no need to open the app. Apple Pay fires instantly via the Wallet trigger; PayNow and card spending are captured indirectly from the DBS transaction-alert email (iOS has no PayNow trigger). The server parses, categorises, and de-duplicates each transaction.

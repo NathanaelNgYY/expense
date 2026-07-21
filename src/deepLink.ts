@@ -20,7 +20,10 @@ export function parseAddDeepLink(search: string): AddDeepLink {
   const rawAmount = params.get('amount')
   if (rawAmount !== null) {
     const n = Number(rawAmount)
-    if (Number.isFinite(n) && n > 0) result.amount = truncate2(n)
+    if (Number.isFinite(n) && n > 0) {
+      const truncated = truncate2(n)
+      if (truncated > 0) result.amount = truncated
+    }
   }
 
   const rawCategory = params.get('category')

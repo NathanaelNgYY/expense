@@ -37,6 +37,14 @@ describe('parseAddDeepLink', () => {
   it('omits an empty category', () => {
     expect(parseAddDeepLink('?add=true&category=%20').category).toBeUndefined()
   })
+
+  it('omits amount for sub-cent values that truncate to zero', () => {
+    expect(parseAddDeepLink('?amount=0.004').amount).toBeUndefined()
+  })
+
+  it('omits category when the param is entirely absent', () => {
+    expect(parseAddDeepLink('?add=true').category).toBeUndefined()
+  })
 })
 
 describe('resolveCategoryId', () => {
@@ -54,6 +62,14 @@ describe('resolveCategoryId', () => {
 
   it('returns null for an empty string', () => {
     expect(resolveCategoryId('   ', OPTIONS)).toBeNull()
+  })
+
+  it('prefers an id match over another option whose label collides', () => {
+    const ambiguous = [
+      { id: 'misc', label: 'Other Stuff' },
+      { id: 'cat_other_x9', label: 'Misc' },
+    ]
+    expect(resolveCategoryId('misc', ambiguous)).toBe('misc')
   })
 })
 

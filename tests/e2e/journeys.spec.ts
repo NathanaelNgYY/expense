@@ -208,3 +208,21 @@ test('automatic tracking meal timing degrades safely when preferences are offlin
   expect(box?.height).toBeGreaterThanOrEqual(44)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
 })
+
+test('user files an uncategorised capture from Home with one tap', async ({ page }) => {
+  await prepareApp(page, [{
+    id: 'uncat-1', amount: 5.8, note: '', category: null,
+    date: currentLocalDate(), merchant: 'Toast Box',
+  }])
+  await page.goto('/')
+
+  // Open the triage bucket, then file with the top-ranked chip.
+  await page.getByRole('button', { name: /Uncategorized/ }).click()
+  await page.getByRole('button', { name: 'Categorize Toast Box as Lunch' }).click()
+
+  await expect(page.locator('.save-toast')).toContainText('Filed Toast Box → Lunch')
+  const entries = await page.evaluate(() => JSON.parse(localStorage.getItem('budget_entries') ?? '[]'))
+  expect(entries).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: 'uncat-1', category: 'lunch' }),
+  ]))
+})

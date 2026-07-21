@@ -11,6 +11,7 @@ import { buildCategoryOptions } from '../categoryDisplay'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
 import type { EntryKind } from '../types'
 import { formatMoney } from '../format'
+import { amountToDigits } from '../deepLink'
 
 /** What was just logged, so the shell can confirm it and offer an undo. */
 export interface SavedEntrySummary {
@@ -23,17 +24,21 @@ export interface SavedEntrySummary {
 
 interface Props {
   initialDate?: string
+  initialAmount?: number
+  initialCategory?: string | null
   onSave: (saved?: SavedEntrySummary) => void
 }
 
 const NUMPAD_KEYS = ['1','2','3','4','5','6','7','8','9','.','0','backspace']
 const AMOUNT_ANNOUNCE_DELAY_MS = 1000
 
-export default function AddEntry({ initialDate, onSave }: Props) {
+export default function AddEntry({ initialDate, initialAmount, initialCategory, onSave }: Props) {
   const today = sgtTodayString()
-  const [digits, setDigits] = useState('0')
+  const [digits, setDigits] = useState(() =>
+    initialAmount && initialAmount > 0 ? amountToDigits(initialAmount) : '0',
+  )
   const [animationCue, setAnimationCue] = useState({ key: '', version: 0 })
-  const [category, setCategory] = useState<string | null>(null)
+  const [category, setCategory] = useState<string | null>(initialCategory ?? null)
   const [kind, setKind] = useState<EntryKind>('expense')
   const [note, setNote] = useState('')
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)

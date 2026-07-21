@@ -1445,6 +1445,8 @@ input:focus-visible {
 .triage-chip--more,
 .triage-chip--collapse {
   color: var(--text-secondary);
+  min-width: 44px;
+  justify-content: center;
 }
 
 .category-expense-confirm-actions {

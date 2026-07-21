@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, Check, ChevronDown, ChevronRight, ChevronUp, Minus, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
@@ -85,6 +85,8 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
     if (triageToast) void editEntry(triageToast.id, { category: null })
     setTriageToast(null)
   }
+
+  const handleTriageToastDismiss = useCallback(() => setTriageToast(null), [])
 
   const currentMonthEntries = entriesForMonth(entries, now.getFullYear(), now.getMonth())
   // Triage bucket: this month's entries that still have no category (e.g. auto-imported
@@ -555,7 +557,7 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
         <SaveToast
           message={triageToast.message}
           onUndo={handleTriageUndo}
-          onDismiss={() => setTriageToast(null)}
+          onDismiss={handleTriageToastDismiss}
         />
       )}
     </div>

@@ -165,6 +165,38 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: /Lunch/ })).not.toHaveClass('chip--selected')
   })
 
+  it('clears the deep-link prefill after navigating away and back to Add via the tab bar', async () => {
+    window.history.replaceState({}, '', '/?add=true&category=lunch&amount=5.80')
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(await screen.findByLabelText('Entered amount')).toHaveTextContent('5.80')
+    expect(screen.getByRole('button', { name: /Lunch/ })).toHaveClass('chip--selected')
+
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'History' })))
+    expect(await screen.findByRole('heading', { level: 1, name: /History/ }, { timeout: 10_000 }))
+      .toBeInTheDocument()
+
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Add entry' })))
+
+    expect(await screen.findByLabelText('Entered amount')).toHaveTextContent('0.00')
+    expect(screen.getByRole('button', { name: /Lunch/ })).not.toHaveClass('chip--selected')
+  })
+
+  it('strips the deep-link query string from the URL on save', async () => {
+    window.history.replaceState({}, '', '/?add=true&category=lunch&amount=5.80')
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(await screen.findByLabelText('Entered amount')).toHaveTextContent('5.80')
+
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save' })))
+
+    expect(window.location.search).toBe('')
+  })
+
   it('restores the selected theme on app startup', async () => {
     localStorage.setItem('budget_onboarding_version', '1')
     localStorage.setItem('budget-tracker-theme-v2', 'copper-current')

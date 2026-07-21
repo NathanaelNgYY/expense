@@ -34,9 +34,7 @@ const AMOUNT_ANNOUNCE_DELAY_MS = 1000
 
 export default function AddEntry({ initialDate, initialAmount, initialCategory, onSave }: Props) {
   const today = sgtTodayString()
-  const [digits, setDigits] = useState(() =>
-    initialAmount && initialAmount > 0 ? amountToDigits(initialAmount) : '0',
-  )
+  const [digits, setDigits] = useState(() => amountToDigits(initialAmount ?? 0))
   const [animationCue, setAnimationCue] = useState({ key: '', version: 0 })
   const [category, setCategory] = useState<string | null>(initialCategory ?? null)
   const [kind, setKind] = useState<EntryKind>('expense')

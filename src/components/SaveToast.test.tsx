@@ -58,4 +58,10 @@ describe('SaveToast', () => {
 
     expect(onDismiss).not.toHaveBeenCalled()
   })
+
+  test('renders a custom message when the message prop is provided', () => {
+    render(<SaveToast message="Filed Toast Box → Lunch" onUndo={vi.fn()} onDismiss={vi.fn()} />)
+    expect(screen.getByText('Filed Toast Box → Lunch')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Undo/ })).toBeTruthy()
+  })
 })

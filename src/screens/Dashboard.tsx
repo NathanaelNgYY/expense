@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, Check, ChevronDown, ChevronRight, ChevronUp, Minus, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
@@ -7,9 +7,12 @@ import BudgetPassStack, { type BudgetPass } from '../components/dashboard/Budget
 import SharedBudgetDashboard from '../components/dashboard/SharedBudgetDashboard'
 import SyncStatus from '../components/SyncStatus'
 import CurrencyWalletMenu from '../components/CurrencyWalletMenu'
+import SaveToast from '../components/SaveToast'
+import UncategorizedTriageChips from '../components/UncategorizedTriageChips'
 import { downloadJsonBackup } from '../dataTransfer'
 import { useBudgetConfig } from '../BudgetConfigContext'
-import { categoryIcon, categoryLabel } from '../categoryDisplay'
+import { buildCategoryOptions, categoryIcon, categoryLabel } from '../categoryDisplay'
+import { rankCategoriesForMerchant } from '../shared/category'
 import {
   bufferRemaining,
   categoryDeficits,
@@ -59,7 +62,7 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
   const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null)
   const [requestedWalletCurrency, setRequestedWalletCurrency] = useState<string | null>(null)
   const now = sgtToday()
-  const { entries: allEntries, removeEntry, sync, refresh } = useEntries()
+  const { entries: allEntries, editEntry, removeEntry, sync, refresh } = useEntries()
   const shared = useSharedBudgets()
   const { openBudget } = shared
   const { config, customCategories, overrides, activeCurrency, currencies } = useBudgetConfig()
@@ -68,6 +71,22 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
   const budgets = categoryBudgets(config, customCategories)
   const labelFor = (id: string): string => categoryLabel(id, overrides, customCategories)
   const iconFor = (id: string): string => categoryIcon(id, overrides, customCategories)
+
+  const triageCategoryOptions = buildCategoryOptions(overrides, customCategories)
+  const [triageToast, setTriageToast] = useState<{ id: string; message: string } | null>(null)
+
+  async function handleTriageCategorize(target: Entry, categoryId: string) {
+    await editEntry(target.id, { category: categoryId })
+    const merchant = target.merchant?.trim() || 'entry'
+    setTriageToast({ id: target.id, message: `Filed ${merchant} → ${labelFor(categoryId)}` })
+  }
+
+  function handleTriageUndo() {
+    if (triageToast) void editEntry(triageToast.id, { category: null })
+    setTriageToast(null)
+  }
+
+  const handleTriageToastDismiss = useCallback(() => setTriageToast(null), [])
 
   const currentMonthEntries = entriesForMonth(entries, now.getFullYear(), now.getMonth())
   // Triage bucket: this month's entries that still have no category (e.g. auto-imported
@@ -220,8 +239,8 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
       )
     }
 
-    return (
-      <div key={entry.id} className="category-expense-row">
+    const row = (
+      <div className="category-expense-row">
         <span className="category-expense-main">
           <span className="category-expense-date">
             {format(fromLocalDateString(entry.date), 'EEE, MMM d')}
@@ -241,6 +260,21 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
             <Minus size={15} strokeWidth={3} aria-hidden="true" />
           </button>
         </span>
+      </div>
+    )
+
+    if (entry.category != null) return <div key={entry.id}>{row}</div>
+
+    const rankedIds = rankCategoriesForMerchant(allEntries, entry.merchant ?? null, categoryIds)
+    return (
+      <div key={entry.id} className="triage-row">
+        {row}
+        <UncategorizedTriageChips
+          entry={entry}
+          rankedIds={rankedIds}
+          categoryOptions={triageCategoryOptions}
+          onCategorize={handleTriageCategorize}
+        />
       </div>
     )
   }
@@ -517,6 +551,14 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
         <span className="week-amount">{formatMoney(thisWeek, activeCurrency)}</span>
       </div>
         </>
+      )}
+
+      {triageToast && (
+        <SaveToast
+          message={triageToast.message}
+          onUndo={handleTriageUndo}
+          onDismiss={handleTriageToastDismiss}
+        />
       )}
     </div>
   )

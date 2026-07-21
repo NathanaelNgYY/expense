@@ -11,7 +11,8 @@ export interface ToastEntry {
 }
 
 interface Props {
-  entry: ToastEntry
+  entry?: ToastEntry
+  message?: string
   onUndo: () => void
   onDismiss: () => void
   /** Exposed for tests; the UI never needs to override it. */
@@ -25,17 +26,24 @@ const DEFAULT_DURATION_MS = 5000
  * the loop and, since a mis-tapped amount is the likeliest mistake, offers the same Undo
  * affordance the History delete flow already uses.
  */
-export default function SaveToast({ entry, onUndo, onDismiss, durationMs = DEFAULT_DURATION_MS }: Props) {
+export default function SaveToast({ entry, message, onUndo, onDismiss, durationMs = DEFAULT_DURATION_MS }: Props) {
   useEffect(() => {
     const id = setTimeout(onDismiss, durationMs)
     return () => clearTimeout(id)
   }, [durationMs, onDismiss])
 
+  if (message == null && entry == null) return null
+
   return (
     <div className="save-toast" role="status">
       <span className="save-toast__text">
-        {entry.kind === 'refund' ? 'Refunded' : 'Saved'} {formatMoney(entry.amount, entry.currency ?? 'SGD')}
-        {entry.categoryLabel && <span className="save-toast__cat"> to {entry.categoryLabel}</span>}
+        {message ?? (
+          <>
+            {entry?.kind === 'refund' ? 'Refunded' : 'Saved'}{' '}
+            {entry ? formatMoney(entry.amount, entry.currency ?? 'SGD') : ''}
+            {entry?.categoryLabel && <span className="save-toast__cat"> to {entry.categoryLabel}</span>}
+          </>
+        )}
       </span>
       <button type="button" className="save-toast__undo" onClick={onUndo}>
         <Undo2 size={15} aria-hidden="true" />

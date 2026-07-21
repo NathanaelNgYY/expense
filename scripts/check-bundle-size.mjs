@@ -18,9 +18,13 @@ const KB = 1024
 
 const BUDGETS = [
   // The currency wallet menu (Dashboard is an eager, non-lazy screen) and its shared currency
-  // helpers pushed initial JS to 143.3 KiB actual. 144 KiB is set just above that, preserving the
-  // same small-margin regression-catching intent as before.
-  { label: 'initial JS', kind: 'js', budgetKb: 144 },
+  // helpers pushed initial JS to 143.3 KiB actual. The F11 one-tap triage chips (the
+  // rankCategoriesForMerchant helper, the UncategorizedTriageChips component, and the Dashboard
+  // wiring — all on the eager Home path) then added ~2 KiB, to 145.3 KiB actual. The merchant pack
+  // was already eager via src/api.ts, so this is the feature's own code, not an accidental import;
+  // there is no single hot spot to move to a lazy chunk. 146 KiB is set just above that, preserving
+  // the same small-margin regression-catching intent as before.
+  { label: 'initial JS', kind: 'js', budgetKb: 146 },
   // The always-available ConfirmDialog + LazyFallback styles (M1/M2) are deliberately in the
   // main chunk (see docs/superpowers/specs/2026-07-16-m1-m2-m4-ux-a11y-design.md). The currency
   // wallet menu styles pushed CSS to 13.5 KiB actual. 14 KiB is set just above that, preserving

@@ -8,6 +8,8 @@ import type { Entry } from '../types'
 import { DEFAULT_BUDGET } from '../types'
 import { getWalletMap, saveActiveCurrency, saveWalletMap } from '../storage'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
+import { sgtToday } from '../shared/sgtDate'
+import { toLocalDateString } from '../dates'
 
 const sharedCtx = vi.hoisted(() => ({
   value: {
@@ -515,5 +517,60 @@ describe('Dashboard category expense history', () => {
     expect(rendered.container).toHaveTextContent('S$20.00 of S$100.00')
     expect(rendered.container).toHaveTextContent('Nat')
     expect(rendered.container).toHaveTextContent('kopi')
+  })
+
+  it('files an uncategorised entry from Home via a triage chip and shows an Undo toast', async () => {
+    const today = toLocalDateString(sgtToday())
+    const { container, root: r } = renderWithEntries([
+      { id: 'u1', amount: 5.8, category: null, note: '', date: today, merchant: 'Toast Box' },
+    ])
+    root = r
+
+    // Expand the Uncategorized bucket so its rows (and chips) render.
+    const bucketToggle = [...container.querySelectorAll('button')]
+      .find(b => /Uncategorized/.test(b.textContent ?? ''))
+    await act(async () => { bucketToggle?.click() })
+
+    const lunchChip = [...container.querySelectorAll('button')]
+      .find(b => b.getAttribute('aria-label') === 'Categorize Toast Box as Lunch')
+    expect(lunchChip).toBeTruthy()
+
+    await act(async () => { lunchChip?.click(); await Promise.resolve() })
+
+    // The entry is now categorised, so its triage chip is gone and the Undo toast is shown.
+    expect([...container.querySelectorAll('button')]
+      .find(b => b.getAttribute('aria-label') === 'Categorize Toast Box as Lunch')).toBeFalsy()
+    expect(container.querySelector('.save-toast')?.textContent).toContain('Filed Toast Box → Lunch')
+  })
+
+  it('restores an uncategorised entry to the bucket when Undo is tapped on the triage toast', async () => {
+    const today = toLocalDateString(sgtToday())
+    const { container, root: r } = renderWithEntries([
+      { id: 'u1', amount: 5.8, category: null, note: '', date: today, merchant: 'Toast Box' },
+    ])
+    root = r
+
+    // Expand the Uncategorized bucket so its rows (and chips) render.
+    const bucketToggle = [...container.querySelectorAll('button')]
+      .find(b => /Uncategorized/.test(b.textContent ?? ''))
+    await act(async () => { bucketToggle?.click() })
+
+    const lunchChip = [...container.querySelectorAll('button')]
+      .find(b => b.getAttribute('aria-label') === 'Categorize Toast Box as Lunch')
+    await act(async () => { lunchChip?.click(); await Promise.resolve() })
+
+    const toast = container.querySelector('.save-toast') as HTMLElement
+    expect(toast).toBeTruthy()
+
+    const undoBtn = [...toast.querySelectorAll('button')]
+      .find(b => /Undo/.test(b.textContent ?? '')) as HTMLElement
+    expect(undoBtn).toBeTruthy()
+
+    await act(async () => { undoBtn.click(); await Promise.resolve() })
+
+    // The entry is back in the (still-expanded) Uncategorized bucket, and the toast is gone.
+    expect([...container.querySelectorAll('button')]
+      .find(b => b.getAttribute('aria-label') === 'Categorize Toast Box as Lunch')).toBeTruthy()
+    expect(container.querySelector('.save-toast')).toBeNull()
   })
 })

@@ -8,6 +8,7 @@ export interface SeedEntry {
   date: string
   source?: 'manual' | 'apple-pay' | 'dbs-email'
   currency?: string
+  merchant?: string
 }
 
 const DEFAULT_BUDGET = {

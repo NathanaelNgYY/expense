@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { guessCategory, categoryFromHistory, normalizeCategoryMerchant } from './category'
+import { guessCategory, categoryFromHistory, normalizeCategoryMerchant, rankCategoriesForMerchant } from './category'
 import type { Entry } from '../types'
 
 describe('guessCategory', () => {
@@ -114,5 +114,66 @@ describe('categoryFromHistory', () => {
   it('returns null for an empty merchant', () => {
     const history = [entry({ merchant: 'AH HUAT', category: 'lunch' })]
     expect(categoryFromHistory(history, '')).toBeNull()
+  })
+})
+
+describe('rankCategoriesForMerchant', () => {
+  const ids = ['lunch', 'transport', 'others', 'savings', 'investments']
+  const e = (over: Partial<Entry>): Entry => ({
+    id: `id-${Math.random()}`, amount: 5, category: null, note: '', date: '2026-07-01', ...over,
+  })
+
+  it('ranks this merchant\'s own history first, most-frequent then most-recent', () => {
+    const entries = [
+      e({ merchant: 'Toast Box', category: 'lunch', date: '2026-07-01' }),
+      e({ merchant: 'Toast Box', category: 'lunch', date: '2026-07-02' }),
+      e({ merchant: 'Toast Box', category: 'others', date: '2026-07-03' }),
+    ]
+    expect(rankCategoriesForMerchant(entries, 'Toast Box', ids)[0]).toBe('lunch')
+  })
+
+  it('falls back to the keyword guess when there is no history', () => {
+    expect(rankCategoriesForMerchant([], 'SimplyGo MRT', ids)[0]).toBe('transport')
+  })
+
+  it('fills remaining slots with globally most-used categories', () => {
+    const entries = [
+      e({ merchant: 'A', category: 'savings' }),
+      e({ merchant: 'B', category: 'savings' }),
+      e({ merchant: 'C', category: 'transport' }),
+    ]
+    // Unknown merchant, no keyword match -> global popularity: savings (2) then transport (1)
+    const ranked = rankCategoriesForMerchant(entries, 'Unknown Shop', ids)
+    expect(ranked).toContain('savings')
+    expect(ranked.length).toBe(3)
+  })
+
+  it('always returns `limit` real chips even at true zero-state', () => {
+    const ranked = rankCategoriesForMerchant([], null, ids)
+    expect(ranked).toEqual(['lunch', 'transport', 'others'])
+  })
+
+  it('never repeats an id and never returns an id outside candidateIds', () => {
+    const entries = [e({ merchant: 'Toast Box', category: 'lunch' })]
+    const ranked = rankCategoriesForMerchant(entries, 'Toast Box', ['lunch', 'transport'])
+    expect(ranked).toEqual(['lunch', 'transport'])
+    expect(new Set(ranked).size).toBe(ranked.length)
+  })
+
+  it('excludes a retired category id that is no longer a candidate', () => {
+    const entries = [e({ merchant: 'Toast Box', category: 'old-custom' })]
+    const ranked = rankCategoriesForMerchant(entries, 'Toast Box', ids)
+    expect(ranked).not.toContain('old-custom')
+  })
+})
+
+describe('categoryFromHistory still returns the single best after refactor', () => {
+  it('returns the most-frequent category for the merchant', () => {
+    const entries: Entry[] = [
+      { id: '1', amount: 5, category: 'lunch', note: '', date: '2026-07-01', merchant: 'Toast Box' },
+      { id: '2', amount: 5, category: 'lunch', note: '', date: '2026-07-02', merchant: 'Toast Box' },
+      { id: '3', amount: 5, category: 'others', note: '', date: '2026-07-03', merchant: 'Toast Box' },
+    ]
+    expect(categoryFromHistory(entries, 'Toast Box')).toBe('lunch')
   })
 })

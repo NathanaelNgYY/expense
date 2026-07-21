@@ -8,6 +8,8 @@ import type { Entry } from '../types'
 import { DEFAULT_BUDGET } from '../types'
 import { getWalletMap, saveActiveCurrency, saveWalletMap } from '../storage'
 import type { ActiveBudgetData, SharedBudget } from '../sharedBudgets/types'
+import { sgtToday } from '../shared/sgtDate'
+import { toLocalDateString } from '../dates'
 
 const sharedCtx = vi.hoisted(() => ({
   value: {
@@ -515,5 +517,28 @@ describe('Dashboard category expense history', () => {
     expect(rendered.container).toHaveTextContent('S$20.00 of S$100.00')
     expect(rendered.container).toHaveTextContent('Nat')
     expect(rendered.container).toHaveTextContent('kopi')
+  })
+
+  it('files an uncategorised entry from Home via a triage chip and shows an Undo toast', async () => {
+    const today = toLocalDateString(sgtToday())
+    const { container } = renderWithEntries([
+      { id: 'u1', amount: 5.8, category: null, note: '', date: today, merchant: 'Toast Box' },
+    ])
+
+    // Expand the Uncategorized bucket so its rows (and chips) render.
+    const bucketToggle = [...container.querySelectorAll('button')]
+      .find(b => /Uncategorized/.test(b.textContent ?? ''))
+    await act(async () => { bucketToggle?.click() })
+
+    const lunchChip = [...container.querySelectorAll('button')]
+      .find(b => b.getAttribute('aria-label') === 'Categorize Toast Box as Lunch')
+    expect(lunchChip).toBeTruthy()
+
+    await act(async () => { lunchChip?.click(); await Promise.resolve() })
+
+    // The entry is now categorised, so its triage chip is gone and the Undo toast is shown.
+    expect([...container.querySelectorAll('button')]
+      .find(b => b.getAttribute('aria-label') === 'Categorize Toast Box as Lunch')).toBeFalsy()
+    expect(container.querySelector('.save-toast')?.textContent).toContain('Filed Toast Box → Lunch')
   })
 })

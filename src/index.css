@@ -1388,6 +1388,65 @@ input:focus-visible {
   font-weight: 600;
 }
 
+.triage-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.triage-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 2px 0 4px;
+}
+
+.triage-chips--expanded {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.triage-chips__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.triage-chips__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.triage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--separator);
+  border-radius: var(--theme-control-radius, 12px);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.triage-chip:active {
+  background: var(--fill);
+  border-color: var(--primary);
+}
+
+.triage-chip--top {
+  border-color: var(--primary);
+}
+
+.triage-chip--more,
+.triage-chip--collapse {
+  color: var(--text-secondary);
+}
+
 .category-expense-confirm-actions {
   flex: 0 0 auto;
   display: flex;

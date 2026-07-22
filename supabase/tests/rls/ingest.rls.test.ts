@@ -48,6 +48,33 @@ describe('ingest_tokens RLS — service role only', () => {
   })
 })
 
+describe('ingest_tokens.expires_at — rotation grace column', () => {
+  it('round-trips an expiry set by the service role and is never writable by a client', async () => {
+    const tokenHash = `expiry-${bob.id}`
+    const expiresAt = '2999-01-01T00:00:00.000Z'
+    const inserted = await oracle
+      .from('ingest_tokens')
+      .insert({ token_hash: tokenHash, user_id: bob.id, label: 'rotated', expires_at: expiresAt })
+    expect(inserted.error).toBeNull()
+
+    const { data, error } = await oracle
+      .from('ingest_tokens')
+      .select('expires_at')
+      .eq('token_hash', tokenHash)
+      .maybeSingle()
+    expect(error).toBeNull()
+    expect(new Date(data!.expires_at as string).toISOString()).toBe(expiresAt)
+
+    // A signed-in user still cannot expire (or touch) a token — rotation is service-role only.
+    const forged = await bob.client
+      .from('ingest_tokens')
+      .update({ expires_at: null })
+      .eq('token_hash', tokenHash)
+    expect(forged.error).not.toBeNull()
+    expect(forged.error!.code).toBe('42501')
+  })
+})
+
 describe('ingest_status RLS — owner-readable, never client-writable', () => {
   beforeAll(async () => {
     const { error } = await oracle

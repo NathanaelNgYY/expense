@@ -3,7 +3,7 @@
 // hashed (sha256) and looked up in ingest_tokens to find whose entries it writes;
 // supabase/config.toml disables JWT verification for this custom authentication scheme.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2'
-import { handleIngest, type IngestBody, type IngestStore } from './handler.ts'
+import { activeTokenUserId, handleIngest, type IngestBody, type IngestStore } from './handler.ts'
 import type { Entry } from '../../../src/types.ts'
 import {
   isAutomaticCategoryRuleList,
@@ -178,10 +178,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (token) {
     const { data } = await client
       .from('ingest_tokens')
-      .select('user_id,label')
+      .select('user_id,label,expires_at')
       .eq('token_hash', await sha256Hex(token))
       .maybeSingle()
-    userId = data?.user_id ?? null
+    // A rotated token stays valid until its grace window elapses; past that, it authenticates
+    // as nobody and falls through to the 401 path below.
+    userId = activeTokenUserId(data ?? null)
     tokenLabel = data?.label ?? ''
   }
   if (!userId) {

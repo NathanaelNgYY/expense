@@ -49,12 +49,18 @@ describe('ingest_tokens RLS — service role only', () => {
 })
 
 describe('ingest_tokens.expires_at — rotation grace column', () => {
+  // A dedicated user: inserting a token fires sync_ingest_status_on_token, which would create an
+  // ingest_status row and pollute the shared alice/bob fixtures used by later tests.
+  let carol: TestUser
+  beforeAll(async () => { carol = await signedInUser() })
+  afterAll(async () => { await deleteUser(carol) })
+
   it('round-trips an expiry set by the service role and is never writable by a client', async () => {
-    const tokenHash = `expiry-${bob.id}`
+    const tokenHash = `expiry-${carol.id}`
     const expiresAt = '2999-01-01T00:00:00.000Z'
     const inserted = await oracle
       .from('ingest_tokens')
-      .insert({ token_hash: tokenHash, user_id: bob.id, label: 'rotated', expires_at: expiresAt })
+      .insert({ token_hash: tokenHash, user_id: carol.id, label: 'rotated', expires_at: expiresAt })
     expect(inserted.error).toBeNull()
 
     const { data, error } = await oracle
@@ -66,7 +72,7 @@ describe('ingest_tokens.expires_at — rotation grace column', () => {
     expect(new Date(data!.expires_at as string).toISOString()).toBe(expiresAt)
 
     // A signed-in user still cannot expire (or touch) a token — rotation is service-role only.
-    const forged = await bob.client
+    const forged = await carol.client
       .from('ingest_tokens')
       .update({ expires_at: null })
       .eq('token_hash', tokenHash)

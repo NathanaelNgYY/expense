@@ -15,6 +15,7 @@ import {
   topSpendingDayOfWeek,
   monthOverMonthDelta,
   monthlySpendForecast,
+  MIN_FORECAST_ELAPSED_DAYS,
   safeToSpendPerDay,
   monthComparison,
 } from './compute'
@@ -477,13 +478,37 @@ describe('monthlySpendForecast', () => {
   it('uses one elapsed day when previewing a future month', () => {
     const entries = [e({ date: '2026-06-02', amount: 30 })]
 
+    // daysElapsed 1 < MIN_FORECAST_ELAPSED_DAYS, so the N4 guard damps the
+    // straight-line projection (would be 900) to spent + (30/5) × 29 remaining.
     expect(monthlySpendForecast(entries, 2026, 5, new Date('2026-05-06T12:00:00'))).toEqual({
       spentToDate: 30,
       dailyAverage: 30,
       daysElapsed: 1,
       daysInMonth: 30,
-      projectedTotal: 900,
+      projectedTotal: 204,
     })
+  })
+
+  it('damps an alarming projection from a single early-month expense (N4 guard)', () => {
+    const entries = [e({ amount: 200, date: '2026-05-02' })]
+    const forecast = monthlySpendForecast(entries, 2026, 4, new Date('2026-05-02T12:00:00'))
+
+    // Straight-line would project 100 × 31 = 3100. The guard spreads the
+    // remaining 29 days at 200 / MIN_FORECAST_ELAPSED_DAYS = 40/day instead.
+    expect(forecast.spentToDate).toBe(200)
+    expect(forecast.daysElapsed).toBe(2)
+    expect(forecast.dailyAverage).toBe(100) // reported average stays truthful
+    expect(forecast.projectedTotal).toBe(200 + 40 * 29)
+  })
+
+  it('leaves the projection unchanged once the elapsed-days floor is reached', () => {
+    const entries = [e({ amount: 50, date: '2026-05-01' })]
+    const forecast = monthlySpendForecast(entries, 2026, 4, new Date('2026-05-05T12:00:00'))
+
+    // daysElapsed 5 == MIN_FORECAST_ELAPSED_DAYS: guard is inert and the total
+    // matches the plain straight-line projection dailyAverage × daysInMonth.
+    expect(forecast.daysElapsed).toBe(MIN_FORECAST_ELAPSED_DAYS)
+    expect(forecast.projectedTotal).toBe(forecast.dailyAverage * forecast.daysInMonth)
   })
 
   it('can exclude commitment categories from spending pace', () => {

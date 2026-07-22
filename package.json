@@ -12,7 +12,7 @@
     "test:e2e": "playwright test",
     "test:rls": "vitest run --config vitest.rls.config.ts",
     "test:coverage": "vitest run --coverage",
-    "typecheck:functions": "deno check supabase/functions/ingest/index.ts supabase/functions/ingest/handler.ts supabase/functions/_shared/rateLimit.ts",
+    "typecheck:functions": "deno check supabase/functions/ingest/index.ts supabase/functions/ingest/handler.ts supabase/functions/_shared/rateLimit.ts supabase/functions/rotate-ingest-token/index.ts supabase/functions/rotate-ingest-token/handler.ts",
     "size": "node scripts/check-bundle-size.mjs",
     "test:ingest": "vitest run supabase/functions/ingest/handler.test.ts",
     "test:ingest:live": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/test-ingest.ps1"

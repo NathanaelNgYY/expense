@@ -791,6 +791,7 @@ input:focus-visible {
 .wallet-sheet__header h2 {
   margin-top: 3px;
   font-family: var(--font-display);
+  font-weight: 500;
   font-size: 26px;
 }
 
@@ -860,9 +861,14 @@ input:focus-visible {
   flex: 1;
 }
 
-.wallet-row__copy strong { font-size: 15px; }
+.wallet-row__copy strong { font-family: var(--font-body); font-weight: 600; font-size: 15px; }
 .wallet-row__copy small { color: var(--text-secondary); letter-spacing: 0.08em; }
-.wallet-row__total { color: var(--text-secondary); font-size: 13px; white-space: nowrap; }
+.wallet-row__total {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 .wallet-add-row {
   justify-content: center;
@@ -920,7 +926,7 @@ input:focus-visible {
 
 .wallet-create__choice input { margin-top: 3px; accent-color: var(--primary); }
 .wallet-create__choice span { display: grid; gap: 2px; }
-.wallet-create__choice strong { color: var(--text); font-size: 14px; }
+.wallet-create__choice strong { color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 14px; }
 .wallet-create__choice small { color: var(--text-secondary); font-weight: 450; }
 .wallet-create__note { color: var(--text-secondary); font-size: 12px; text-align: center; }
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Entry } from '../../../src/types'
 import type { AutomaticCategoryRule } from '../../../src/shared/automaticCategoryRules'
-import { handleIngest, type IngestStore } from './handler'
+import { activeTokenUserId, handleIngest, type IngestStore } from './handler'
 
 class InMemoryStore implements IngestStore {
   private map = new Map<string, Entry>()
@@ -426,5 +426,29 @@ To: KHXX JIX SHEXX (MOBILE ending 5998)`,
     )
     expect(result.status).toBe('saved')
     if (result.status === 'saved') expect(result.entry.category).toBe('lunch')
+  })
+})
+
+describe('activeTokenUserId — expired ingest tokens are rejected', () => {
+  const NOW = new Date('2026-07-22T12:00:00Z')
+
+  it('returns null for a missing token row', () => {
+    expect(activeTokenUserId(null, NOW)).toBeNull()
+  })
+
+  it('returns the user id when expires_at is null (never expires)', () => {
+    expect(activeTokenUserId({ user_id: 'u1', expires_at: null }, NOW)).toBe('u1')
+  })
+
+  it('returns the user id when expires_at is in the future', () => {
+    expect(activeTokenUserId({ user_id: 'u1', expires_at: '2026-07-23T12:00:00Z' }, NOW)).toBe('u1')
+  })
+
+  it('returns null when expires_at is in the past', () => {
+    expect(activeTokenUserId({ user_id: 'u1', expires_at: '2026-07-22T11:59:59Z' }, NOW)).toBeNull()
+  })
+
+  it('treats expires_at exactly at now as expired', () => {
+    expect(activeTokenUserId({ user_id: 'u1', expires_at: NOW.toISOString() }, NOW)).toBeNull()
   })
 })

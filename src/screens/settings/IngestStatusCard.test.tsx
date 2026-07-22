@@ -2,9 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import IngestStatusCard from './IngestStatusCard'
+import { ConfirmProvider } from '../../components/ConfirmDialog'
 import { INGEST_BINDING_STORAGE_KEY } from '../../ingestVisibility'
 
-const api = vi.hoisted(() => ({ fetchIngestStatus: vi.fn() }))
+const api = vi.hoisted(() => ({ fetchIngestStatus: vi.fn(), rotateIngestToken: vi.fn() }))
 const shared = vi.hoisted(() => ({
   value: {
     authReady: true,
@@ -13,16 +14,32 @@ const shared = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('../../api', () => ({ fetchIngestStatus: api.fetchIngestStatus }))
+vi.mock('../../api', () => ({
+  fetchIngestStatus: api.fetchIngestStatus,
+  rotateIngestToken: api.rotateIngestToken,
+}))
 vi.mock('../../sharedBudgets/SharedBudgetsContext', () => ({ useSharedBudgets: () => shared.value }))
 
 async function renderCard(props: { refreshable?: boolean } = {}): Promise<{ container: HTMLElement; root: Root }> {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
-  await act(async () => root.render(<IngestStatusCard {...props} />))
+  await act(async () => root.render(<ConfirmProvider><IngestStatusCard {...props} /></ConfirmProvider>))
   await act(async () => new Promise(resolve => setTimeout(resolve, 0)))
   return { container, root }
+}
+
+function findButton(container: HTMLElement, text: string): HTMLButtonElement {
+  const button = [...container.querySelectorAll('button')].find(b => b.textContent?.includes(text))
+  if (!button) throw new Error(`Button "${text}" not found`)
+  return button
+}
+
+// The confirm dialog renders in document.body (top layer), not inside the card container.
+function clickConfirm(label: string): Promise<void> {
+  const button = [...document.querySelectorAll('dialog button')].find(b => b.textContent?.trim() === label)
+  if (!button) throw new Error(`Confirm button "${label}" not found`)
+  return act(async () => (button as HTMLButtonElement).click())
 }
 
 describe('IngestStatusCard', () => {
@@ -131,5 +148,88 @@ describe('IngestStatusCard', () => {
     expect(api.fetchIngestStatus).toHaveBeenCalledTimes(2)
     expect(refresh).toBeEnabled()
     expect(refresh).toHaveTextContent('Refresh status')
+  })
+
+  it('offers "Generate token" when no token is linked', async () => {
+    api.fetchIngestStatus.mockResolvedValue(null)
+    const rendered = await renderCard()
+    root = rendered.root
+    expect(findButton(rendered.container, 'Generate token')).toBeEnabled()
+  })
+
+  it('offers "Rotate token" when a token is already linked', async () => {
+    api.fetchIngestStatus.mockResolvedValue({
+      recipientUserId: 'user-current',
+      tokenLabel: 'ios-shortcut',
+      lastCapturedAt: '2026-07-13T09:30:00.000Z',
+      lastSource: 'apple_pay',
+    })
+    const rendered = await renderCard()
+    root = rendered.root
+    expect(findButton(rendered.container, 'Rotate token')).toBeEnabled()
+  })
+
+  it('reveals the new token once after confirming, then clears it on Done', async () => {
+    api.fetchIngestStatus.mockResolvedValue({
+      recipientUserId: 'user-current', tokenLabel: 'ios-shortcut', lastCapturedAt: null, lastSource: null,
+    })
+    api.rotateIngestToken.mockResolvedValue({ token: 'SECRET-TOKEN-XYZ' })
+    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } })
+
+    const rendered = await renderCard()
+    root = rendered.root
+
+    await act(async () => findButton(rendered.container, 'Rotate token').click())
+    await clickConfirm('Rotate')
+
+    expect(api.rotateIngestToken).toHaveBeenCalledTimes(1)
+    const field = rendered.container.querySelector<HTMLInputElement>('input[aria-label="New ingest token"]')
+    expect(field).not.toBeNull()
+    expect(field!.value).toBe('SECRET-TOKEN-XYZ')
+    expect(field!.readOnly).toBe(true)
+
+    await act(async () => findButton(rendered.container, 'Copy').click())
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('SECRET-TOKEN-XYZ')
+
+    await act(async () => findButton(rendered.container, 'Done').click())
+    expect(rendered.container.querySelector('input[aria-label="New ingest token"]')).toBeNull()
+  })
+
+  it('does not rotate when the confirm is cancelled', async () => {
+    api.fetchIngestStatus.mockResolvedValue(null)
+    const rendered = await renderCard()
+    root = rendered.root
+
+    await act(async () => findButton(rendered.container, 'Generate token').click())
+    await clickConfirm('Cancel')
+
+    expect(api.rotateIngestToken).not.toHaveBeenCalled()
+  })
+
+  it('shows an error notice when rotation fails and reveals no token', async () => {
+    api.fetchIngestStatus.mockResolvedValue(null)
+    api.rotateIngestToken.mockRejectedValue(new Error('boom'))
+
+    const rendered = await renderCard()
+    root = rendered.root
+
+    await act(async () => findButton(rendered.container, 'Generate token').click())
+    await clickConfirm('Generate')
+
+    expect(rendered.container).toHaveTextContent('Could not generate a new token')
+    expect(rendered.container.querySelector('input[aria-label="New ingest token"]')).toBeNull()
+  })
+
+  it('hides the rotate control when there is no signed-in account', async () => {
+    shared.value.session = null as unknown as typeof shared.value.session
+    shared.value.profile = null as unknown as typeof shared.value.profile
+    api.fetchIngestStatus.mockResolvedValue(null)
+
+    const rendered = await renderCard()
+    root = rendered.root
+
+    expect([...rendered.container.querySelectorAll('button')].some(
+      b => /Generate token|Rotate token/.test(b.textContent ?? ''),
+    )).toBe(false)
   })
 })

@@ -99,6 +99,21 @@ export async function fetchIngestStatus(): Promise<IngestStatus | null> {
   }
 }
 
+// Rotate the iOS-Shortcut ingest token: mints a new token, expires the old one after a grace
+// window, and returns the raw token once. The old token keeps working during the grace window so
+// the Shortcut can be updated without dropping captures.
+export async function rotateIngestToken(): Promise<{ token: string }> {
+  await ensureUserId()
+  const { data, error } = await getSupabase().functions.invoke('rotate-ingest-token', { method: 'POST' })
+  if (error) {
+    const status = (error as { context?: { status?: number } }).context?.status
+    throw new ApiError(status ?? 0, error.message)
+  }
+  const token = (data as { token?: unknown } | null)?.token
+  if (typeof token !== 'string' || !token) throw new ApiError(0, 'rotate returned no token')
+  return { token }
+}
+
 // ---------- automatic category preferences ----------
 
 interface AutomaticCategoryPreferencesRow {

@@ -84,7 +84,13 @@ Transactions are captured automatically by two iOS Shortcuts that POST to the ap
 
 Open **Settings → Automatic Tracking** for a three-step Apple Pay and DBS-alert setup guide, the exact ingest endpoint, a link into Shortcuts, the receiving account, the most recent capture time, and the source. The status card warns when the app is signed into a different account from the account remembered for the iPhone Shortcut. The raw ingest token is never exposed to the browser; the guide links back to the trusted one-time server setup below.
 
+### Rotating the ingest token
+
+The capture card has a **Rotate token** button (**Generate token** if the account has none). Rotating mints a fresh token, shows it **once**, and keeps the old token working for **24 hours** so you can update your Shortcut without dropping captures. After rotating: copy the new token, open each Shortcut's **Get Contents of URL** action, and replace the `Authorization` header value with `Bearer <new-token>`. Once the 24-hour grace window passes, the old token stops authenticating (`401`). The raw token is generated server-side, returned to your signed-in session once, and never stored (only its hash is) — if you dismiss the panel without copying it, rotate again. Rotation requires a real signed-in account (not an anonymous session).
+
 ### Server setup (one-time)
+
+You can skip this and just tap **Generate token** in the app. The manual script below remains for scripted or bulk minting:
 
 1. Find the target account id in Supabase Dashboard → Authentication → Users.
 2. Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` locally, then run `node scripts/mint-ingest-token.mjs <user-id> ios-shortcut`.

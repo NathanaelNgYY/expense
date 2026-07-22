@@ -10,6 +10,20 @@ import {
 import { fingerprintIngestEvent } from '../../../src/shared/dedupe.ts'
 import { entriesForCurrency, normalizeCurrencyCode } from '../../../src/shared/currency.ts'
 
+export interface IngestTokenRow {
+  user_id: string
+  expires_at: string | null
+}
+
+// Resolve the owning user for a presented ingest token. A missing row or a token whose grace
+// window has elapsed (expires_at at or before now) authenticates as nobody — the caller then
+// falls through to the shared 401 path. `expires_at === null` means the token never expires.
+export function activeTokenUserId(row: IngestTokenRow | null, now: Date = new Date()): string | null {
+  if (!row) return null
+  if (row.expires_at != null && new Date(row.expires_at).getTime() <= now.getTime()) return null
+  return row.user_id
+}
+
 export interface IngestStore {
   list(): Promise<Entry[]>
   listAutomaticCategoryRules?(): Promise<AutomaticCategoryRule[]>

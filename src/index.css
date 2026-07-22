@@ -2436,6 +2436,7 @@ input:focus-visible {
 }
 
 .ingest-status-card__refresh,
+.ingest-status-card__rotate-btn,
 .automatic-capture__copy,
 .automatic-capture__open-shortcuts {
   min-height: 44px;
@@ -2446,6 +2447,7 @@ input:focus-visible {
 }
 
 .ingest-status-card__refresh,
+.ingest-status-card__rotate-btn,
 .automatic-capture__copy {
   display: inline-flex;
   align-items: center;
@@ -2459,9 +2461,93 @@ input:focus-visible {
 }
 
 .ingest-status-card__refresh:disabled,
+.ingest-status-card__rotate-btn:disabled,
 .automatic-capture__copy:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+/* Token rotation controls + show-once reveal */
+.ingest-status-card__rotate {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ingest-status-card__rotate-btn {
+  width: 100%;
+}
+
+.ingest-token-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--separator));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--bg-elev-1));
+  padding: 12px;
+}
+
+.ingest-token-reveal__label {
+  margin: 0;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.ingest-token-reveal__value {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--separator);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  padding: 9px 10px;
+  overflow-x: auto;
+}
+
+.ingest-token-reveal__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ingest-token-reveal__copy,
+.ingest-token-reveal__done {
+  min-height: 40px;
+  flex: 1;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.ingest-token-reveal__copy {
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--separator));
+  background: color-mix(in srgb, var(--primary) 12%, var(--bg-elev-1));
+  color: var(--primary);
+}
+
+.ingest-token-reveal__done {
+  border: 1px solid var(--separator);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.ingest-token-reveal__hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ingest-token-reveal__hint code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
 }
 
 /* ─── Automatic tracking setup ───────────────────────────── */

@@ -21,6 +21,7 @@ import {
   isUniqueViolation,
   fetchAutomaticCategoryRules,
   saveAutomaticCategoryRules,
+  rotateIngestToken,
 } from './api'
 
 interface FakeResult {
@@ -363,5 +364,38 @@ describe('isAuthFailure', () => {
   it('ignores other errors', () => {
     expect(isAuthFailure(new ApiError(404, 'not-found'))).toBe(false)
     expect(isAuthFailure(new TypeError('Failed to fetch'))).toBe(false)
+  })
+})
+
+describe('rotateIngestToken', () => {
+  function stubRotate(invokeResult: { data: unknown; error: unknown }) {
+    const invoke = vi.fn().mockResolvedValue(invokeResult)
+    const fake = {
+      auth: {
+        getSession: vi.fn().mockResolvedValue({ data: { session: { user: { id: 'u1' } } } }),
+        signInAnonymously: vi.fn(),
+      },
+      functions: { invoke },
+    }
+    vi.mocked(getSupabase).mockReturnValue(fake as unknown as ReturnType<typeof getSupabase>)
+    return { invoke }
+  }
+
+  it('invokes the rotate-ingest-token function and returns the new token', async () => {
+    const { invoke } = stubRotate({ data: { token: 'NEW-TOKEN' }, error: null })
+    await expect(rotateIngestToken()).resolves.toEqual({ token: 'NEW-TOKEN' })
+    expect(invoke).toHaveBeenCalledWith('rotate-ingest-token', { method: 'POST' })
+  })
+
+  it('throws an auth ApiError when the function rejects with 401', async () => {
+    stubRotate({ data: null, error: { message: 'unauthorized', context: { status: 401 } } })
+    const error = await rotateIngestToken().then(() => null, (e: unknown) => e)
+    expect(error).toBeInstanceOf(ApiError)
+    expect(isAuthFailure(error)).toBe(true)
+  })
+
+  it('throws when the function returns no token', async () => {
+    stubRotate({ data: {}, error: null })
+    await expect(rotateIngestToken()).rejects.toBeInstanceOf(ApiError)
   })
 })

@@ -49,6 +49,13 @@ export interface MonthlySpendForecast {
   projectedTotal: number
 }
 
+// N4 forecast smoothing guard: early in the month a straight-line projection
+// (dailyAverage × daysInMonth) turns a single large expense on day 1–2 into an
+// alarming month-end total. Project the remaining days at a rate computed over
+// at least this many elapsed days. Once daysElapsed reaches this floor the guard
+// is inert and projectedTotal equals the plain straight-line projection.
+export const MIN_FORECAST_ELAPSED_DAYS = 5
+
 export interface SafeToSpendResult {
   remainingBudget: number
   daysRemaining: number
@@ -285,12 +292,19 @@ export function monthlySpendForecast(
   const daysElapsed = daysElapsedForForecast(year, month, referenceDate)
   const dailyAverage = spentToDate / daysElapsed
 
+  // Damp the projection with the N4 guard: keep spend-to-date real, then project
+  // the remaining days at a rate averaged over at least MIN_FORECAST_ELAPSED_DAYS.
+  // The reported dailyAverage stays truthful; only the forward estimate is smoothed.
+  const projectionDays = Math.max(daysElapsed, MIN_FORECAST_ELAPSED_DAYS)
+  const projectionRate = spentToDate / projectionDays
+  const daysRemaining = Math.max(0, daysInMonth - daysElapsed)
+
   return {
     spentToDate,
     dailyAverage,
     daysElapsed,
     daysInMonth,
-    projectedTotal: dailyAverage * daysInMonth,
+    projectedTotal: spentToDate + projectionRate * daysRemaining,
   }
 }
 

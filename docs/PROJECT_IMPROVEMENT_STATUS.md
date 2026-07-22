@@ -57,15 +57,14 @@ health at audit time was strong: 65 test files / 539 tests green, lint + typeche
 | ~~N1~~ | Done | Correctness | **Complete (2026-07-17).** The real leak was at write/"now" time, not in stored-entry bucketing (`entriesForMonth` reads calendar fields back and was already timezone-independent). Added `sgtToday`/`sgtTodayString` to `src/shared/sgtDate.ts`; routed all screen "now"/"today" derivations and `isFutureDateString` through them so the client agrees with the SGT server/ingest model on any device timezone. `compute.ts` deliberately left timezone-agnostic (injected `referenceDate`). | `docs/superpowers/specs/2026-07-17-n1-sgt-today-design.md`, `src/shared/sgtDate.ts`, `src/shared/sgtDate.test.ts`, `src/dates.ts`, `src/dates.test.ts` |
 | ~~N2~~ | Done | Architecture | **Complete (2026-07-17).** Budget config, custom categories, and overrides now live in one reactive context seeded from the existing user-scoped storage layer. Context writes persist and publish state, JSON import reloads it, and active-user changes reload the correct namespace. Dashboard/History splitting remains a separate follow-up. | `docs/superpowers/specs/2026-07-17-n2-budget-config-context-design.md`, `docs/testing/n2-budget-config-context.tdd.md`, `src/BudgetConfigContext.tsx`, `src/userStorage.ts` |
 | ~~N3~~ | Done | Finance clarity | **Complete (2026-07-17).** Restored the previously approved commitment model: safe-to-spend uses Lunch + Transport + Buffer + budgeted custom envelopes and excludes Savings/Investments entries, so its value no longer depends on when commitments are logged. Personal totals are labelled allocated; shared-budget totals remain spent. | `docs/superpowers/specs/2026-07-17-n3-finance-clarity-product-brief.md`, `docs/testing/n3-finance-clarity.tdd.md`, `src/screens/Dashboard.tsx`, `src/components/BudgetUsageRing.tsx` |
-| N4 | Low | Finance | Early-month forecast is volatile: `monthlySpendForecast.projectedTotal = dailyAverage × daysInMonth` extrapolates straight-line from `daysElapsed ≥ 1`, so one large expense on day 2 projects an alarming month. If surfaced on Insights, add a minimum-elapsed-days guard or smoothing. | `src/compute.ts:274-293` |
+| ~~N4~~ | Done | Finance | **Complete (2026-07-22).** Added a minimum-elapsed-days guard to `monthlySpendForecast`: `projectedTotal` now projects the remaining days at a rate averaged over at least `MIN_FORECAST_ELAPSED_DAYS` (5), so a single large day-1–2 expense no longer extrapolates an alarming month. The guard is algebraically inert once `daysElapsed ≥ 5` (unchanged from the prior straight-line result); reported `dailyAverage`/`daysElapsed` stay truthful. | `src/compute.ts` (`MIN_FORECAST_ELAPSED_DAYS`, `monthlySpendForecast`), `src/compute.test.ts` |
 | N5 | Partial | Production | **Partially verified (2026-07-17).** PageSpeed reports no CrUX field data for the production origin; a fresh mobile lab run scored 98 with 1.8s LCP, 0ms TBT, and CLS 0. Sentry UI/API access was blocked by the available browser's ad-blocking layer, so BUDGET-TRACKER-2 recurrence is unconfirmed. Physical iPhone Lunch/Dinner captures remain pending. | `docs/testing/n5-production-verification-2026-07-17.md`, PR #21 |
 
 ## Next recommended work
 
 1. Verify the N5 real-world items (Apple Pay capture on a physical iPhone; BUDGET-TRACKER-2 resolution; CrUX field CWV).
-2. Revisit N4 forecast smoothing only if a forecast is surfaced again.
 
-(N1–N3 are complete; see the N-series table above.)
+(N1–N4 are complete; see the N-series table above.)
 
 ## Remaining audit items
 

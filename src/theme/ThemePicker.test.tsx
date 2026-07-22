@@ -16,7 +16,7 @@ describe('ThemePicker', () => {
       </ThemeProvider>,
     )
 
-    expect(screen.getAllByRole('radio')).toHaveLength(4)
+    expect(screen.getAllByRole('radio')).toHaveLength(2)
     expect(screen.getByRole('radio', { name: /Original Dark/i })).toBeChecked()
   })
 
@@ -27,9 +27,9 @@ describe('ThemePicker', () => {
       </ThemeProvider>,
     )
 
-    act(() => screen.getByRole('radio', { name: /Berry Circuit/i }).click())
+    act(() => screen.getByRole('radio', { name: /Deep Sea/i }).click())
 
-    expect(screen.getByRole('radio', { name: /Berry Circuit/i })).toBeChecked()
+    expect(screen.getByRole('radio', { name: /Deep Sea/i })).toBeChecked()
     expect(screen.getByRole('status')).toHaveTextContent('Theme applied and saved')
   })
 })

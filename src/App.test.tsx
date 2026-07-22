@@ -199,13 +199,13 @@ describe('App', () => {
 
   it('restores the selected theme on app startup', async () => {
     localStorage.setItem('budget_onboarding_version', '1')
-    localStorage.setItem('budget-tracker-theme-v2', 'copper-current')
+    localStorage.setItem('budget-tracker-theme-v2', 'deep-sea')
 
     await act(async () => {
       render(<App />)
     })
 
-    expect(document.documentElement).toHaveAttribute('data-theme', 'copper-current')
+    expect(document.documentElement).toHaveAttribute('data-theme', 'deep-sea')
   })
 
   it('keeps the five-tab shell visible on Insights and Settings', async () => {

@@ -6,14 +6,15 @@ import InsightsSection from '../components/InsightsSection'
 import { useEntries } from '../EntriesContext'
 import { sgtToday } from '../shared/sgtDate'
 import {
+  categoryWeeklySpend,
   entriesForMonth,
-  lunchWeeklySpend,
   monthlySpendByCategory,
+  paceCategory,
   weeklyBudgetTarget,
   weeklyTotal,
   weeksInMonth,
 } from '../compute'
-import { buildCategoryOptions } from '../categoryDisplay'
+import { buildCategoryOptions, categoryLabel } from '../categoryDisplay'
 import { formatMoney, formatMoneyWhole } from '../format'
 import { useBudgetConfig } from '../BudgetConfigContext'
 import { entriesForCurrency } from '../shared/currency'
@@ -34,6 +35,8 @@ export default function Insights() {
   const monthEntries = entriesForMonth(entries, year, month)
   const categorySpend = monthlySpendByCategory(entries, year, month, customCategories)
   const weeks = weeksInMonth(year, month)
+  const paceId = paceCategory(config)
+  const paceLabel = categoryLabel(paceId, overrides, customCategories)
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth()
   const monthLabel = new Date(year, month, 1).toLocaleString('default', {
     month: 'long',
@@ -85,9 +88,9 @@ export default function Insights() {
       <h2 className="section-title">Weekly Spending</h2>
       {weeks.map(weekStart => {
         const total = weeklyTotal(monthEntries, weekStart)
-        const lunch = lunchWeeklySpend(monthEntries, weekStart)
+        const paceSpend = categoryWeeklySpend(monthEntries, weekStart, paceId)
         const weeklyBudget = weeklyBudgetTarget(config.monthlyIncome, year, month, weekStart)
-        const lunchWeeklyBudget = weeklyBudgetTarget(config.lunch, year, month, weekStart)
+        const paceWeeklyBudget = weeklyBudgetTarget(config[paceId], year, month, weekStart)
         const label = `${format(weekStart, 'MMM d')} - ${format(endOfWeek(weekStart, { weekStartsOn: 1 }), 'MMM d')}`
         const summaryId = `insights-week-${format(weekStart, 'yyyy-MM-dd')}-summary`
 
@@ -104,7 +107,7 @@ export default function Insights() {
               <span className="week-bar-total">{formatMoney(total, activeCurrency)} / ~{formatMoneyWhole(weeklyBudget, activeCurrency)}</span>
             </div>
             <span id={summaryId} className="sr-only">
-              Total {formatMoney(total, activeCurrency)} of {formatMoney(weeklyBudget, activeCurrency)} target. Lunch {formatMoney(lunch, activeCurrency)} of {formatMoney(lunchWeeklyBudget, activeCurrency)} target.
+              Total {formatMoney(total, activeCurrency)} of {formatMoney(weeklyBudget, activeCurrency)} target. {paceLabel} {formatMoney(paceSpend, activeCurrency)} of {formatMoney(paceWeeklyBudget, activeCurrency)} target.
             </span>
             <div className="progress-bar" style={{ marginTop: 6 }}>
               <div
@@ -116,13 +119,13 @@ export default function Insights() {
               />
             </div>
             <div className="week-bar-lunch">
-              <span className="muted">Lunch {formatMoney(lunch, activeCurrency)} / ~{formatMoneyWhole(lunchWeeklyBudget, activeCurrency)}</span>
+              <span className="muted">{paceLabel} {formatMoney(paceSpend, activeCurrency)} / ~{formatMoneyWhole(paceWeeklyBudget, activeCurrency)}</span>
               <div className="progress-bar thin" style={{ marginTop: 4 }}>
                 <div
                   className="progress-fill"
                   style={{
-                    width: `${progressPercent(lunch, lunchWeeklyBudget)}%`,
-                    background: lunch > lunchWeeklyBudget ? 'var(--red)' : 'var(--blue)',
+                    width: `${progressPercent(paceSpend, paceWeeklyBudget)}%`,
+                    background: paceSpend > paceWeeklyBudget ? 'var(--red)' : 'var(--blue)',
                   }}
                 />
               </div>

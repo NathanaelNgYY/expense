@@ -11,7 +11,8 @@ describe('dashboard pass card styling', () => {
 
     const passRules = `${indexCss}\n${themesCss}`.match(/(?:\[data-theme='[^']+'\]\s+)?\.pass\s*\{[^}]*\}/g)
 
-    expect(passRules).toHaveLength(4)
+    // Base `.pass` (index.css) + the one alternate theme that overrides it (deep-sea).
+    expect(passRules).toHaveLength(2)
     expect(passRules?.every((rule) => !rule.includes('gradient('))).toBe(true)
   })
 })

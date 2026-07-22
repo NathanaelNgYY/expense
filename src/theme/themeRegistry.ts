@@ -13,18 +13,6 @@ export const THEMES = [
     description: 'Calm aqua, circular progress, and soft spatial grouping.',
     swatches: ['#061012', '#52d8d0', '#eafaf9'],
   },
-  {
-    id: 'copper-current',
-    name: 'Copper Current',
-    description: 'Burnished orange, ledger geometry, and dense financial data.',
-    swatches: ['#100d09', '#ff9147', '#fff5e9'],
-  },
-  {
-    id: 'berry-circuit',
-    name: 'Berry Circuit',
-    description: 'Deep plum, acid-lime signals, and rounded ribbon layouts.',
-    swatches: ['#170a18', '#d7ff6f', '#fff2ff'],
-  },
 ] as const
 
 export type ThemeId = (typeof THEMES)[number]['id']

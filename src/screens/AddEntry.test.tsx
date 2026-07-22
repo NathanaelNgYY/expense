@@ -59,6 +59,17 @@ function renderWithEntries(entries: unknown[] = []) {
   )
 }
 
+function renderWithPrefill(props: { initialAmount?: number; initialCategory?: string | null }) {
+  localStorage.setItem('budget_entries', '[]')
+  localStorage.setItem('api_token', 'tok')
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('[]', { status: 200 })))
+  return render(
+    <EntriesProvider>
+      <AddEntry onSave={() => undefined} {...props} />
+    </EntriesProvider>,
+  )
+}
+
 describe('AddEntry', () => {
   beforeEach(() => {
     ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
@@ -422,5 +433,21 @@ describe('AddEntry', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+describe('AddEntry prefill props', () => {
+  it('seeds the amount and selects the matching category chip', () => {
+    renderWithPrefill({ initialAmount: 5.8, initialCategory: 'lunch' })
+
+    expect(screen.getByLabelText('Entered amount').textContent).toContain('5.80')
+    expect(screen.getByRole('button', { name: /Lunch/ })).toHaveClass('chip--selected')
+  })
+
+  it('renders an empty amount and no selected chip without prefill', () => {
+    renderWithPrefill({})
+
+    expect(screen.getByLabelText('Entered amount').textContent).toContain('0.00')
+    expect(screen.getByRole('button', { name: /Lunch/ })).not.toHaveClass('chip--selected')
   })
 })

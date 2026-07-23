@@ -8,6 +8,12 @@ export const THEMES = [
     swatches: ['#1a1b1c', '#c98d68', '#ece9e4'],
   },
   {
+    id: 'daylight',
+    name: 'Daylight Ledger',
+    description: 'Warm paper and ink, built to stay readable outdoors at noon.',
+    swatches: ['#f4f1ea', '#8a5a34', '#1c1a17'],
+  },
+  {
     id: 'deep-sea',
     name: 'Deep Sea Revised',
     description: 'Calm aqua, circular progress, and soft spatial grouping.',

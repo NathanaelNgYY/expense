@@ -60,6 +60,44 @@ test('currency wallet sheet has no automated WCAG A/AA violations', async ({ pag
   expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([])
 })
 
+// U2: the light theme inverts every surface, so it is the one theme where a stale
+// hardcoded dark color shows up as a real contrast failure rather than as a slightly
+// off tint. Unit tests measure the palette; this measures what actually renders.
+test('the light theme has no automated WCAG A/AA violations on primary screens', async ({
+  page,
+}) => {
+  await prepareApp(page, [
+    { id: 'l1', amount: 5.8, category: 'lunch', note: 'toast', date: currentLocalDate() },
+    { id: 'l2', amount: 22, category: 'others', note: 'haircut', date: currentLocalDate() },
+  ])
+  await page.addInitScript(() =>
+    localStorage.setItem('budget-tracker-theme-v2', 'daylight'),
+  )
+  await page.goto('/')
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'daylight')
+
+  await expectAccessiblePage(page, 'Dashboard')
+
+  await page.getByRole('button', { name: 'Add entry' }).click()
+  await expectAccessiblePage(page, 'Add entry')
+
+  await page.getByRole('button', { name: 'History' }).click()
+  await expectAccessiblePage(page, 'History')
+
+  await page.getByRole('button', { name: 'Insights' }).click()
+  await expectAccessiblePage(page, 'Insights')
+
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await expectAccessiblePage(page, 'Settings')
+
+  await page.getByRole('button', { name: /Appearance/ }).click()
+  await expectAccessiblePage(page, 'Appearance')
+
+  await page.getByRole('button', { name: 'Settings', exact: true }).first().click()
+  await page.getByRole('button', { name: /Poker tracker/ }).click()
+  await expectAccessiblePage(page, 'Poker tracker')
+})
+
 test('keyboard focus reaches named navigation and form controls', async ({ page }) => {
   await prepareApp(page)
   await page.goto('/')

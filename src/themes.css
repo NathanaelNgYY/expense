@@ -1,3 +1,45 @@
+/* Daylight Ledger (U2) — the light sibling of Original Dark, not a different
+   product: same serif display, same copper accent role, same geometry, inverted
+   palette. It exists because the app is used outdoors at noon, where dark UI
+   legibility collapses. Every foreground below clears WCAG AA on all three
+   surfaces; `src/lightTheme.test.ts` re-measures the ratios from this block, so
+   a palette edit that drops one under 4.5:1 fails the suite. */
+[data-theme='daylight'] {
+  color-scheme: light;
+  --carbon-canvas: #f4f1ea;
+  --carbon-surface: #fdfcf9;
+  --carbon-surface-raised: #ffffff;
+  --carbon-chrome: #efeae0;
+  --carbon-text: #1c1a17;
+  --carbon-text-secondary: #4a453e;
+  --carbon-text-tertiary: #6b655c;
+  --carbon-separator: #ded8cd;
+  --carbon-copper: #8a5a34;
+  --carbon-copper-pressed: #6d4526;
+  --carbon-sage: #2f6d46;
+  --carbon-amber: #8a6212;
+  --carbon-brick: #a83a2c;
+  --carbon-display: Georgia, "Times New Roman", serif;
+  --bg: var(--carbon-canvas);
+  --bg-elev: var(--carbon-surface);
+  --bg-elev-2: var(--carbon-surface-raised);
+  --text: var(--carbon-text);
+  --text-secondary: var(--carbon-text-secondary);
+  --text-tertiary: var(--carbon-text-tertiary);
+  --primary: var(--carbon-copper);
+  --blue: var(--carbon-copper);
+  --green: var(--carbon-sage);
+  --warning: var(--carbon-amber);
+  --yellow: var(--carbon-amber);
+  --red: var(--carbon-brick);
+  --separator: var(--carbon-separator);
+  --fill: #ebe6dc;
+  /* The accents are dark here, so anything painted on them takes paper, not ink. */
+  --theme-primary-contrast: #fdfcf9;
+  --theme-on-accent: #fdfcf9;
+  --font-display: Georgia, "Times New Roman", serif;
+}
+
 [data-theme='deep-sea'] {
   color-scheme: dark;
   --carbon-canvas: #061012;
@@ -7,6 +49,7 @@
   --carbon-text-secondary: #9ab8b9;
   --carbon-text-tertiary: #789597;
   --carbon-separator: #214044;
+  --carbon-chrome: #040c0e;
   --carbon-copper: #52d8d0;
   --carbon-copper-pressed: #39bdb6;
   --carbon-sage: #72dfa5;
@@ -107,6 +150,13 @@ body,
   border-radius: 9px;
   background: var(--preview-bg);
   padding: 8px;
+}
+
+[data-theme-preview='daylight'] .theme-preview {
+  --preview-bg: #f4f1ea;
+  --preview-surface: #ffffff;
+  --preview-line: #ded8cd;
+  --preview-accent: #8a5a34;
 }
 
 [data-theme-preview='deep-sea'] .theme-preview {

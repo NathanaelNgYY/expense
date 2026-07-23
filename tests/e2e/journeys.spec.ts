@@ -1,4 +1,11 @@
-import { currentLocalDate, expect, prepareApp, test } from './fixtures'
+import {
+  currentLocalDate,
+  expect,
+  localDateMonthsBack,
+  monthNameMonthsBack,
+  prepareApp,
+  test,
+} from './fixtures'
 
 test('first-run user records a personal expense', async ({ page }) => {
   await prepareApp(page)
@@ -348,4 +355,58 @@ test('someone whose captures already work is never nudged', async ({ page }) => 
 
   await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible()
   await expect(page.locator('.capture-nudge')).toHaveCount(0)
+})
+
+// F6. The point of Trends is that it only exists once there is history to trend,
+// so both halves of that rule are worth a real browser: the chart when it has been
+// earned, and the sentence in its place when it has not.
+test('a user with three months of history gets a six-month trend on Insights', async ({ page }) => {
+  await prepareApp(page, [
+    { id: 'o1', amount: 240, category: 'lunch', note: '', date: localDateMonthsBack(2) },
+    { id: 'o2', amount: 40, category: 'transport', note: '', date: localDateMonthsBack(2) },
+    { id: 'p1', amount: 300, category: 'lunch', note: '', date: localDateMonthsBack(1) },
+    { id: 'p2', amount: 60, category: 'transport', note: '', date: localDateMonthsBack(1) },
+    { id: 'c1', amount: 90, category: 'lunch', note: '', date: currentLocalDate() },
+  ])
+  await page.goto('/#/insights')
+
+  await expect(page.getByRole('heading', { level: 1, name: /Insights/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Trends', exact: true })).toBeVisible()
+
+  // One bar per month with data — the three seeded ones, not six with three blanks.
+  await expect(page.locator('.trend-bar')).toHaveCount(3)
+  // The running month is hatched and never solid.
+  await expect(page.locator('.trend-bar--partial')).toHaveCount(1)
+
+  // The chart is a single labelled image, not geometry a screen reader must infer.
+  const chart = page.getByRole('img', { name: /^Six-month spending:/ })
+  await expect(chart).toBeVisible()
+  const chartLabel = await chart.getAttribute('aria-label')
+  expect(chartLabel).toContain(`${monthNameMonthsBack(2)} S$280.00`)
+  expect(chartLabel).toContain(`${monthNameMonthsBack(1)} S$360.00`)
+  expect(chartLabel).toMatch(/so far\.$/)
+
+  await expect(page.locator('.trend-legend')).toContainText('Average month S$320')
+  await expect(page.locator('.trend-legend')).toContainText('so far')
+  await expect(page.getByText('vs your average')).toBeVisible()
+  await expect(page.getByText('Daily pace')).toBeVisible()
+  await expect(page.getByText(`${monthNameMonthsBack(2)} — S$280.00`)).toBeVisible()
+  await expect(page.getByText(`${monthNameMonthsBack(1)} — S$360.00`)).toBeVisible()
+
+  // Only categories that were actually spent on get a row (U4: nothing is pinned to Lunch).
+  await expect(page.getByRole('heading', { name: 'Category trends' })).toBeVisible()
+  await expect(page.locator('.trend-spark')).toHaveCount(2)
+  await expect(page.locator('.trend-category-row')).toContainText(['Lunch', 'Transport'])
+})
+
+test('a user one complete month in is told what is missing instead of shown a chart', async ({ page }) => {
+  await prepareApp(page, [
+    { id: 'p1', amount: 300, category: 'lunch', note: '', date: localDateMonthsBack(1) },
+    { id: 'c1', amount: 90, category: 'lunch', note: '', date: currentLocalDate() },
+  ])
+  await page.goto('/#/insights')
+
+  await expect(page.getByRole('heading', { name: 'Trends', exact: true })).toBeVisible()
+  await expect(page.getByText('One more full month and your six-month trend appears here.')).toBeVisible()
+  await expect(page.locator('.trend-bar')).toHaveCount(0)
 })

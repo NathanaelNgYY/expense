@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, Radio } from 'lucide-react'
+import { AlertTriangle, ExternalLink, Radio } from 'lucide-react'
 import { fetchIngestStatus, rotateIngestToken } from '../../api'
 import { useConfirm } from '../../components/ConfirmDialog'
 import {
@@ -30,9 +30,13 @@ function sourceLabel(source: IngestVisibility['lastSource']): string | null {
 
 interface Props {
   refreshable?: boolean
+  shortcutInstallUrl?: string | null
 }
 
-export default function IngestStatusCard({ refreshable = false }: Props) {
+export default function IngestStatusCard({
+  refreshable = false,
+  shortcutInstallUrl,
+}: Props) {
   const { authReady, session, profile } = useSharedBudgets()
   const confirm = useConfirm()
   const [visibility, setVisibility] = useState<IngestVisibility | null>(null)
@@ -43,6 +47,7 @@ export default function IngestStatusCard({ refreshable = false }: Props) {
   const [rotateError, setRotateError] = useState(false)
   const [newToken, setNewToken] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState(false)
 
   const currentUserId = session?.user.id ?? null
   const currentAccountLabel = currentUserId
@@ -86,12 +91,19 @@ export default function IngestStatusCard({ refreshable = false }: Props) {
   const isGenerate = visibility?.state === 'unlinked'
 
   async function handleRotate() {
+    const isInstallerSetup = Boolean(shortcutInstallUrl)
     const confirmed = await confirm({
-      title: isGenerate ? 'Generate an ingest token?' : 'Generate a new token?',
+      title: isInstallerSetup
+        ? isGenerate ? 'Set up Apple Pay?' : 'Reconnect Apple Pay?'
+        : isGenerate ? 'Generate an ingest token?' : 'Generate a new token?',
       message: isGenerate
-        ? "This creates a token for your iOS Shortcut. You'll paste it into the Shortcut's Authorization header."
+        ? isInstallerSetup
+          ? 'This creates a private setup value for the ready-made Shortcut. It is shown once and never added to the public installer link.'
+          : "This creates a token for your iOS Shortcut. You'll paste it into the Shortcut's Authorization header."
         : 'Your current token keeps working for 24 hours so you can update your iOS Shortcut before it stops.',
-      confirmLabel: isGenerate ? 'Generate' : 'Rotate',
+      confirmLabel: isInstallerSetup
+        ? isGenerate ? 'Continue' : 'Reconnect'
+        : isGenerate ? 'Generate' : 'Rotate',
     })
     if (!confirmed) return
     setRotating(true)
@@ -100,6 +112,7 @@ export default function IngestStatusCard({ refreshable = false }: Props) {
       const { token } = await rotateIngestToken()
       setNewToken(token)
       setCopied(false)
+      setCopyError(false)
       refreshStatus()
     } catch {
       setRotateError(true)
@@ -111,11 +124,12 @@ export default function IngestStatusCard({ refreshable = false }: Props) {
   async function copyToken() {
     if (!newToken) return
     try {
-      await navigator.clipboard.writeText(newToken)
+      await navigator.clipboard.writeText(`Bearer ${newToken}`)
       setCopied(true)
+      setCopyError(false)
     } catch {
-      // Clipboard can be blocked (permissions, insecure context); the token is still visible to
-      // copy by hand, so a failed copy is non-fatal.
+      setCopied(false)
+      setCopyError(true)
     }
   }
 
@@ -173,25 +187,48 @@ export default function IngestStatusCard({ refreshable = false }: Props) {
         <div className="ingest-status-card__rotate">
           {newToken ? (
             <div className="ingest-token-reveal" role="status">
-              <p className="ingest-token-reveal__label">New token — shown once</p>
+              <p className="ingest-token-reveal__label">Shortcut setup value — shown once</p>
               <input
                 className="ingest-token-reveal__value"
                 readOnly
-                value={newToken}
-                aria-label="New ingest token"
+                value={`Bearer ${newToken}`}
+                aria-label="Shortcut setup value"
                 onFocus={event => event.target.select()}
               />
               <div className="ingest-token-reveal__actions">
-                <button type="button" className="ingest-token-reveal__copy" onClick={copyToken}>
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
+                {shortcutInstallUrl ? (
+                  <a
+                    className="ingest-token-reveal__install"
+                    href={shortcutInstallUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => void copyToken()}
+                  >
+                    <span>{copied ? 'Setup value copied' : 'Copy setup value & add Shortcut'}</span>
+                    <ExternalLink aria-hidden="true" size={16} />
+                  </a>
+                ) : (
+                  <button type="button" className="ingest-token-reveal__copy" onClick={copyToken}>
+                    {copied ? 'Copied' : 'Copy'}
+                  </button>
+                )}
                 <button type="button" className="ingest-token-reveal__done" onClick={() => setNewToken(null)}>
                   Done
                 </button>
               </div>
+              {copied && shortcutInstallUrl && (
+                <p className="ingest-token-reveal__feedback" role="status">
+                  Setup value copied. Paste it when Apple asks during Shortcut setup.
+                </p>
+              )}
+              {copyError && (
+                <p className="ingest-token-reveal__feedback ingest-token-reveal__feedback--error" role="alert">
+                  Copy failed. Return here and press and hold the setup value to copy it.
+                </p>
+              )}
               <p className="ingest-token-reveal__hint">
-                Paste this into your Shortcut&apos;s Authorization header as <code>Bearer &lt;token&gt;</code>.
-                Your old token stops working in 24&nbsp;hours. It won&apos;t be shown again.
+                The public Shortcut installer never contains this private value.
+                {isGenerate ? ' It will not be shown again.' : ' Your old value stops working in 24 hours.'}
               </p>
             </div>
           ) : (
@@ -202,7 +239,11 @@ export default function IngestStatusCard({ refreshable = false }: Props) {
                 onClick={handleRotate}
                 disabled={rotating}
               >
-                {rotating ? 'Generating…' : isGenerate ? 'Generate token' : 'Rotate token'}
+                {rotating
+                  ? 'Generating…'
+                  : shortcutInstallUrl
+                    ? isGenerate ? 'Set up Apple Pay' : 'Reconnect Apple Pay'
+                    : isGenerate ? 'Generate token' : 'Rotate token'}
               </button>
               {rotateError && (
                 <p className="ingest-status-card__notice" role="alert">

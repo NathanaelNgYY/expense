@@ -291,3 +291,61 @@ test('a tab is restorable by URL after a reload', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: /Insights/ })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Insights' })).toHaveAttribute('aria-current', 'page')
 })
+
+// U5. Automatic capture is the product's differentiator and was previously only
+// discoverable by wandering into Settings.
+test('a hand-typing user is offered automatic capture, once', async ({ page }) => {
+  const today = currentLocalDate()
+  await prepareApp(page, [
+    { id: 'm1', amount: 5.8, category: 'lunch', note: 'toast', date: today, source: 'manual' },
+    { id: 'm2', amount: 1.79, category: 'transport', note: 'MRT', date: today, source: 'manual' },
+    { id: 'm3', amount: 22, category: 'others', note: 'haircut', date: today, source: 'manual' },
+  ])
+  await page.goto('/')
+
+  const nudge = page.locator('.capture-nudge')
+  await expect(nudge).toContainText('Stop typing these in')
+
+  await nudge.getByRole('button', { name: 'Set it up' }).click()
+
+  // Straight into the setup screen — a real address since U1.
+  await expect(page).toHaveURL(/#\/settings\/automatic$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Automatic tracking' })).toBeVisible()
+
+  // Accepting retires it: coming home must not offer it again.
+  await page.getByRole('button', { name: 'Home' }).click()
+  await expect(page.locator('.capture-nudge')).toHaveCount(0)
+})
+
+test('a previous dismissal survives a fresh page load', async ({ page }) => {
+  // Not a reload of the test above: prepareApp's init script re-clears localStorage on
+  // every navigation, so the flag is seeded here instead and the read path is what is
+  // under test.
+  const today = currentLocalDate()
+  await prepareApp(page, [
+    { id: 'm1', amount: 5.8, category: 'lunch', note: '', date: today, source: 'manual' },
+    { id: 'm2', amount: 1.79, category: 'transport', note: '', date: today, source: 'manual' },
+    { id: 'm3', amount: 22, category: 'others', note: '', date: today, source: 'manual' },
+  ])
+  await page.addInitScript(() =>
+    localStorage.setItem('budget_capture_nudge_dismissed', '1'),
+  )
+  await page.goto('/')
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible()
+  await expect(page.locator('.capture-nudge')).toHaveCount(0)
+})
+
+test('someone whose captures already work is never nudged', async ({ page }) => {
+  const today = currentLocalDate()
+  await prepareApp(page, [
+    { id: 'm1', amount: 5.8, category: 'lunch', note: '', date: today, source: 'manual' },
+    { id: 'm2', amount: 1.79, category: 'transport', note: '', date: today, source: 'manual' },
+    { id: 'm3', amount: 22, category: 'others', note: '', date: today, source: 'manual' },
+    { id: 'a1', amount: 4.2, category: 'lunch', note: '', date: today, source: 'apple-pay' },
+  ])
+  await page.goto('/')
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible()
+  await expect(page.locator('.capture-nudge')).toHaveCount(0)
+})

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import { AlertTriangle, Check, ChevronDown, ChevronRight, ChevronUp, Minus, X } from 'lucide-react'
 import { format } from 'date-fns'
 import BudgetIcon from '../components/BudgetIcon'
@@ -8,7 +8,6 @@ import SharedBudgetDashboard from '../components/dashboard/SharedBudgetDashboard
 import SyncStatus from '../components/SyncStatus'
 import CurrencyWalletMenu from '../components/CurrencyWalletMenu'
 import SaveToast from '../components/SaveToast'
-import UncategorizedTriageChips from '../components/UncategorizedTriageChips'
 import { downloadJsonBackup } from '../dataTransfer'
 import { useBudgetConfig } from '../BudgetConfigContext'
 import { buildCategoryOptions, categoryIcon, categoryLabel } from '../categoryDisplay'
@@ -28,6 +27,9 @@ import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
 import { sgtToday } from '../shared/sgtDate'
 import { formatEntryAmount, formatMoney, formatMoneyWhole, formatRemaining } from '../format'
 import { getCaptureHealthWarning } from '../captureHealth'
+import { shouldShowCaptureNudge } from '../captureNudge'
+import { dismissCaptureNudge, isCaptureNudgeDismissed } from '../captureNudgeState'
+import { lazyWithRetry } from '../lazyWithRetry'
 import type { Category, Entry } from '../types'
 import { useEntries } from '../EntriesContext'
 import { useSharedBudgets } from '../sharedBudgets/SharedBudgetsContext'
@@ -38,6 +40,19 @@ import {
   entriesForMonth as sharedEntriesForMonth,
   totalSpent as sharedTotalSpent,
 } from '../sharedBudgets/memberTotals'
+
+// Both render only for a minority of users on a minority of screens: the chips need an
+// uncategorised entry to exist, the nudge needs someone who has never had a capture land.
+// Neither belongs in the initial chunk just because Dashboard is eager.
+const UncategorizedTriageChips = lazyWithRetry(
+  () => import('../components/UncategorizedTriageChips'),
+  'triage-chips',
+)
+
+const CaptureNudge = lazyWithRetry(
+  () => import('../components/dashboard/CaptureNudge'),
+  'capture-nudge',
+)
 
 interface Props {
   onAddEntry: () => void
@@ -74,6 +89,14 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
 
   const triageCategoryOptions = buildCategoryOptions(overrides, customCategories)
   const [triageToast, setTriageToast] = useState<{ id: string; message: string } | null>(null)
+  const [captureNudgeDismissed, setCaptureNudgeDismissed] = useState(isCaptureNudgeDismissed)
+
+  // Persist immediately, not on unmount: the CTA navigates away, and a nudge that
+  // survives because you accepted it would be absurd.
+  const handleDismissCaptureNudge = useCallback(() => {
+    dismissCaptureNudge()
+    setCaptureNudgeDismissed(true)
+  }, [])
 
   async function handleTriageCategorize(target: Entry, categoryId: string) {
     await editEntry(target.id, { category: categoryId })
@@ -97,6 +120,9 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
   const uncategorizedExpanded = expandedCategory === 'uncategorized'
   const todayDate = toLocalDateString(now)
   const captureHealthWarning = getCaptureHealthWarning(allEntries, todayDate)
+  // U5: offered once to someone who has only ever typed entries in. Disjoint from the
+  // health warning above by construction — see captureNudge.ts.
+  const showCaptureNudge = shouldShowCaptureNudge(allEntries, captureNudgeDismissed)
   const unconfiguredCurrencies = Object.entries(unconfiguredCurrencyCounts(allEntries, currencies))
   const [unconfiguredCurrency, unconfiguredCount] = unconfiguredCurrencies[0] ?? []
   const recentExpenseStartDate = toLocalDateString(addDays(now, -14))
@@ -269,12 +295,14 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
     return (
       <div key={entry.id} className="triage-row">
         {row}
-        <UncategorizedTriageChips
-          entry={entry}
-          rankedIds={rankedIds}
-          categoryOptions={triageCategoryOptions}
-          onCategorize={handleTriageCategorize}
-        />
+        <Suspense fallback={null}>
+          <UncategorizedTriageChips
+            entry={entry}
+            rankedIds={rankedIds}
+            categoryOptions={triageCategoryOptions}
+            onCategorize={handleTriageCategorize}
+          />
+        </Suspense>
       </div>
     )
   }
@@ -330,6 +358,18 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
             <ChevronRight aria-hidden="true" size={17} />
           </button>
         </section>
+      )}
+
+      {viewScope === 'personal' && showCaptureNudge && (
+        <Suspense fallback={null}>
+          <CaptureNudge
+            onSetUp={() => {
+              handleDismissCaptureNudge()
+              onOpenAutomaticTracking()
+            }}
+            onDismiss={handleDismissCaptureNudge}
+          />
+        </Suspense>
       )}
 
       <BudgetPassStack passes={budgetPasses} onSelect={selectPassById} />

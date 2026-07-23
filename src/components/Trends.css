@@ -1,0 +1,109 @@
+/* Trends (F6). Loaded with the lazy `insights` chunk, not the initial payload —
+   P2 of the product audit names a charting dependency as the biggest bundle risk
+   in the pipeline, so this is CSS-sized divs and nothing else. */
+
+.trend-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.trend-plot {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 104px;
+  border-bottom: 1px solid var(--separator);
+}
+
+.trend-column {
+  display: flex;
+  align-items: flex-end;
+  flex: 1 1 0;
+  height: 100%;
+}
+
+.trend-bar {
+  width: 100%;
+  min-height: 0;
+  border-radius: 5px 5px 0 0;
+  background: var(--fill);
+}
+
+.trend-bar--current {
+  background: var(--primary);
+}
+
+/* The month still running is hatched with the card's own surface colour, so it
+   reads as incomplete in every theme without needing a per-theme override. */
+.trend-bar--partial {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0 5px,
+    var(--bg-elev) 5px 10px
+  );
+}
+
+.trend-average-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed var(--text-tertiary);
+  pointer-events: none;
+}
+
+.trend-axis {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.trend-axis-label {
+  flex: 1 1 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.trend-legend {
+  margin-top: 10px;
+}
+
+.trend-category-figures {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.trend-spark {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  width: 46px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.trend-spark-bar {
+  flex: 1 1 0;
+  border-radius: 1px;
+  background: var(--separator);
+}
+
+.trend-spark-bar--current {
+  background: var(--primary);
+}
+
+/* Spending up is the bad direction, matching the existing insight rows. Every
+   delta also carries a sign and an arrow, so colour is never the only signal. */
+.trend-delta--up {
+  color: var(--red);
+}
+
+.trend-delta--down {
+  color: var(--green);
+}
+
+.trend-delta--flat {
+  color: var(--text-tertiary);
+}

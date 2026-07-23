@@ -87,6 +87,7 @@ export interface SpendFilterOptions {
   excludedCategories?: string[]
 }
 
+
 export function entriesForMonth(entries: Entry[], year: number, month: number): Entry[] {
   return entries.filter(e => {
     const d = parseISO(e.date)
@@ -263,11 +264,13 @@ function daysInCalendarMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate()
 }
 
-function monthOrder(year: number, month: number): number {
+export function monthOrder(year: number, month: number): number {
   return year * 12 + month
 }
 
-function daysElapsedForForecast(year: number, month: number, referenceDate: Date): number {
+// Exported for spendingTrend.ts, which needs the same "how much of this month has
+// actually happened" answer to keep a running month out of its averages.
+export function daysElapsedForForecast(year: number, month: number, referenceDate: Date): number {
   const daysInMonth = daysInCalendarMonth(year, month)
   const target = monthOrder(year, month)
   const reference = monthOrder(referenceDate.getFullYear(), referenceDate.getMonth())

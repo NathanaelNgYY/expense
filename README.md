@@ -82,11 +82,23 @@ Example — a "Kopi" preset: `…/?add=true&category=lunch&amount=2.20`
 
 Transactions are captured automatically by two iOS Shortcuts that POST to the app's API in the background — no need to open the app. Apple Pay fires instantly via the Wallet trigger; PayNow and card spending are captured indirectly from the DBS transaction-alert email (iOS has no PayNow trigger). The server parses, categorises, and de-duplicates each transaction.
 
-Open **Settings → Automatic Tracking** for a three-step Apple Pay and DBS-alert setup guide, the exact ingest endpoint, a link into Shortcuts, the receiving account, the most recent capture time, and the source. The status card warns when the app is signed into a different account from the account remembered for the iPhone Shortcut. The raw ingest token is never exposed to the browser; the guide links back to the trusted one-time server setup below.
+Open **Settings → Automatic Tracking** for the guided Apple Pay installer, the smaller Wallet
+automation handoff, the receiving account, the most recent capture time, and the source. The app
+generates a show-once setup value containing the complete `Bearer <token>` header value, then opens
+the configured Apple-hosted Shortcut template. The public installer URL never contains that private
+value. Set `VITE_APPLE_PAY_SHORTCUT_URL` to the template's iCloud link; see
+[`docs/APPLE_PAY_SHORTCUT_TEMPLATE.md`](docs/APPLE_PAY_SHORTCUT_TEMPLATE.md) for publishing and
+physical-device validation.
 
 ### Rotating the ingest token
 
-The capture card has a **Rotate token** button (**Generate token** if the account has none). Rotating mints a fresh token, shows it **once**, and keeps the old token working for **24 hours** so you can update your Shortcut without dropping captures. After rotating: copy the new token, open each Shortcut's **Get Contents of URL** action, and replace the `Authorization` header value with `Bearer <new-token>`. Once the 24-hour grace window passes, the old token stops authenticating (`401`). The raw token is generated server-side, returned to your signed-in session once, and never stored (only its hash is) — if you dismiss the panel without copying it, rotate again. Rotation requires a real signed-in account (not an anonymous session).
+The capture card has a **Rotate token** button (**Generate token** if the account has none). In the
+guided installer these controls read **Reconnect Apple Pay** and **Set up Apple Pay**. Rotation
+mints a fresh token, shows the complete `Bearer <token>` setup value **once**, and keeps the old token
+working for **24 hours** so you can update your Shortcut without dropping captures. Once the grace
+window passes, the old token stops authenticating (`401`). The raw token is generated server-side,
+returned to the signed-in session once, and never stored (only its hash is). Rotation requires a
+real signed-in account.
 
 ### Server setup (one-time)
 
@@ -98,16 +110,17 @@ You can skip this and just tap **Generate token** in the app. The manual script 
 
 ### Shortcut 1 — Apple Pay
 
-- Automation trigger: **Transaction** → "When I tap" → select your card(s).
-- Action: **Get Contents of URL**
-  - URL: `https://<project>.supabase.co/functions/v1/ingest`
-  - Method: `POST`
-  - Headers: `Authorization: Bearer <INGEST_TOKEN>`, `Content-Type: application/json`
-  - Request Body (JSON):
-    - `sourceKind`: `apple_pay`
-    - `amount`: the Shortcut "Amount" variable
-    - `merchant`: the Shortcut "Merchant" variable
-    - `currency`: `SGD`
+Standard user setup:
+
+1. Tap **Set up Apple Pay**, then **Copy & add Shortcut** in the PWA.
+2. Paste the value into the template's import question and add **Budget Tracker Capture**.
+3. Create **Automation → Transaction → When I Tap**, select the cards, and choose
+   **Run Immediately**.
+4. Add **Run Shortcut → Budget Tracker Capture** and pass the Transaction input.
+
+The shared Shortcut owns the endpoint, POST method, Authorization header, and four-field JSON body.
+The manual body remains `sourceKind: apple_pay`, Amount, Merchant, and `currency: SGD` for
+troubleshooting or when no installer link is configured.
 
 Keep this as the original four-field payload. Do **not** add `idempotencyKey`: the Wallet trigger does not expose a documented stable transaction identifier, and its whole `Transaction` value can collapse to the merchant name when converted to text.
 

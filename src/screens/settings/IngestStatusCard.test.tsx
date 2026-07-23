@@ -20,7 +20,9 @@ vi.mock('../../api', () => ({
 }))
 vi.mock('../../sharedBudgets/SharedBudgetsContext', () => ({ useSharedBudgets: () => shared.value }))
 
-async function renderCard(props: { refreshable?: boolean } = {}): Promise<{ container: HTMLElement; root: Root }> {
+async function renderCard(
+  props: { refreshable?: boolean; shortcutInstallUrl?: string | null } = {},
+): Promise<{ container: HTMLElement; root: Root }> {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
@@ -183,16 +185,70 @@ describe('IngestStatusCard', () => {
     await clickConfirm('Rotate')
 
     expect(api.rotateIngestToken).toHaveBeenCalledTimes(1)
-    const field = rendered.container.querySelector<HTMLInputElement>('input[aria-label="New ingest token"]')
+    const field = rendered.container.querySelector<HTMLInputElement>('input[aria-label="Shortcut setup value"]')
     expect(field).not.toBeNull()
-    expect(field!.value).toBe('SECRET-TOKEN-XYZ')
+    expect(field!.value).toBe('Bearer SECRET-TOKEN-XYZ')
     expect(field!.readOnly).toBe(true)
 
     await act(async () => findButton(rendered.container, 'Copy').click())
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('SECRET-TOKEN-XYZ')
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Bearer SECRET-TOKEN-XYZ')
 
     await act(async () => findButton(rendered.container, 'Done').click())
-    expect(rendered.container.querySelector('input[aria-label="New ingest token"]')).toBeNull()
+    expect(rendered.container.querySelector('input[aria-label="Shortcut setup value"]')).toBeNull()
+  })
+
+  it('copies the complete setup value and opens only the configured public installer', async () => {
+    api.fetchIngestStatus.mockResolvedValue(null)
+    api.rotateIngestToken.mockResolvedValue({ token: 'SECRET-TOKEN-XYZ' })
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.assign(navigator, { clipboard: { writeText } })
+
+    const rendered = await renderCard({
+      shortcutInstallUrl: 'https://www.icloud.com/shortcuts/abc123',
+    })
+    root = rendered.root
+
+    await act(async () => findButton(rendered.container, 'Set up Apple Pay').click())
+    await clickConfirm('Continue')
+
+    const install = rendered.container.querySelector<HTMLAnchorElement>(
+      'a[href="https://www.icloud.com/shortcuts/abc123"]',
+    )
+    expect(install).not.toBeNull()
+    expect(install).toHaveTextContent('Copy & add Shortcut')
+    expect(install).toHaveAttribute('target', '_blank')
+    expect(install!.href).not.toContain('SECRET-TOKEN-XYZ')
+
+    await act(async () => install!.click())
+    expect(writeText).toHaveBeenCalledWith('Bearer SECRET-TOKEN-XYZ')
+    expect(rendered.container).toHaveTextContent('Setup value copied')
+  })
+
+  it('keeps the setup value selectable and reports when clipboard access fails', async () => {
+    api.fetchIngestStatus.mockResolvedValue(null)
+    api.rotateIngestToken.mockResolvedValue({ token: 'SECRET-TOKEN-XYZ' })
+    Object.assign(navigator, {
+      clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+    })
+
+    const rendered = await renderCard({
+      shortcutInstallUrl: 'https://www.icloud.com/shortcuts/abc123',
+    })
+    root = rendered.root
+
+    await act(async () => findButton(rendered.container, 'Set up Apple Pay').click())
+    await clickConfirm('Continue')
+    const install = rendered.container.querySelector<HTMLAnchorElement>(
+      'a[href="https://www.icloud.com/shortcuts/abc123"]',
+    )
+    await act(async () => install!.click())
+
+    expect(rendered.container).toHaveTextContent(
+      'Copy failed. Return here and press and hold the setup value to copy it.',
+    )
+    expect(
+      rendered.container.querySelector<HTMLInputElement>('input[aria-label="Shortcut setup value"]'),
+    ).toHaveValue('Bearer SECRET-TOKEN-XYZ')
   })
 
   it('does not rotate when the confirm is cancelled', async () => {
@@ -217,7 +273,7 @@ describe('IngestStatusCard', () => {
     await clickConfirm('Generate')
 
     expect(rendered.container).toHaveTextContent('Could not generate a new token')
-    expect(rendered.container.querySelector('input[aria-label="New ingest token"]')).toBeNull()
+    expect(rendered.container.querySelector('input[aria-label="Shortcut setup value"]')).toBeNull()
   })
 
   it('hides the rotate control when there is no signed-in account', async () => {

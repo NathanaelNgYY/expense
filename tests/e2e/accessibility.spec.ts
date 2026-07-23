@@ -143,12 +143,16 @@ test('critical mobile controls expose at least a 44 by 44 pixel target', async (
   await page.getByRole('button', { name: 'Home' }).click()
   await page.getByRole('button', { name: 'Settings' }).click()
   await page.getByRole('button', { name: /Automatic Tracking/ }).click()
-  for (const name of ['Copy endpoint', 'Refresh status', 'Back']) {
+  for (const name of ['Refresh status', 'Back']) {
     const box = await page.getByRole('button', { name }).boundingBox()
     expect(box, `${name} should have a rendered target`).not.toBeNull()
     expect(box!.width).toBeGreaterThanOrEqual(44)
     expect(box!.height).toBeGreaterThanOrEqual(44)
   }
+  const openShortcuts = await page.getByRole('link', { name: 'Open Shortcuts' }).boundingBox()
+  expect(openShortcuts, 'Open Shortcuts should have a rendered target').not.toBeNull()
+  expect(openShortcuts!.width).toBeGreaterThanOrEqual(44)
+  expect(openShortcuts!.height).toBeGreaterThanOrEqual(44)
 })
 
 test('primary screens stay usable on SE-class short viewports', async ({ page }) => {

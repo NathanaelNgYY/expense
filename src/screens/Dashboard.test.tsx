@@ -57,7 +57,7 @@ function entry(overrides: Partial<Entry> = {}): Entry {
   }
 }
 
-function renderWithEntries(entries: unknown[] = []) {
+function renderWithEntries(entries: unknown[] = [], onOpenAutomaticTracking = () => undefined) {
   localStorage.setItem('budget_entries', JSON.stringify(entries))
   localStorage.setItem('api_token', 'tok')
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(entries), { status: 200 })))
@@ -69,7 +69,7 @@ function renderWithEntries(entries: unknown[] = []) {
     root.render(
       <BudgetConfigProvider>
         <EntriesProvider>
-          <Dashboard onAddEntry={() => undefined} onOpenAutomaticTracking={() => undefined} />
+          <Dashboard onAddEntry={() => undefined} onOpenAutomaticTracking={onOpenAutomaticTracking} />
         </EntriesProvider>
       </BudgetConfigProvider>,
     )
@@ -572,5 +572,92 @@ describe('Dashboard category expense history', () => {
     expect([...container.querySelectorAll('button')]
       .find(b => b.getAttribute('aria-label') === 'Categorize Toast Box as Lunch')).toBeTruthy()
     expect(container.querySelector('.save-toast')).toBeNull()
+  })
+})
+
+// U5: the app's differentiator is otherwise only discoverable in Settings.
+describe('automatic-capture nudge (U5)', () => {
+  let root: Root | null = null
+
+  const today = toLocalDateString(sgtToday())
+  const typed = (n: number) =>
+    Array.from({ length: n }, () => entry({ source: 'manual', date: today }))
+
+  function nudge(container: HTMLElement): HTMLElement | null {
+    return container.querySelector<HTMLElement>('.capture-nudge')
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+    nextId = 0
+  })
+
+  afterEach(() => {
+    act(() => { root?.unmount() })
+    document.body.replaceChildren()
+    root = null
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  it('stays hidden while only two entries have been typed', () => {
+    const rendered = renderWithEntries(typed(2))
+    root = rendered.root
+
+    expect(nudge(rendered.container)).toBeNull()
+  })
+
+  it('offers automatic capture on the third typed entry', () => {
+    const rendered = renderWithEntries(typed(3))
+    root = rendered.root
+
+    const card = nudge(rendered.container)
+    expect(card).not.toBeNull()
+    expect(card).toHaveTextContent('Stop typing these in')
+    expect(card).toHaveTextContent('Apple Pay and DBS alerts')
+  })
+
+  it('never appears for someone whose captures already work', () => {
+    const rendered = renderWithEntries([
+      ...typed(9),
+      entry({ source: 'apple-pay', date: today }),
+    ])
+    root = rendered.root
+
+    expect(nudge(rendered.container)).toBeNull()
+  })
+
+  it('opens Automatic Tracking from the call to action', () => {
+    const onOpen = vi.fn()
+    const rendered = renderWithEntries(typed(3), onOpen)
+    root = rendered.root
+
+    clickButton(rendered.container, b => b.textContent === 'Set it up')
+
+    expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('stays dismissed across a remount', () => {
+    const first = renderWithEntries(typed(3))
+    root = first.root
+    clickButton(first.container, b => b.textContent === 'Not now')
+    expect(nudge(first.container)).toBeNull()
+
+    act(() => { first.root.unmount() })
+    document.body.replaceChildren()
+
+    // Same ledger, fresh mount: a nudge that comes back is an ad.
+    const second = renderWithEntries(typed(3))
+    root = second.root
+    expect(nudge(second.container)).toBeNull()
+  })
+
+  it('does not reappear after being accepted', () => {
+    const rendered = renderWithEntries(typed(3), () => undefined)
+    root = rendered.root
+
+    clickButton(rendered.container, b => b.textContent === 'Set it up')
+
+    expect(nudge(rendered.container)).toBeNull()
   })
 })

@@ -1,6 +1,5 @@
 import { Trophy, Utensils, CalendarDays, BarChart2, TrendingUp, TrendingDown } from 'lucide-react'
 import { format } from 'date-fns'
-import BudgetIcon from './BudgetIcon'
 import {
   mostExpensiveCategory,
   averageLunchPerEntry,
@@ -9,7 +8,6 @@ import {
   monthOverMonthDelta,
   monthComparison,
 } from '../compute'
-import { CATEGORIES } from '../types'
 import { categoryLabel } from '../categoryDisplay'
 import { useBudgetConfig } from '../BudgetConfigContext'
 import { formatMoney, formatSignedMoney } from '../format'
@@ -118,21 +116,6 @@ export default function InsightsSection({ entries, year, month, customCategories
             <span className="insight-value">Mostly {topDow}</span>
           </div>
         )}
-        {delta !== null && (
-          <div className="breakdown-row insight-row">
-            <span className="icon-label">
-              {delta > 0 ? (
-                <TrendingUp size={16} strokeWidth={2} aria-hidden="true" />
-              ) : (
-                <TrendingDown size={16} strokeWidth={2} aria-hidden="true" />
-              )}
-              vs last month
-            </span>
-            <span className="insight-value" style={{ color: delta > 0 ? 'var(--red)' : 'var(--green)' }}>
-              {formatSignedMoney(delta, currency)}
-            </span>
-          </div>
-        )}
       </div>
 
       {comparison && (
@@ -150,6 +133,10 @@ export default function InsightsSection({ entries, year, month, customCategories
               {formatMoney(comparison.currentTotal, currency)} this month &middot; {formatMoney(comparison.previousTotal, currency)} last month
             </p>
           </div>
+          {/* Without the per-category list this block used to carry, both
+              superlatives can be absent at once — an identical month against
+              its predecessor — and an empty bordered list would render. */}
+          {(comparison.biggestIncrease || comparison.biggestDecrease) && (
           <div className="ios-list">
             {comparison.biggestIncrease && (
               <div className="breakdown-row insight-row">
@@ -175,25 +162,8 @@ export default function InsightsSection({ entries, year, month, customCategories
                 </span>
               </div>
             )}
-            {CATEGORIES.map(category => {
-              const categoryDelta = comparison.categoryDeltas[category]
-
-              return (
-                <div key={category} className="breakdown-row insight-row">
-                  <span className="icon-label">
-                    <BudgetIcon name={category} />
-                    {categoryLabel(category, overrides)}
-                  </span>
-                  <span
-                    className="insight-value"
-                    style={{ color: categoryDelta.delta > 0 ? 'var(--red)' : 'var(--green)' }}
-                  >
-                    {formatSignedMoney(categoryDelta.delta, currency)}
-                  </span>
-                </div>
-              )
-            })}
           </div>
+          )}
         </>
       )}
     </>

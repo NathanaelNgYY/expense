@@ -36,12 +36,24 @@ export interface CategoryTrend {
   /** Mean over the baseline months; 0 when the category was untouched in them. */
   average: number | null
   delta: number | null
+  /** The same category one month back — the other yardstick the UI offers. */
+  previous: number | null
+  previousDelta: number | null
 }
 
 export interface SpendingTrend {
   points: TrendPoint[]
   current: TrendPoint
+  /**
+   * The month directly before the selected one, and only when it was actually
+   * logged — an unlogged month is no baseline, the same rule `monthComparison`
+   * applies before it will compare anything.
+   */
+  previousMonth: TrendPoint | null
   completeMonths: TrendPoint[]
+  /** The complete months the averages are actually taken over: everything in
+   *  `completeMonths` except the selected one. */
+  baselineMonths: TrendPoint[]
   averageMonth: number | null
   currentVsAverage: number | null
   leanestMonth: TrendPoint | null
@@ -62,6 +74,14 @@ export const TREND_MONTHS = 6
  * something.
  */
 export const MIN_TREND_COMPLETE_MONTHS = 2
+
+/**
+ * Baseline months required before "your average" is a distinct yardstick from
+ * "last month". With one baseline month they are arithmetically the same number,
+ * and offering both as choices would put the same figure behind two labels — the
+ * exact confusion the single consolidated list exists to remove.
+ */
+export const MIN_AVERAGE_BASELINE_MONTHS = 2
 
 function mean(values: number[]): number {
   return values.reduce((sum, value) => sum + value, 0) / values.length
@@ -148,6 +168,11 @@ export function spendingTrend(
     .map((point, index) => (baseline.includes(point) ? index : -1))
     .filter(index => index !== -1)
 
+  // The window is contiguous and only ever trimmed from the front, so the point
+  // before the current one is always the immediately preceding calendar month.
+  const priorPoint = points.length > 1 ? points[points.length - 2] : null
+  const previousMonth = priorPoint?.hasEntries ? priorPoint : null
+
   const categories: CategoryTrend[] = [...categoryTotals.entries()]
     .filter(([, totals]) => totals.some(total => total !== 0))
     .map(([category, totals]) => {
@@ -155,6 +180,7 @@ export function spendingTrend(
         ? mean(baselineIndexes.map(index => totals[index]))
         : null
       const categoryCurrent = totals[totals.length - 1]
+      const categoryPrevious = previousMonth === null ? null : totals[totals.length - 2]
 
       return {
         category,
@@ -162,13 +188,17 @@ export function spendingTrend(
         current: categoryCurrent,
         average,
         delta: average === null ? null : categoryCurrent - average,
+        previous: categoryPrevious,
+        previousDelta: categoryPrevious === null ? null : categoryCurrent - categoryPrevious,
       }
     })
 
   return {
     points,
     current,
+    previousMonth,
     completeMonths,
+    baselineMonths: baseline,
     averageMonth,
     currentVsAverage: averageMonth === null ? null : current.total - averageMonth,
     leanestMonth: completeMonths.length > 0

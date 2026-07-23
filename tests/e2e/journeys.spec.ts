@@ -393,10 +393,18 @@ test('a user with three months of history gets a six-month trend on Insights', a
   await expect(page.getByText(`${monthNameMonthsBack(2)} — S$280.00`)).toBeVisible()
   await expect(page.getByText(`${monthNameMonthsBack(1)} — S$360.00`)).toBeVisible()
 
-  // Only categories that were actually spent on get a row (U4: nothing is pinned to Lunch).
-  await expect(page.getByRole('heading', { name: 'Category trends' })).toBeVisible()
+  // ONE per-category list, its baseline named rather than left to be inferred, and
+  // only categories actually spent on (U4: nothing is pinned to Lunch).
+  await expect(page.getByRole('heading', { name: 'By category' })).toBeVisible()
+  await expect(page.getByText('Compared with your six-month average')).toBeVisible()
   await expect(page.locator('.trend-spark')).toHaveCount(2)
   await expect(page.locator('.trend-category-row')).toContainText(['Lunch', 'Transport'])
+
+  // Switching yardstick rewrites the same list instead of scrolling to a second one.
+  const previousMonth = monthNameMonthsBack(1)
+  await page.getByRole('button', { name: `vs ${previousMonth}` }).click()
+  await expect(page.getByText(`Compared with ${previousMonth}`)).toBeVisible()
+  await expect(page.locator('.trend-category-row')).toHaveCount(2)
 })
 
 test('a user one complete month in is told what is missing instead of shown a chart', async ({ page }) => {

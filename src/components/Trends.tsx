@@ -1,13 +1,5 @@
 import { TrendingUp, TrendingDown, ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react'
-import BudgetIcon from './BudgetIcon'
-import {
-  MIN_TREND_COMPLETE_MONTHS,
-  spendingTrend,
-  type CategoryTrend,
-  type TrendPoint,
-} from '../spendingTrend'
-import { categoryIcon, categoryLabel } from '../categoryDisplay'
-import { useBudgetConfig } from '../BudgetConfigContext'
+import { MIN_TREND_COMPLETE_MONTHS, spendingTrend, type TrendPoint } from '../spendingTrend'
 import { formatMoney, formatMoneyWhole, formatSignedMoney } from '../format'
 import type { CustomCategory, Entry } from '../types'
 import './Trends.css'
@@ -40,22 +32,6 @@ function deltaTone(delta: number): 'up' | 'down' | 'flat' {
   return 'flat'
 }
 
-function Sparkline({ totals }: { totals: number[] }) {
-  const max = Math.max(...totals, 0)
-
-  return (
-    <span className="trend-spark" aria-hidden="true">
-      {totals.map((total, index) => (
-        <span
-          key={index}
-          className={`trend-spark-bar${index === totals.length - 1 ? ' trend-spark-bar--current' : ''}`}
-          style={{ height: `${barPercent(total, max)}%` }}
-        />
-      ))}
-    </span>
-  )
-}
-
 export default function Trends({
   entries,
   year,
@@ -64,7 +40,6 @@ export default function Trends({
   customCategories,
   currency = 'SGD',
 }: Props) {
-  const { overrides } = useBudgetConfig()
   const trend = spendingTrend(entries, year, month, referenceDate, customCategories)
   const monthsShort = MIN_TREND_COMPLETE_MONTHS - trend.completeMonths.length
 
@@ -86,25 +61,6 @@ export default function Trends({
   const chartLabel = `Six-month spending: ${trend.points
     .map(point => `${monthLabel(point, 'long')} ${formatMoney(point.total, currency)}${point.isPartial ? ' so far' : ''}`)
     .join(', ')}.`
-
-  function categoryRow(item: CategoryTrend) {
-    const tone = item.delta === null ? 'flat' : deltaTone(item.delta)
-
-    return (
-      <div className="breakdown-row insight-row trend-category-row" key={item.category}>
-        <span className="icon-label">
-          <BudgetIcon name={categoryIcon(item.category, overrides, customCategories)} />
-          {categoryLabel(item.category, overrides, customCategories)}
-        </span>
-        <span className="trend-category-figures">
-          <Sparkline totals={item.totals} />
-          <span className={`insight-value trend-delta trend-delta--${tone}`}>
-            {item.delta === null ? formatMoney(item.current, currency) : formatSignedMoney(item.delta, currency)}
-          </span>
-        </span>
-      </div>
-    )
-  }
 
   return (
     <>
@@ -205,12 +161,6 @@ export default function Trends({
         )}
       </div>
 
-      {trend.categories.length > 0 && (
-        <>
-          <h3 className="section-title">Category trends</h3>
-          <div className="ios-list">{trend.categories.map(categoryRow)}</div>
-        </>
-      )}
     </>
   )
 }

@@ -107,3 +107,12 @@
 .trend-delta--flat {
   color: var(--text-tertiary);
 }
+
+/* Trends.css is the stylesheet for the whole Insights trend section: the chart
+   (Trends.tsx) and the consolidated per-category list (CategoryDeltas.tsx),
+   which always render together on the same screen and share the sparkline and
+   delta rules above. */
+
+.category-deltas-caption {
+  margin: 0 4px 2px;
+}

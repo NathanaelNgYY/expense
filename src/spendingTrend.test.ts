@@ -148,3 +148,56 @@ describe('spendingTrend', () => {
     expect(trend.categories).toHaveLength(0)
   })
 })
+
+describe('spendingTrend previous-month baseline', () => {
+  const ref = new Date(2026, 6, 23)
+
+  function month(monthIndex: number, amounts: Array<Partial<Entry>>): Entry[] {
+    const mm = String(monthIndex + 1).padStart(2, '0')
+    return amounts.map((entry, i) => e({ id: `${mm}-${i}`, date: `2026-${mm}-05`, ...entry }))
+  }
+
+  it('exposes the month immediately before the selected one', () => {
+    const entries = [...month(4, [{ amount: 400 }]), ...month(5, [{ amount: 500 }])]
+    const trend = spendingTrend(entries, 2026, 5, ref)
+    expect(trend.previousMonth).toMatchObject({ month: 4, total: 400 })
+  })
+
+  it('has no previous month when the one before was never logged', () => {
+    const entries = [...month(3, [{ amount: 300 }]), ...month(5, [{ amount: 500 }])]
+    const trend = spendingTrend(entries, 2026, 5, ref)
+    expect(trend.previousMonth).toBeNull()
+    expect(trend.categories[0].previous).toBeNull()
+    expect(trend.categories[0].previousDelta).toBeNull()
+  })
+
+  it('has no previous month when the selected one is the first with any data', () => {
+    const trend = spendingTrend([...month(5, [{ amount: 500 }])], 2026, 5, ref)
+    expect(trend.previousMonth).toBeNull()
+  })
+
+  it('gives every category a previous-month delta, custom ones included', () => {
+    const groceries: CustomCategory = { id: 'cat_groc', label: 'Groceries', icon: 'others', budget: 100 }
+    const entries = [
+      ...month(4, [{ amount: 400, category: 'lunch' }, { amount: 30, category: 'cat_groc' }]),
+      ...month(5, [{ amount: 260, category: 'lunch' }, { amount: 75, category: 'cat_groc' }]),
+    ]
+    const trend = spendingTrend(entries, 2026, 5, ref, [groceries])
+    const [lunch, groc] = trend.categories
+
+    expect(lunch).toMatchObject({ previous: 400, previousDelta: -140 })
+    // monthComparison never covered custom categories; this baseline does.
+    expect(groc).toMatchObject({ previous: 30, previousDelta: 45 })
+  })
+
+  it('compares the running month against the last complete one', () => {
+    const entries = [
+      ...month(4, [{ amount: 400 }]),
+      ...month(5, [{ amount: 500 }]),
+      ...month(6, [{ amount: 90 }]),
+    ]
+    const trend = spendingTrend(entries, 2026, 6, ref)
+    expect(trend.previousMonth).toMatchObject({ month: 5, total: 500 })
+    expect(trend.categories[0].previousDelta).toBe(90 - 500)
+  })
+})

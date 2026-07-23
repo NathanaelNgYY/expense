@@ -86,29 +86,6 @@ describe('Trends', () => {
     expect(screen.getByText(/vs usual/)).toBeInTheDocument()
   })
 
-  it('lists a sparkline row per spent category and leaves untouched ones out', () => {
-    const groceries: CustomCategory = {
-      id: 'cat_groceries',
-      label: 'Groceries',
-      budget: 300,
-      icon: 'ShoppingBasket',
-    }
-    const entries = [
-      monthOf(4, 400),
-      monthOf(5, 500),
-      monthOf(5, 80, groceries.id),
-      monthOf(6, 60),
-    ]
-
-    const { container } = renderTrends(entries, 6, [groceries])
-
-    expect(screen.getByText('Category trends')).toBeInTheDocument()
-    expect(screen.getByText('Lunch')).toBeInTheDocument()
-    expect(screen.getByText('Groceries')).toBeInTheDocument()
-    expect(screen.queryByText('Transport')).not.toBeInTheDocument()
-    expect(container.querySelectorAll('.trend-spark')).toHaveLength(2)
-  })
-
   it('pairs every delta with a sign so colour is never the only signal', () => {
     const { container } = renderTrends([monthOf(4, 400), monthOf(5, 500), monthOf(6, 60)])
 

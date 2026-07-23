@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import BudgetIcon from '../components/BudgetIcon'
 import InsightsSection from '../components/InsightsSection'
 import Trends from '../components/Trends'
+import CategoryDeltas from '../components/CategoryDeltas'
 import { useEntries } from '../EntriesContext'
 import { sgtToday } from '../shared/sgtDate'
 import {
@@ -138,6 +139,15 @@ export default function Insights() {
       <InsightsSection entries={entries} year={year} month={month} customCategories={customCategories} currency={activeCurrency} />
 
       <Trends
+        entries={entries}
+        year={year}
+        month={month}
+        referenceDate={now}
+        customCategories={customCategories}
+        currency={activeCurrency}
+      />
+
+      <CategoryDeltas
         entries={entries}
         year={year}
         month={month}

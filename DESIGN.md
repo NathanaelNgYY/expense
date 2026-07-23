@@ -2,14 +2,14 @@
 
 Visual system captured from the live code (`src/index.css`, `src/themes.css`). Tokens are
 CSS custom properties on `:root`; alternate themes override them via `[data-theme='…']`.
-When styling anything, use the tokens — never raw hex — so all four themes keep working.
+When styling anything, use the tokens — never raw hex — so both themes keep working.
 
 ## Theme
 
 Dark, always. The default "Wallet" theme is a deep felt-green with gold-foil accents —
-money as leather, felt, and gilt. Three alternate themes (Deep Sea, Copper Current, Berry
-Circuit) restyle the same tokens; they may change radius (`--theme-card-radius`,
-`--theme-control-radius`) and display font but never the component vocabulary.
+money as leather, felt, and gilt. One alternate theme (Deep Sea) restyles the same tokens;
+it may change radius (`--theme-card-radius`, `--theme-control-radius`) and display font but
+never the component vocabulary.
 
 ## Color (default "Wallet" theme)
 
@@ -35,7 +35,7 @@ Borders are gold-tinted alphas (`rgba(212,175,106,.16–.4)`), never gray.
 ## Typography
 
 - `--font-display`: Georgia / Palatino serif — hero money numerals and display titles only.
-  Theme-overridable (Copper Current swaps to Arial Narrow).
+  Theme-overridable (Deep Sea swaps to the system sans stack).
 - `--font-body`: system sans stack (`-apple-system, …`) — everything else.
 - Scale (fixed px, iOS-flavored): 17px row labels/buttons (600 for emphasis), 15px dense
   rows, 13px uppercase section headers (`letter-spacing .04–.05em`, `--text-secondary`),

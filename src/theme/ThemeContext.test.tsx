@@ -7,8 +7,8 @@ function Probe() {
   return (
     <>
       <output aria-label="theme">{theme}</output>
-      <button type="button" onClick={() => setTheme('copper-current')}>
-        Copper
+      <button type="button" onClick={() => setTheme('deep-sea')}>
+        Deep Sea
       </button>
     </>
   )
@@ -37,7 +37,7 @@ describe('ThemeProvider', () => {
   })
 
   it('restores a valid stored theme', () => {
-    localStorage.setItem('budget-tracker-theme-v2', 'berry-circuit')
+    localStorage.setItem('budget-tracker-theme-v2', 'deep-sea')
 
     render(
       <ThemeProvider>
@@ -45,7 +45,7 @@ describe('ThemeProvider', () => {
       </ThemeProvider>,
     )
 
-    expect(screen.getByLabelText('theme')).toHaveTextContent('berry-circuit')
+    expect(screen.getByLabelText('theme')).toHaveTextContent('deep-sea')
   })
 
   it('rejects an invalid stored theme', () => {
@@ -67,10 +67,10 @@ describe('ThemeProvider', () => {
       </ThemeProvider>,
     )
 
-    act(() => screen.getByRole('button', { name: 'Copper' }).click())
+    act(() => screen.getByRole('button', { name: 'Deep Sea' }).click())
 
-    expect(document.documentElement).toHaveAttribute('data-theme', 'copper-current')
-    expect(localStorage.getItem('budget-tracker-theme-v2')).toBe('copper-current')
+    expect(document.documentElement).toHaveAttribute('data-theme', 'deep-sea')
+    expect(localStorage.getItem('budget-tracker-theme-v2')).toBe('deep-sea')
   })
 
   it('keeps switching when storage throws', () => {
@@ -84,9 +84,9 @@ describe('ThemeProvider', () => {
       </ThemeProvider>,
     )
 
-    act(() => screen.getByRole('button', { name: 'Copper' }).click())
+    act(() => screen.getByRole('button', { name: 'Deep Sea' }).click())
 
-    expect(document.documentElement).toHaveAttribute('data-theme', 'copper-current')
-    expect(screen.getByLabelText('theme')).toHaveTextContent('copper-current')
+    expect(document.documentElement).toHaveAttribute('data-theme', 'deep-sea')
+    expect(screen.getByLabelText('theme')).toHaveTextContent('deep-sea')
   })
 })

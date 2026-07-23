@@ -73,6 +73,31 @@ describe('Insights', () => {
     )
   })
 
+  it('shows the largest variable envelope as the weekly pace sub-bar, not a hard-coded Lunch', async () => {
+    saveWalletMap({
+      SGD: { config: { ...DEFAULT_BUDGET, lunch: 100, others: 400 }, customCategories: [], overrides: {} },
+    })
+    saveActiveCurrency('SGD')
+    localStorage.setItem('budget_entries', JSON.stringify([
+      { id: 'may-others', amount: 12, category: 'others', note: '', date: '2026-05-01' },
+    ]))
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+
+    await act(async () => {
+      root?.render(
+        <BudgetConfigProvider>
+          <EntriesProvider><Insights /></EntriesProvider>
+        </BudgetConfigProvider>,
+      )
+    })
+
+    const paceLabel = container.querySelector('.week-bar .week-bar-lunch .muted')
+    expect(paceLabel?.textContent).toMatch(/^Others/)
+    expect(paceLabel?.textContent).not.toMatch(/Lunch/)
+  })
+
   it('only analyzes entries in the active currency wallet', async () => {
     saveWalletMap({
       SGD: { config: DEFAULT_BUDGET, customCategories: [], overrides: {} },

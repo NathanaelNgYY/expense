@@ -6,7 +6,8 @@ import {
   categoryDeficits,
   bufferRemaining,
   weeklyTotal,
-  lunchWeeklySpend,
+  categoryWeeklySpend,
+  paceCategory,
   weeklyBudgetTarget,
   weeksInMonth,
   mostExpensiveCategory,
@@ -90,7 +91,7 @@ describe('refund-aware spending analytics', () => {
     const referenceDate = new Date(2026, 4, 5)
 
     expect(weeklyTotal(entries, referenceDate)).toBe(24)
-    expect(lunchWeeklySpend(entries, referenceDate)).toBe(24)
+    expect(categoryWeeklySpend(entries, referenceDate, 'lunch')).toBe(24)
     expect(monthlySpendForecast(entries, 2026, 4, referenceDate).spentToDate).toBe(24)
     expect(safeToSpendPerDay(entries, 2026, 4, 100, referenceDate).remainingBudget).toBe(76)
   })
@@ -189,13 +190,26 @@ describe('weeklyTotal', () => {
   })
 })
 
-describe('lunchWeeklySpend', () => {
-  it('sums only lunch entries for the week', () => {
+describe('categoryWeeklySpend', () => {
+  it('sums only the given category for the week', () => {
     const entries = [
       e({ amount: 14, category: 'lunch', date: '2026-05-04' }),
       e({ amount: 3, category: 'transport', date: '2026-05-04' }),
     ]
-    expect(lunchWeeklySpend(entries, new Date('2026-05-04'))).toBe(14)
+    expect(categoryWeeklySpend(entries, new Date('2026-05-04'), 'lunch')).toBe(14)
+    expect(categoryWeeklySpend(entries, new Date('2026-05-04'), 'transport')).toBe(3)
+  })
+})
+
+describe('paceCategory', () => {
+  it('picks the largest variable envelope and ignores savings/investments', () => {
+    // DEFAULT_BUDGET: lunch 264 > others 236 > transport 50; savings/investments larger but excluded.
+    expect(paceCategory(DEFAULT_BUDGET)).toBe('lunch')
+  })
+
+  it('follows the config when another variable envelope is largest', () => {
+    expect(paceCategory({ ...DEFAULT_BUDGET, lunch: 100, others: 300 })).toBe('others')
+    expect(paceCategory({ ...DEFAULT_BUDGET, lunch: 20, transport: 400, others: 30 })).toBe('transport')
   })
 })
 

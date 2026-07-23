@@ -140,12 +140,29 @@ export function weeklyTotal(entries: Entry[], referenceDate: Date): number {
     .reduce((sum, e) => sum + entryNetAmount(e), 0)
 }
 
-export function lunchWeeklySpend(entries: Entry[], referenceDate: Date): number {
+export function categoryWeeklySpend(
+  entries: Entry[],
+  referenceDate: Date,
+  category: string,
+): number {
   const start = startOfWeek(referenceDate, { weekStartsOn: 1 })
   const end = endOfWeek(referenceDate, { weekStartsOn: 1 })
   return entries
-    .filter(e => e.category === 'lunch' && isWithinInterval(parseISO(e.date), { start, end }))
+    .filter(e => e.category === category && isWithinInterval(parseISO(e.date), { start, end }))
     .reduce((sum, e) => sum + entryNetAmount(e), 0)
+}
+
+// The "pace" category is the variable-spend envelope shown as the sub-bar on the
+// Insights weekly cards. Savings and investments are committed envelopes, not
+// day-to-day pacing, so they are excluded; among the rest the largest budgeted
+// envelope is the one worth pacing against.
+const PACE_CANDIDATES: Category[] = ['lunch', 'transport', 'others']
+
+export function paceCategory(config: BudgetConfig): Category {
+  return PACE_CANDIDATES.reduce(
+    (largest, candidate) => (config[candidate] > config[largest] ? candidate : largest),
+    PACE_CANDIDATES[0],
+  )
 }
 
 export function weeksInMonth(year: number, month: number): Date[] {

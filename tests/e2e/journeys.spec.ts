@@ -226,3 +226,68 @@ test('user files an uncategorised capture from Home with one tap', async ({ page
     expect.objectContaining({ id: 'uncat-1', category: 'lunch' }),
   ]))
 })
+
+// U1. Only a real browser has a real history stack, so this is where back-swipe is
+// actually proven — the unit suite can only show the shell reads and writes the hash.
+test('back walks up the Settings hierarchy instead of leaving the app', async ({ page }) => {
+  await prepareApp(page)
+  await page.goto('/')
+  await expect(page).toHaveURL(/#\/home$/)
+
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await expect(page).toHaveURL(/#\/settings$/)
+  await page.getByRole('button', { name: /Appearance/ }).click()
+  await expect(page).toHaveURL(/#\/settings\/appearance$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Appearance' })).toBeVisible()
+
+  // The gesture an iOS edge-swipe fires. Before U1 this dismissed the PWA.
+  await page.goBack()
+
+  await expect(page).toHaveURL(/#\/settings$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
+
+  await page.goBack()
+  await expect(page).toHaveURL(/#\/home$/)
+  // Still the same document — the app was never unloaded.
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible()
+})
+
+test('the in-app back chevron and the OS gesture do the same thing', async ({ page }) => {
+  await prepareApp(page)
+  await page.goto('/')
+
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('button', { name: /Data & Backup/ }).click()
+  await expect(page).toHaveURL(/#\/settings\/data$/)
+
+  await page.locator('.back-btn').click()
+
+  await expect(page).toHaveURL(/#\/settings$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
+})
+
+test('a cold-loaded deep link lands on the screen and can still go up', async ({ page }) => {
+  await prepareApp(page)
+  await page.goto('/#/settings/automatic')
+
+  await expect(page.getByRole('heading', { level: 1, name: 'Automatic tracking' })).toBeVisible()
+
+  // Nothing on the stack to pop here, so goBack climbs the route tree rather than
+  // dead-ending or exiting.
+  await page.locator('.back-btn').click()
+  await expect(page).toHaveURL(/#\/settings$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Settings' })).toBeVisible()
+})
+
+test('a tab is restorable by URL after a reload', async ({ page }) => {
+  await prepareApp(page)
+  await page.goto('/')
+
+  await page.getByRole('button', { name: 'Insights' }).click()
+  await expect(page).toHaveURL(/#\/insights$/)
+
+  await page.reload()
+
+  await expect(page.getByRole('heading', { level: 1, name: /Insights/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Insights' })).toHaveAttribute('aria-current', 'page')
+})

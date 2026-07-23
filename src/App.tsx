@@ -18,7 +18,6 @@ import { downloadJsonBackup } from './dataTransfer'
 import { reportReactError } from './monitoring'
 import { shouldShowBudgetOnboarding } from './onboarding/onboardingState'
 import { lazyWithRetry } from './lazyWithRetry'
-import UncategorizedReviewDialog from './components/UncategorizedReviewDialog'
 import { buildCategoryOptions } from './categoryDisplay'
 import { entriesForCurrency } from './shared/currency'
 import { parseAddDeepLink, resolveCategoryId } from './deepLink'
@@ -36,6 +35,14 @@ const SharedScreen = lazyWithRetry(() => import('./sharedBudgets/SharedScreen'),
 const FirstRunBudgetOnboarding = lazyWithRetry(
   () => import('./onboarding/FirstRunBudgetOnboarding'),
   'onboarding',
+)
+// Lazy despite living on the eager Home path: it is a modal that only renders once
+// entries have loaded and an uncategorised capture exists, so it is never first-paint
+// content — and moving it out is what keeps the initial chunk under budget now that
+// routing lives there.
+const UncategorizedReviewDialog = lazyWithRetry(
+  () => import('./components/UncategorizedReviewDialog'),
+  'uncategorized-review',
 )
 
 function initialTab(): Tab {
@@ -182,11 +189,15 @@ function AppShell() {
         </Suspense>
       </main>
       {toast && <SaveToast entry={toast} onUndo={handleUndo} onDismiss={dismissToast} />}
-      <UncategorizedReviewDialog
-        entries={activeEntries}
-        categoryOptions={categoryOptions}
-        onCategorize={(entry, categoryId) => editEntry(entry.id, { category: categoryId })}
-      />
+      {/* No fallback: a modal that has not arrived yet should show nothing, not a
+          spinner over the dashboard. */}
+      <Suspense fallback={null}>
+        <UncategorizedReviewDialog
+          entries={activeEntries}
+          categoryOptions={categoryOptions}
+          onCategorize={(entry, categoryId) => editEntry(entry.id, { category: categoryId })}
+        />
+      </Suspense>
       <TabBar active={tab} onChange={handleTabChange} />
     </div>
   )

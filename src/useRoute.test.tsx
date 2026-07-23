@@ -129,9 +129,10 @@ describe('goBack', () => {
   it('walks up to the parent when deep-linked cold with nothing to pop', () => {
     // #/settings/poker opened straight from a link: history.back() would leave the
     // app entirely, so climb the route tree instead.
-    window.location.hash = '#/settings/poker'
+    // A tab with prior unrelated history: history.length is >1 here, which is
+    // exactly why depth is tracked in history.state instead.
+    window.history.replaceState(null, '', '/#/settings/poker')
     const back = vi.spyOn(window.history, 'back').mockImplementation(() => {})
-    vi.spyOn(window.history, 'length', 'get').mockReturnValue(1)
     render(<Probe />)
 
     act(() => goBack())
@@ -141,9 +142,8 @@ describe('goBack', () => {
   })
 
   it('never tries to exit the app from a top-level tab with no history', () => {
-    window.location.hash = '#/insights'
+    window.history.replaceState(null, '', '/#/insights')
     const back = vi.spyOn(window.history, 'back').mockImplementation(() => {})
-    vi.spyOn(window.history, 'length', 'get').mockReturnValue(1)
     render(<Probe />)
 
     act(() => goBack())

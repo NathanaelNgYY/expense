@@ -177,7 +177,9 @@ export default function IngestStatusCard({
       )}
       {visibility?.state === 'unlinked' && (
         <p className="ingest-status-card__notice" role="status">
-          No Shortcut token is linked to this account.
+          {shortcutInstallUrl
+            ? 'Apple Pay is not connected to this account yet.'
+            : 'No Shortcut token is linked to this account.'}
         </p>
       )}
       {visibility?.state === 'linked' && (
@@ -204,7 +206,7 @@ export default function IngestStatusCard({
                     rel="noreferrer"
                     onClick={() => void copyToken()}
                   >
-                    <span>{copied ? 'Setup value copied' : 'Copy setup value & add Shortcut'}</span>
+                    <span>{copied ? 'Setup value copied' : 'Copy & add Shortcut'}</span>
                     <ExternalLink aria-hidden="true" size={16} />
                   </a>
                 ) : (
@@ -255,7 +257,7 @@ export default function IngestStatusCard({
         </div>
       )}
 
-      {refreshable && (
+      {refreshable && (!shortcutInstallUrl || visibility?.state !== 'unlinked') && (
         <button
           type="button"
           className="ingest-status-card__refresh"

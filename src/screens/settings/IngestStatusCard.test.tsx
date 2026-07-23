@@ -215,7 +215,7 @@ describe('IngestStatusCard', () => {
       'a[href="https://www.icloud.com/shortcuts/abc123"]',
     )
     expect(install).not.toBeNull()
-    expect(install).toHaveTextContent('Copy setup value & add Shortcut')
+    expect(install).toHaveTextContent('Copy & add Shortcut')
     expect(install).toHaveAttribute('target', '_blank')
     expect(install!.href).not.toContain('SECRET-TOKEN-XYZ')
 

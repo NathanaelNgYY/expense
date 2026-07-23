@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { currentLocalDate, expect, prepareApp, test } from './fixtures'
+import { currentLocalDate, expect, localDateMonthsBack, prepareApp, test } from './fixtures'
 
 async function expectAccessiblePage(page: Parameters<typeof prepareApp>[0], name: string) {
   await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
@@ -69,6 +69,11 @@ test('the light theme has no automated WCAG A/AA violations on primary screens',
   await prepareApp(page, [
     { id: 'l1', amount: 5.8, category: 'lunch', note: 'toast', date: currentLocalDate() },
     { id: 'l2', amount: 22, category: 'others', note: 'haircut', date: currentLocalDate() },
+    // Two complete months so the Insights step below audits the F6 chart itself.
+    // Empty Insights only ever renders the pending sentence, which proves nothing
+    // about the bars, the hatched partial month or the dashed average line.
+    { id: 'l3', amount: 240, category: 'lunch', note: '', date: localDateMonthsBack(1) },
+    { id: 'l4', amount: 210, category: 'lunch', note: '', date: localDateMonthsBack(2) },
   ])
   await page.addInitScript(() =>
     localStorage.setItem('budget-tracker-theme-v2', 'daylight'),
@@ -218,4 +223,21 @@ test('desktop backdrop renders behind the app column on wide viewports (M5)', as
     page.evaluate(() => getComputedStyle(document.querySelector('.app')).backgroundColor),
   ])
   expect(bodyBg).not.toBe(appBg)
+})
+
+// F6. The Trends chart is the only place in the app that states a number through
+// geometry, so it is the only place where a screen reader depends entirely on an
+// authored label. Empty Insights renders the pending sentence instead, which is
+// why the default a11y sweep above cannot cover this.
+test('the Insights trend chart has no automated WCAG A/AA violations', async ({ page }) => {
+  await prepareApp(page, [
+    { id: 't1', amount: 240, category: 'lunch', note: '', date: localDateMonthsBack(2) },
+    { id: 't2', amount: 40, category: 'transport', note: '', date: localDateMonthsBack(2) },
+    { id: 't3', amount: 300, category: 'lunch', note: '', date: localDateMonthsBack(1) },
+    { id: 't4', amount: 90, category: 'lunch', note: '', date: currentLocalDate() },
+  ])
+  await page.goto('/#/insights')
+
+  await expect(page.getByRole('img', { name: /^Six-month spending:/ })).toBeVisible()
+  await expectAccessiblePage(page, 'Insights')
 })

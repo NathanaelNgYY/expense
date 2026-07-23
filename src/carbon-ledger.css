@@ -9,6 +9,10 @@
      canvas (5.49), surface (5.09) and raised (4.53). */
   --carbon-text-tertiary: #94918c;
   --carbon-separator: #3a3b3c;
+  /* The tab bar sits a half-step below the canvas so the bar reads as chrome
+     rather than as another card. Every theme must set it: it is a surface, and
+     a hardcoded value here strands a dark bar on a light page. */
+  --carbon-chrome: #181a1b;
   --carbon-copper: #c98d68;
   --carbon-copper-pressed: #ad7352;
   --carbon-sage: #79a58a;
@@ -64,7 +68,7 @@ body {
 /* ─── Tab bar ─────────────────────────────────────────────── */
 
 .tab-bar {
-  background: #181a1b;
+  background: var(--carbon-chrome);
   border-top: 1px solid var(--carbon-separator);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;

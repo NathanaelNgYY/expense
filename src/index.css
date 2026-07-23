@@ -22,8 +22,8 @@
   --yellow: #d9a441;
   --red: #c96a5a;
   /* Structural */
-  --separator: rgba(212, 175, 106, 0.18);
-  --fill: rgba(212, 175, 106, 0.08);
+  --separator: color-mix(in srgb, var(--primary) 18%, transparent);
+  --fill: color-mix(in srgb, var(--primary) 8%, transparent);
   /* Fonts: serif display for hero numbers/titles, system sans for body */
   --font-display: Georgia, "Palatino Linotype", "Iowan Old Style", serif;
   --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
@@ -158,7 +158,7 @@ button {
 
 .card {
   background: linear-gradient(155deg, #163b2c, #0a1611);
-  border: 1px solid rgba(212, 175, 106, 0.25);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
   border-radius: 18px;
   padding: 16px;
   box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.6);
@@ -182,7 +182,7 @@ button {
 .tab-bar {
   display: flex;
   gap: 0;
-  border-top: 1px solid rgba(212, 175, 106, 0.15);
+  border-top: 1px solid color-mix(in srgb, var(--primary) 15%, transparent);
   background: rgba(15, 27, 22, 0.9);
   padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
   backdrop-filter: blur(24px) saturate(180%);
@@ -262,7 +262,7 @@ button {
   gap: 6px;
   padding: 4px;
   margin: 10px 0 14px;
-  border: 1px solid rgba(212, 175, 106, 0.22);
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
   border-radius: 14px;
   background: var(--fill);
 }
@@ -318,14 +318,14 @@ button {
 .export-btn {
   background: none;
   color: var(--primary);
-  border: 1px dashed rgba(212, 175, 106, 0.4);
+  border: 1px dashed color-mix(in srgb, var(--primary) 40%, transparent);
   border-radius: 999px;
 }
 
 .danger-btn {
   background: none;
   color: var(--red);
-  border: 1px solid rgba(201, 106, 90, 0.4);
+  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
   border-radius: 999px;
 }
 
@@ -420,13 +420,13 @@ button {
 button:focus-visible,
 input:focus-visible {
   outline: none;
-  border-color: rgba(212, 175, 106, 0.55);
-  box-shadow: 0 0 0 4px rgba(212, 175, 106, 0.12);
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 .date-input-shell:focus-within {
-  border-color: rgba(212, 175, 106, 0.55);
-  box-shadow: 0 0 0 4px rgba(212, 175, 106, 0.12);
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 .add-entry-date {
@@ -443,9 +443,9 @@ input:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid rgba(212, 175, 106, 0.3);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
   border-radius: 999px;
-  background: rgba(212, 175, 106, 0.08);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
   color: var(--primary);
   font-size: 14px;
   font-weight: 700;
@@ -466,8 +466,8 @@ input:focus-visible {
 }
 
 .add-entry-date__trigger:focus-within {
-  border-color: rgba(212, 175, 106, 0.55);
-  box-shadow: 0 0 0 4px rgba(212, 175, 106, 0.12);
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 /* ─── Amount display ─────────────────────────────────────── */
@@ -608,9 +608,9 @@ input:focus-visible {
 
 .numpad-key {
   min-height: 62px;
-  border: 1px solid rgba(212, 175, 106, 0.18);
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
   border-radius: 14px;
-  background: rgba(212, 175, 106, 0.08);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
   color: var(--text);
   cursor: pointer;
   font-size: 26px;
@@ -621,7 +621,7 @@ input:focus-visible {
 }
 
 .numpad-key:active {
-  background: rgba(212, 175, 106, 0.2);
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
   transform: scale(0.92);
   /* Press-in: near-instant so the tap feels tactile and immediate. */
   transition: transform 45ms ease-out, background 45ms ease-out;
@@ -676,7 +676,7 @@ input:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 1px solid rgba(212, 175, 106, 0.3);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
   border-radius: 999px;
   background: none;
   color: var(--text-secondary);
@@ -847,7 +847,7 @@ input:focus-visible {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  color: #16110a;
+  color: var(--theme-on-accent, #16110a);
   background: var(--primary);
 }
 
@@ -948,7 +948,7 @@ input:focus-visible {
   border: 0;
   border-radius: 10px;
   background: var(--warning);
-  color: #171108;
+  color: var(--theme-on-accent, #171108);
   font-size: 12px;
   font-weight: 800;
   cursor: pointer;
@@ -992,7 +992,7 @@ input:focus-visible {
   flex-direction: column;
   gap: 14px;
   border-radius: 22px;
-  border-color: rgba(212, 175, 106, 0.3);
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 .summary-card-top,
@@ -1037,7 +1037,7 @@ input:focus-visible {
 .summary-pill {
   flex: 0 0 auto;
   border-radius: 999px;
-  background: rgba(212, 175, 106, 0.18);
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
   color: var(--primary);
   font-size: 13px;
   font-weight: 600;
@@ -1048,11 +1048,11 @@ input:focus-visible {
 
 .forecast-card {
   border-radius: 22px;
-  border-color: rgba(111, 174, 122, 0.18);
+  border-color: color-mix(in srgb, var(--green) 18%, transparent);
 }
 
 .forecast-card--danger {
-  border-color: rgba(201, 106, 90, 0.22);
+  border-color: color-mix(in srgb, var(--red) 22%, transparent);
 }
 
 .forecast-grid {
@@ -1105,7 +1105,7 @@ input:focus-visible {
   border-radius: 18px;
   padding: 16px 18px;
   background: var(--bg-elev);
-  border: 1px solid rgba(212, 175, 106, 0.25);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
   box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.6);
   transition: transform 220ms ease, opacity 220ms ease;
 }
@@ -1168,7 +1168,7 @@ input:focus-visible {
 
 .pass-bar {
   margin-top: 12px;
-  background: rgba(212, 175, 106, 0.16);
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
 }
 
 .pass-bar .progress-fill {
@@ -1278,7 +1278,7 @@ input:focus-visible {
 }
 
 .category-row--committed {
-  border-color: rgba(212, 175, 106, 0.18);
+  border-color: color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .cat-row-bottom {
@@ -1478,7 +1478,7 @@ input:focus-visible {
 
 .expense-confirm-btn--yes {
   background: var(--green);
-  color: #06280f;
+  color: var(--theme-on-accent, #06280f);
 }
 
 .expense-confirm-btn--no {
@@ -1693,7 +1693,7 @@ input:focus-visible {
   flex-shrink: 0;
   background: var(--bg-elev);
   border-radius: 14px;
-  border: 1px solid rgba(212, 175, 106, 0.16);
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
   overflow: hidden;
 }
 
@@ -1762,7 +1762,7 @@ input:focus-visible {
   min-height: 64px;
   border-radius: 14px;
   background: var(--bg-elev);
-  border: 1px solid rgba(212, 175, 106, 0.16);
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
   padding: 14px 16px;
 }
 
@@ -1828,7 +1828,7 @@ input:focus-visible {
 
 .entry-row-button {
   width: 100%;
-  border: 1px solid rgba(212, 175, 106, 0.16);
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
   text-align: left;
   cursor: pointer;
 }
@@ -1843,7 +1843,7 @@ input:focus-visible {
   gap: 10px;
   border-radius: 14px;
   background: var(--bg-elev);
-  border: 1px solid rgba(212, 175, 106, 0.18);
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
   padding: 14px;
 }
 
@@ -1951,7 +1951,7 @@ input:focus-visible {
   gap: 9px;
   border-radius: 14px;
   background: var(--bg-elev);
-  border: 1px solid rgba(212, 175, 106, 0.16);
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
   color: var(--text-secondary);
   padding: 0 12px;
 }
@@ -1997,7 +1997,7 @@ input:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(212, 175, 106, 0.16);
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
   border-radius: 14px;
   background: var(--bg-elev);
   color: var(--text-secondary);
@@ -2031,7 +2031,7 @@ input:focus-visible {
   gap: 12px;
   border-radius: 14px;
   background: var(--bg-elev);
-  border: 1px solid rgba(212, 175, 106, 0.16);
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
   padding: 14px;
 }
 
@@ -2108,7 +2108,7 @@ input:focus-visible {
   gap: 10px;
   border-radius: 14px;
   background: var(--bg-elev);
-  border: 1px solid rgba(212, 175, 106, 0.18);
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
   padding: 14px;
 }
 
@@ -2226,7 +2226,7 @@ input:focus-visible {
 .empty-state {
   border-radius: 14px;
   background: var(--bg-elev);
-  border: 1px solid rgba(212, 175, 106, 0.16);
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
   color: var(--text-secondary);
   font-size: 15px;
   padding: 18px;
@@ -2293,7 +2293,7 @@ input:focus-visible {
 }
 
 .settings-input:focus-visible {
-  box-shadow: 0 0 0 4px rgba(212, 175, 106, 0.12);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 /* ─── Settings hub & subscreen rows ──────────────────────── */
@@ -2843,7 +2843,7 @@ input:focus-visible {
 
 .poker-stats-card {
   border-radius: 22px;
-  border-color: rgba(111, 174, 122, 0.2);
+  border-color: color-mix(in srgb, var(--green) 20%, transparent);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -2976,7 +2976,7 @@ input:focus-visible {
 .result-toggle-btn {
   flex: 1;
   min-height: 44px;
-  border: 1px solid rgba(212, 175, 106, 0.22);
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
   border-radius: 12px;
   background: var(--bg-elev-2);
   color: var(--text-secondary);
@@ -2987,15 +2987,15 @@ input:focus-visible {
 }
 
 .result-toggle-btn--win {
-  background: rgba(111, 174, 122, 0.15);
+  background: color-mix(in srgb, var(--green) 15%, transparent);
   color: var(--green);
-  border-color: rgba(111, 174, 122, 0.35);
+  border-color: color-mix(in srgb, var(--green) 35%, transparent);
 }
 
 .result-toggle-btn--loss {
-  background: rgba(201, 106, 90, 0.15);
+  background: color-mix(in srgb, var(--red) 15%, transparent);
   color: var(--red);
-  border-color: rgba(201, 106, 90, 0.35);
+  border-color: color-mix(in srgb, var(--red) 35%, transparent);
 }
 
 /* Custom stakes input */

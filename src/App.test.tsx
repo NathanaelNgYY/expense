@@ -246,3 +246,90 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page')
   }, 15_000)
 })
+
+// U1: every destination gets an address, so the OS back gesture means "back" rather
+// than "quit". The real back-stack proof lives in the E2E suite, which has a genuine
+// history; here we prove the shell reads from and writes to the hash.
+describe('App routing (U1)', () => {
+  beforeEach(() => {
+    localStorage.setItem('budget_onboarding_version', '1')
+  })
+
+  it('writes the hash when a tab is tapped', async () => {
+    await act(async () => {
+      render(<App />)
+    })
+
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Insights' })))
+
+    expect(window.location.hash).toBe('#/insights')
+  })
+
+  it('gives each Settings subscreen its own address', async () => {
+    await act(async () => {
+      render(<App />)
+    })
+
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Settings' })))
+    await screen.findByRole('heading', { level: 1, name: 'Settings' }, { timeout: 10_000 })
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: /Appearance/ })))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Appearance' }, { timeout: 10_000 }))
+      .toBeInTheDocument()
+    expect(window.location.hash).toBe('#/settings/appearance')
+  }, 15_000)
+
+  it('cold-loads straight into a deep-linked Settings subscreen', async () => {
+    window.history.replaceState({}, '', '/#/settings/automatic')
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Automatic tracking' }, { timeout: 10_000 }))
+      .toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Settings' })).toHaveAttribute('aria-current', 'page')
+  }, 15_000)
+
+  it('sends an unknown hash to Home instead of a blank screen', async () => {
+    window.history.replaceState({}, '', '/#/settings/nonsense')
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    // The h1's accessible name is "Dashboard: July 2026" — the sr-only label plus
+    // the visible month.
+    expect(await screen.findByRole('heading', { level: 1, name: /Dashboard/ }, { timeout: 10_000 }))
+      .toBeInTheDocument()
+    expect(window.location.hash).toBe('#/home')
+  }, 15_000)
+
+  it('normalises the quick-add deep link to #/add and still prefills', async () => {
+    // The iOS Shortcuts widget points at the query form; it must keep working.
+    window.history.replaceState({}, '', '/?add=true&category=lunch&amount=5.80')
+
+    await act(async () => {
+      render(<App />)
+    })
+
+    expect(await screen.findByLabelText('Entered amount')).toHaveTextContent('5.80')
+    expect(window.location.hash).toBe('#/add')
+  })
+
+  it('replaces rather than pushes when a save sends you home', async () => {
+    // Back must not return to an Add screen whose entry is already saved.
+    window.history.replaceState({}, '', '/?add=true&amount=5.80')
+    await act(async () => {
+      render(<App />)
+    })
+    await screen.findByLabelText('Entered amount')
+    const push = vi.spyOn(window.history, 'pushState')
+
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save' })))
+
+    expect(push).not.toHaveBeenCalled()
+    expect(window.location.hash).toBe('#/home')
+    expect(window.location.search).toBe('')
+  }, 15_000)
+})

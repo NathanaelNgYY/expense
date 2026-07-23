@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act } from 'react'
+import { act, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { fireEvent, screen } from '@testing-library/react'
 import Settings from './Settings'
+import type { SettingsSub } from '../router'
 import { EntriesProvider } from '../EntriesContext'
 import { BudgetConfigProvider } from '../BudgetConfigContext'
 import { ThemeProvider } from '../theme/ThemeContext'
@@ -54,6 +55,31 @@ interface Seed {
   dedupeKey?: string
 }
 
+// Settings takes its subscreen from the route now (U1), so the suite supplies the
+// same controlled prop the shell does. The routing itself is covered by router /
+// useRoute / App; here it is just plumbing that keeps the drill-down tests honest.
+function SettingsHarness({
+  onBack,
+  onOpenPoker,
+  onOpenShared,
+}: {
+  onBack?: () => void
+  onOpenPoker: () => void
+  onOpenShared: () => void
+}) {
+  const [subscreen, setSubscreen] = useState<SettingsSub | null>(null)
+  return (
+    <Settings
+      subscreen={subscreen}
+      onOpenSubscreen={setSubscreen}
+      onLeaveSubscreen={() => setSubscreen(null)}
+      onBack={onBack}
+      onOpenPoker={onOpenPoker}
+      onOpenShared={onOpenShared}
+    />
+  )
+}
+
 function renderSettings(
   entries: Seed[] = [],
   onBack?: () => void,
@@ -76,7 +102,7 @@ function renderSettings(
         <ConfirmProvider>
           <ThemeProvider>
             <EntriesProvider>
-              <Settings onBack={onBack} onOpenPoker={onOpenPoker} onOpenShared={onOpenShared} />
+              <SettingsHarness onBack={onBack} onOpenPoker={onOpenPoker} onOpenShared={onOpenShared} />
             </EntriesProvider>
           </ThemeProvider>
         </ConfirmProvider>

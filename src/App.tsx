@@ -18,10 +18,11 @@ import { downloadJsonBackup } from './dataTransfer'
 import { reportReactError } from './monitoring'
 import { shouldShowBudgetOnboarding } from './onboarding/onboardingState'
 import { lazyWithRetry } from './lazyWithRetry'
-import UncategorizedReviewDialog from './components/UncategorizedReviewDialog'
 import { buildCategoryOptions } from './categoryDisplay'
 import { entriesForCurrency } from './shared/currency'
 import { parseAddDeepLink, resolveCategoryId } from './deepLink'
+import { formatHash, type Route, type SettingsSub } from './router'
+import { currentRoute, goBack, navigate, replaceRoute, useRoute } from './useRoute'
 
 // lazyWithRetry (not bare React.lazy): a stale chunk after a deploy — or a
 // transient mobile-network blip — would otherwise crash the lazy route to the
@@ -35,15 +36,41 @@ const FirstRunBudgetOnboarding = lazyWithRetry(
   () => import('./onboarding/FirstRunBudgetOnboarding'),
   'onboarding',
 )
+// Lazy despite living on the eager Home path: it is a modal that only renders once
+// entries have loaded and an uncategorised capture exists, so it is never first-paint
+// content — and moving it out is what keeps the initial chunk under budget now that
+// routing lives there.
+const UncategorizedReviewDialog = lazyWithRetry(
+  () => import('./components/UncategorizedReviewDialog'),
+  'uncategorized-review',
+)
 
 function initialTab(): Tab {
   return parseAddDeepLink(window.location.search).add ? 'add' : 'home'
 }
 
+/**
+ * Settle the address bar before the first render (U1). A cold load can arrive three
+ * ways: with a real hash, with the legacy `?add=true` Shortcuts link and no hash, or
+ * with nothing. All three end up on a canonical hash, and all three *replace* so no
+ * junk entry is left for back to land on.
+ *
+ * Module scope, not an effect: the hash has to be right before `useRoute` first reads
+ * it, or the shell paints Home and then jumps.
+ */
+function normaliseInitialRoute(): void {
+  const raw = window.location.hash
+  const parsed = currentRoute()
+  const target: Route = raw ? parsed : { tab: initialTab(), sub: null }
+  // `raw &&` — an empty hash is not "unknown", it is simply absent.
+  if (!raw || formatHash(parsed) !== raw) replaceRoute(target)
+}
+
 function AppShell() {
   const { entries, editEntry, removeEntry } = useEntries()
   const { customCategories, overrides, activeCurrency } = useBudgetConfig()
-  const [tab, setTab] = useState<Tab>(initialTab)
+  const route = useRoute()
+  const tab = route.tab
   const [prefill, setPrefill] = useState<{ amount?: number; category: string | null }>(() => {
     const link = parseAddDeepLink(window.location.search)
     const options = buildCategoryOptions(overrides, customCategories)
@@ -56,8 +83,11 @@ function AppShell() {
     shouldShowBudgetOnboarding(initialTab() === 'add'),
   )
   const [addEntryDate, setAddEntryDate] = useState<string | undefined>()
-  const [settingsTool, setSettingsTool] = useState<'poker' | 'shared' | null>(null)
-  const [settingsSubscreen, setSettingsSubscreen] = useState<'hub' | 'automatic'>('hub')
+  // Poker and Shared render through the shell (wrapped in a SettingsHeader) while the
+  // other four children render inside Settings — a split U1 deliberately left alone.
+  const settingsTool =
+    route.sub === 'poker' || route.sub === 'shared' ? route.sub : null
+  const settingsSubscreen = settingsTool ? null : route.sub
   // Lives in the shell, not in AddEntry: the confirmation has to outlive the screen that
   // triggered it, because saving navigates straight home.
   const [toast, setToast] = useState<ToastEntry | null>(null)
@@ -67,11 +97,13 @@ function AppShell() {
   const clearPrefill = useCallback(() => setPrefill({ category: null }), [])
 
   function handleSave(saved?: SavedEntrySummary) {
-    setTab('home')
     setAddEntryDate(undefined)
     clearPrefill()
     setToast(saved ?? null)
-    window.history.replaceState({}, '', window.location.pathname)
+    // Replace, not push: back must not return to an Add screen whose entry is
+    // already saved. Strips the quick-add query while keeping the new hash.
+    window.history.replaceState({}, '', `${window.location.pathname}#/home`)
+    replaceRoute({ tab: 'home', sub: null })
   }
 
   const dismissToast = useCallback(() => setToast(null), [])
@@ -79,21 +111,17 @@ function AppShell() {
   function handleTabChange(nextTab: Tab) {
     setAddEntryDate(undefined)
     clearPrefill()
-    if (nextTab !== 'settings') setSettingsTool(null)
-    setSettingsSubscreen('hub')
-    setTab(nextTab)
+    navigate({ tab: nextTab, sub: null })
   }
 
   function handleOpenAutomaticTracking() {
-    setSettingsTool(null)
-    setSettingsSubscreen('automatic')
-    setTab('settings')
+    navigate({ tab: 'settings', sub: 'automatic' })
   }
 
   function handleAddForDate(date: string) {
     clearPrefill()
     setAddEntryDate(date)
-    setTab('add')
+    navigate({ tab: 'add', sub: null })
   }
 
   function handleUndo() {
@@ -103,7 +131,8 @@ function AppShell() {
 
   function handleOnboardingFinish(destination: 'home' | 'add') {
     setShowOnboarding(false)
-    setTab(destination)
+    // Replace: the first-run gate is not somewhere back should return to.
+    replaceRoute({ tab: destination, sub: null })
   }
 
   if (showOnboarding) {
@@ -124,7 +153,7 @@ function AppShell() {
         <Suspense fallback={<LazyFallback />}>
           {tab === 'home' && (
             <Dashboard
-              onAddEntry={() => setTab('add')}
+              onAddEntry={() => navigate({ tab: 'add', sub: null })}
               onOpenAutomaticTracking={handleOpenAutomaticTracking}
             />
           )}
@@ -140,9 +169,11 @@ function AppShell() {
           {tab === 'insights' && <Insights />}
           {tab === 'settings' && settingsTool === null && (
             <Settings
-              initialSubscreen={settingsSubscreen}
-              onOpenPoker={() => setSettingsTool('poker')}
-              onOpenShared={() => setSettingsTool('shared')}
+              subscreen={settingsSubscreen}
+              onOpenSubscreen={(sub: SettingsSub) => navigate({ tab: 'settings', sub })}
+              onLeaveSubscreen={goBack}
+              onOpenPoker={() => navigate({ tab: 'settings', sub: 'poker' })}
+              onOpenShared={() => navigate({ tab: 'settings', sub: 'shared' })}
             />
           )}
           {tab === 'settings' && settingsTool !== null && (
@@ -150,7 +181,7 @@ function AppShell() {
               <SettingsHeader
                 title={settingsTool === 'poker' ? 'Poker tracker' : 'Shared budgets'}
                 backLabel="Settings"
-                onBack={() => setSettingsTool(null)}
+                onBack={goBack}
               />
               {settingsTool === 'poker' ? <Poker /> : <SharedScreen />}
             </div>
@@ -158,17 +189,22 @@ function AppShell() {
         </Suspense>
       </main>
       {toast && <SaveToast entry={toast} onUndo={handleUndo} onDismiss={dismissToast} />}
-      <UncategorizedReviewDialog
-        entries={activeEntries}
-        categoryOptions={categoryOptions}
-        onCategorize={(entry, categoryId) => editEntry(entry.id, { category: categoryId })}
-      />
+      {/* No fallback: a modal that has not arrived yet should show nothing, not a
+          spinner over the dashboard. */}
+      <Suspense fallback={null}>
+        <UncategorizedReviewDialog
+          entries={activeEntries}
+          categoryOptions={categoryOptions}
+          onCategorize={(entry, categoryId) => editEntry(entry.id, { category: categoryId })}
+        />
+      </Suspense>
       <TabBar active={tab} onChange={handleTabChange} />
     </div>
   )
 }
 
 export default function App() {
+  normaliseInitialRoute()
   return (
     <AppErrorBoundary
       onReload={() => window.location.reload()}

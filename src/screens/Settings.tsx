@@ -2,6 +2,7 @@
 import { useState, type ReactNode } from 'react'
 import { ChevronRight, Database, Palette, Radio, Spade, Trash2, Undo2, Users, Wallet } from 'lucide-react'
 import SettingsHeader from './settings/SettingsHeader'
+import type { SettingsSub } from '../router'
 import BudgetSettings from './settings/BudgetSettings'
 import AppearanceSettings from './settings/AppearanceSettings'
 import DataSettings from './settings/DataSettings'
@@ -20,13 +21,17 @@ interface Props {
   onBack?: () => void
   onOpenPoker: () => void
   onOpenShared: () => void
-  initialSubscreen?: Extract<SettingsSubscreen, 'hub' | 'automatic'>
+  /** The active child, straight off the route. `null` is the hub. */
+  subscreen: SettingsSub | null
+  onOpenSubscreen: (sub: SettingsSub) => void
+  /** Same operation as the OS back gesture — see `useRoute.goBack`. */
+  onLeaveSubscreen: () => void
 }
 
-// Two levels, no router: the hub pushes one subscreen at a time and every subscreen comes
-// straight back here. Each subscreen owns its own state and reads its own contexts, so the
-// shell passes navigation callbacks and nothing else.
-type SettingsSubscreen = 'hub' | 'automatic' | 'budget' | 'appearance' | 'data'
+// Two levels. The hub shows one subscreen at a time and every subscreen comes straight
+// back here — but which one is showing now lives in the URL (U1), not in this component,
+// so an edge-swipe and the ‹ chevron are the same operation. Each subscreen still owns
+// its own state and reads its own contexts.
 
 function isEntryInMonth(date: string, year: number, month: number): boolean {
   const [entryYear, entryMonth] = date.split('-').map(Number)
@@ -53,8 +58,14 @@ function NavRow({ icon, label, sub, onClick }: NavRowProps) {
   )
 }
 
-export default function Settings({ onBack, onOpenPoker, onOpenShared, initialSubscreen = 'hub' }: Props) {
-  const [subscreen, setSubscreen] = useState<SettingsSubscreen>(initialSubscreen)
+export default function Settings({
+  onBack,
+  onOpenPoker,
+  onOpenShared,
+  subscreen,
+  onOpenSubscreen,
+  onLeaveSubscreen,
+}: Props) {
   const [resetSnapshot, setResetSnapshot] = useState<Entry[] | null>(null)
   const [resetMessage, setResetMessage] = useState<string | null>(null)
   const { entries, removeEntry, restoreEntry } = useEntries()
@@ -99,15 +110,15 @@ export default function Settings({ onBack, onOpenPoker, onOpenShared, initialSub
     setResetMessage(`Restored ${snapshot.length} ${noun}`)
   }
 
-  const goHub = () => setSubscreen('hub')
-
   return (
     <div className="screen settings">
-      {subscreen === 'budget' && <BudgetSettings key={activeCurrency} onDone={goHub} />}
-      {subscreen === 'automatic' && <AutomaticCaptureSettings onDone={goHub} />}
-      {subscreen === 'appearance' && <AppearanceSettings onDone={goHub} />}
-      {subscreen === 'data' && <DataSettings onDone={goHub} />}
-      {subscreen === 'hub' && (
+      {subscreen === 'budget' && (
+        <BudgetSettings key={activeCurrency} onDone={onLeaveSubscreen} />
+      )}
+      {subscreen === 'automatic' && <AutomaticCaptureSettings onDone={onLeaveSubscreen} />}
+      {subscreen === 'appearance' && <AppearanceSettings onDone={onLeaveSubscreen} />}
+      {subscreen === 'data' && <DataSettings onDone={onLeaveSubscreen} />}
+      {subscreen === null && (
         <>
           <SettingsHeader title="Settings" backLabel="Back" onBack={onBack} />
 
@@ -118,25 +129,25 @@ export default function Settings({ onBack, onOpenPoker, onOpenShared, initialSub
               icon={<Radio className="ui-icon" aria-hidden="true" strokeWidth={2.2} />}
               label="Automatic Tracking"
               sub="Apple Pay, DBS alerts, connection status"
-              onClick={() => setSubscreen('automatic')}
+              onClick={() => onOpenSubscreen('automatic')}
             />
             <NavRow
               icon={<Wallet className="ui-icon" aria-hidden="true" strokeWidth={2.2} />}
               label="Budget & Categories"
               sub="Income, monthly budgets, custom categories"
-              onClick={() => setSubscreen('budget')}
+              onClick={() => onOpenSubscreen('budget')}
             />
             <NavRow
               icon={<Palette className="ui-icon" aria-hidden="true" strokeWidth={2.2} />}
               label="Appearance"
               sub={themeName}
-              onClick={() => setSubscreen('appearance')}
+              onClick={() => onOpenSubscreen('appearance')}
             />
             <NavRow
               icon={<Database className="ui-icon" aria-hidden="true" strokeWidth={2.2} />}
               label="Data & Backup"
               sub="Export, import, restore"
-              onClick={() => setSubscreen('data')}
+              onClick={() => onOpenSubscreen('data')}
             />
           </div>
 

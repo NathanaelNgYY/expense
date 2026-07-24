@@ -26,6 +26,10 @@ export interface BudgetConfig {
   investments: number
   others: number
   buffer: number
+  // Whether the dashboard budgets each category (limits + bars + safe-to-spend) or
+  // just tracks spend against monthlyIncome. Absent in legacy configs; interpreted
+  // as true (see tracksByCategory in compute.ts) so no stored wallet needs migrating.
+  trackByCategory?: boolean
 }
 
 export type CurrencyCode = string
@@ -46,6 +50,7 @@ export const DEFAULT_BUDGET: BudgetConfig = {
   investments: 250,
   buffer: 236,
   others: 236,
+  trackByCategory: true,
 }
 
 export const CATEGORY_LABELS: Record<Category, string> = {

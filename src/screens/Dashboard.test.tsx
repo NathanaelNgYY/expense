@@ -661,3 +661,69 @@ describe('automatic-capture nudge (U5)', () => {
     expect(nudge(rendered.container)).toBeNull()
   })
 })
+
+describe('Dashboard budgets-off mode', () => {
+  let root: Root | null = null
+
+  beforeEach(() => {
+    ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-05-07T12:00:00'))
+    localStorage.clear()
+    nextId = 0
+    vi.clearAllMocks()
+    sharedCtx.value.budgets = []
+    sharedCtx.value.active = null
+  })
+
+  afterEach(() => {
+    act(() => {
+      root?.unmount()
+    })
+    document.body.replaceChildren()
+    root = null
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  function renderOff(entries: unknown[]) {
+    saveWalletMap({
+      SGD: { config: { ...DEFAULT_BUDGET, trackByCategory: false }, customCategories: [], overrides: {} },
+    })
+    saveActiveCurrency('SGD')
+    return renderWithEntries(entries)
+  }
+
+  it('reframes the overview to "Spent this month" and drops the budget envelopes copy', () => {
+    const rendered = renderOff([entry({ amount: 200, category: 'lunch', date: '2026-05-04' })])
+    root = rendered.root
+
+    expect(rendered.container.textContent).toContain('Spent this month')
+    expect(rendered.container.textContent).not.toContain('Safe to spend today')
+  })
+
+  it('replaces budget cards with a "Where it went" breakdown, biggest share first', () => {
+    const rendered = renderOff([
+      entry({ amount: 200, category: 'lunch', date: '2026-05-04' }),
+      entry({ amount: 50, category: 'transport', date: '2026-05-05' }),
+    ])
+    root = rendered.root
+
+    expect(rendered.container.textContent).toContain('Where it went')
+    const shares = [...rendered.container.querySelectorAll('.where-share')].map(e => e.textContent)
+    expect(shares).toEqual(['80%', '20%'])
+    // No per-category budget status ("left" / "over") in off mode.
+    expect(rendered.container.querySelector('.cat-status')).toBeNull()
+  })
+
+  it('still expands a breakdown row to reveal its entries', () => {
+    const rendered = renderOff([
+      entry({ amount: 200, category: 'lunch', date: '2026-05-04', note: 'Kopitiam set' }),
+    ])
+    root = rendered.root
+
+    clickCategory(rendered.container, 'Lunch')
+    expect(rendered.container.textContent).toContain('Kopitiam set')
+  })
+})

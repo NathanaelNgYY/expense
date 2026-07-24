@@ -32,6 +32,30 @@ export function customBudgetTotal(custom: CustomCategory[] = []): number {
   return custom.reduce((sum, c) => sum + (c.budget ?? 0), 0)
 }
 
+// Whether the dashboard budgets each category (limits, bars, safe-to-spend) or just
+// tracks total spend. Absent in legacy configs means "on", so existing wallets keep
+// today's behavior with no migration.
+export function tracksByCategory(config: BudgetConfig): boolean {
+  return config.trackByCategory !== false
+}
+
+export interface CategorySpendShare {
+  id: string
+  amount: number
+  share: number // 0–1 fraction of total positive spend
+}
+
+// The "where it went" breakdown for Budgets-Off mode: categories with actual spend,
+// biggest first, each with its share of the month's total. Zero/negative net rows are
+// dropped — a list of S$0.00 lines is noise, not information.
+export function categorySpendBreakdown(spend: Record<string, number>): CategorySpendShare[] {
+  const spent = Object.entries(spend).filter(([, amount]) => amount > 0)
+  const total = spent.reduce((sum, [, amount]) => sum + amount, 0)
+  return spent
+    .map(([id, amount]) => ({ id, amount, share: total > 0 ? amount / total : 0 }))
+    .sort((a, b) => b.amount - a.amount)
+}
+
 // How many entries (any date) reference this category id. Used to block removal
 // of an in-use category so no entry is left pointing at a deleted category.
 export function countEntriesForCategory(entries: Entry[], categoryId: string): number {

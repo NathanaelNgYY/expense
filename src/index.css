@@ -1308,6 +1308,30 @@ input:focus-visible {
   gap: 12px;
 }
 
+/* ─── Budgets-off "where it went" list ───────────────────── */
+.where-row-card {
+  min-height: 0;
+}
+
+.where-row-toggle {
+  min-height: 0;
+  padding: 15px 16px;
+}
+
+.where-share {
+  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 34px;
+  text-align: right;
+}
+
+.where-it-went-empty {
+  padding: 4px 4px 8px;
+  font-size: 14px;
+}
+
 .category-expense-header {
   color: var(--text-secondary);
   font-size: 12px;
@@ -2294,6 +2318,51 @@ input:focus-visible {
 
 .settings-input:focus-visible {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+/* ─── iOS-style switch (budget-per-category toggle) ──────── */
+.ui-switch {
+  --track: color-mix(in srgb, var(--text) 24%, transparent);
+  width: 50px;
+  height: 30px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--track);
+  cursor: pointer;
+  position: relative;
+  transition: background 180ms ease;
+}
+
+.ui-switch--on {
+  --track: var(--green);
+}
+
+.ui-switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f7f3ea;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 180ms ease;
+}
+
+.ui-switch--on .ui-switch__thumb {
+  transform: translateX(20px);
+}
+
+.ui-switch:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+/* Saved-but-inactive limit fields while budgets are off. Dimmed, still editable. */
+.budget-limits--off {
+  opacity: 0.5;
 }
 
 /* ─── Settings hub & subscreen rows ──────────────────────── */

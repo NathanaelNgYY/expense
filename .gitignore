@@ -36,9 +36,6 @@ docs/superpowers/backup/
 # Graphify generated knowledge graph (rebuilt by git post-commit hook)
 graphify-out/
 
-# understand-anything output
-.understand-anything/
-
 # Local isolated feature worktrees
 .worktrees/
 

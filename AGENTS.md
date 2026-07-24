@@ -19,7 +19,8 @@ insights.
 
 ## Current direction — Supabase/Vercel PWA (App Store plan ON HOLD)
 
-**The PWA is the product.** The App Store / SwiftUI rewrite plan (`docs/APP_STORE.md`) was put
+**The PWA is the product.** The App Store / SwiftUI rewrite plan (removed from the tree in the
+2026-07-24 docs cleanup; recover from git history if the hold lifts) was put
 **on hold on 2026-07-10** — the owner has no macOS hardware to build/sign/submit iOS apps. Its task
 IDs (`T-01`–`T-35`) and gates are dormant; don't block PWA work on them or pick up `T-` tasks unless
 the hold is explicitly lifted.

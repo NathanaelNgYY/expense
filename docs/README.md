@@ -2,24 +2,25 @@
 
 ## Current operational docs
 
-- `PROJECT_IMPROVEMENT_STATUS.md` — live audit progress and next priorities.
+- `PRODUCT_AUDIT_2026-07-19.md` — active v1.1 roadmap and priorities.
 - `SENTRY.md` — production error-monitoring configuration and operator workflow.
+- `APPLE_PAY_SHORTCUT_TEMPLATE.md` — iOS Shortcut template for Apple Pay ingestion.
 - Root `README.md` — setup, deployment, iOS Shortcut, and product usage.
 
 ## Architecture and decisions
 
-- `superpowers/specs/` — approved design decisions retained for rationale.
-- `APP_STORE.md` — explicitly on hold; retained so dormant native-app work is not mistaken for active PWA scope.
+- `superpowers/specs/` — approved design decisions retained for rationale (includes the
+  active Supabase-migration and Vercel-cutover designs).
 - Root `DESIGN.md` and `PRODUCT.md` — current product and visual direction.
 
 ## Verification evidence
 
-- `testing/` — concise RED/GREEN evidence for shipped changes.
 - `screenshots/` — current H8 crash-fallback references.
 
 ## Historical research
 
-- `UX_AUDIT_2026-07-10.md`
 - `PRODUCT_COMPETITOR_ANALYSIS_2026.md`
 
-Completed implementation plans, superseded test reports, and rendered design mockups were removed in the July 13 cleanup. Git history remains the archive for those artifacts.
+Completed implementation plans, RED/GREEN test evidence, superseded audits, and the dormant
+App Store / native-migration docs were removed in cleanups on July 13 and July 24. Git history
+remains the archive for those artifacts.

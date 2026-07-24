@@ -22,11 +22,52 @@ import {
 } from './compute'
 import { DEFAULT_BUDGET, CATEGORIES } from './types'
 import type { Entry, CustomCategory } from './types'
-import { allCategoryIds, categoryBudgets, customBudgetTotal, countEntriesForCategory } from './compute'
+import {
+  allCategoryIds,
+  categoryBudgets,
+  customBudgetTotal,
+  countEntriesForCategory,
+  tracksByCategory,
+  categorySpendBreakdown,
+} from './compute'
 
 function e(overrides: Partial<Entry> = {}): Entry {
   return { id: '1', amount: 10, category: 'lunch', note: '', date: '2026-05-04', ...overrides }
 }
+
+describe('tracksByCategory', () => {
+  it('defaults to true when the flag is absent (legacy configs)', () => {
+    const legacy = {
+      monthlyIncome: 1200,
+      lunch: 264,
+      transport: 50,
+      savings: 400,
+      investments: 250,
+      buffer: 236,
+      others: 236,
+    }
+    expect(tracksByCategory(legacy)).toBe(true)
+  })
+
+  it('is true when explicitly enabled and false when explicitly disabled', () => {
+    expect(tracksByCategory({ ...DEFAULT_BUDGET, trackByCategory: true })).toBe(true)
+    expect(tracksByCategory({ ...DEFAULT_BUDGET, trackByCategory: false })).toBe(false)
+  })
+})
+
+describe('categorySpendBreakdown', () => {
+  it('sorts spent categories biggest first with their share of the total', () => {
+    const breakdown = categorySpendBreakdown({ lunch: 200, transport: 50, others: 0, savings: -10 })
+    expect(breakdown.map(b => b.id)).toEqual(['lunch', 'transport'])
+    expect(breakdown[0]).toMatchObject({ id: 'lunch', amount: 200 })
+    expect(breakdown[0].share).toBeCloseTo(0.8)
+    expect(breakdown[1].share).toBeCloseTo(0.2)
+  })
+
+  it('drops zero and negative rows and returns [] when nothing was spent', () => {
+    expect(categorySpendBreakdown({ lunch: 0, transport: 0 })).toEqual([])
+  })
+})
 
 describe('entriesForMonth', () => {
   it('returns only entries in the given month', () => {

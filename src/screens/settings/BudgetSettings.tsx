@@ -13,7 +13,7 @@ import {
 import { useBudgetConfig } from '../../BudgetConfigContext'
 import { categoryIcon, categoryLabel } from '../../categoryDisplay'
 import { formatMoney } from '../../format'
-import { countEntriesForCategory } from '../../compute'
+import { countEntriesForCategory, tracksByCategory } from '../../compute'
 import { useEntries } from '../../EntriesContext'
 import { CATEGORY_LABELS } from '../../types'
 import type { BudgetConfig, Category, CategoryOverride, CustomCategory } from '../../types'
@@ -43,7 +43,9 @@ export default function BudgetSettings({ onDone }: Props) {
 
   const customTotal = customCategories.reduce((sum, c) => sum + (c.budget ?? 0), 0)
   const total = BUDGET_FIELDS.reduce((sum, key) => sum + config[key], 0) + customTotal
-  const totalMismatch = Math.abs(total - config.monthlyIncome) > 0.01
+  const budgetsOn = tracksByCategory(config)
+  // The "must sum to income" reconciliation only matters when categories are budgeted.
+  const totalMismatch = budgetsOn && Math.abs(total - config.monthlyIncome) > 0.01
 
   // Budget edits live in local state until Save. Without this the user could edit a field,
   // scroll away to check another, leave the screen, and lose the change with no warning —
@@ -85,6 +87,15 @@ export default function BudgetSettings({ onDone }: Props) {
       ...currentConfig,
       [key]: nextValue,
       ...(key === 'others' ? { buffer: nextValue } : {}),
+    }))
+  }
+
+  // Non-destructive: flipping this off leaves every limit in state, so turning it back
+  // on restores the exact numbers. undefined (legacy) counts as on, so === false flips it on.
+  function toggleTrackByCategory() {
+    setConfig(currentConfig => ({
+      ...currentConfig,
+      trackByCategory: currentConfig.trackByCategory === false,
     }))
   }
 
@@ -167,6 +178,31 @@ export default function BudgetSettings({ onDone }: Props) {
           </section>
           {isDirty && <p className="muted settings-wallet-hint">Save your changes before switching wallets.</p>}
 
+          <h3 className="section-title">Budgeting</h3>
+
+          <div className="ios-list">
+            <div className="settings-row settings-toggle-row">
+              <span className="settings-label" id="track-by-category-label">
+                Track a budget per category
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={budgetsOn}
+                aria-labelledby="track-by-category-label"
+                className={budgetsOn ? 'ui-switch ui-switch--on' : 'ui-switch'}
+                onClick={toggleTrackByCategory}
+              >
+                <span className="ui-switch__thumb" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+          <p className="settings-hint">
+            {budgetsOn
+              ? 'Each category has its own limit, with progress bars and “safe to spend”.'
+              : 'Off — just log spending against your income. Categories stay as labels for History and Insights.'}
+          </p>
+
           <h3 className="section-title">Income</h3>
 
           <div className="ios-list">
@@ -189,8 +225,11 @@ export default function BudgetSettings({ onDone }: Props) {
           </div>
 
           <h3 className="section-title">Monthly Budgets ({budget.activeCurrency})</h3>
+          {!budgetsOn && (
+            <p className="settings-hint">Budgets are off — these limits are saved but inactive.</p>
+          )}
 
-          <div className="ios-list">
+          <div className={budgetsOn ? 'ios-list' : 'ios-list budget-limits--off'}>
             {BUDGET_FIELDS.map(key => {
               const displayLabel = categoryLabel(key, overrides)
               const displayIcon = categoryIcon(key, overrides)
@@ -238,7 +277,7 @@ export default function BudgetSettings({ onDone }: Props) {
           </div>
 
           {customCategories.length > 0 && (
-            <div className="ios-list">
+            <div className={budgetsOn ? 'ios-list' : 'ios-list budget-limits--off'}>
               {customCategories.map(cat => (
                 <div key={cat.id}>
                   <div className="settings-row">

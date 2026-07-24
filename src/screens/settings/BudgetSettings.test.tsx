@@ -8,6 +8,7 @@ import { BudgetConfigProvider } from '../../BudgetConfigContext'
 import { ThemeProvider } from '../../theme/ThemeContext'
 import { ConfirmProvider } from '../../components/ConfirmDialog'
 import type { ActiveBudgetData, SharedBudget } from '../../sharedBudgets/types'
+import { DEFAULT_BUDGET } from '../../types'
 
 const sharedCtx = vi.hoisted(() => ({
   value: {
@@ -176,6 +177,41 @@ describe('BudgetSettings', () => {
 
     expect(container.querySelector('.settings-total-warning')).not.toBeNull()
     expect(container).toHaveTextContent('Total: S$1,200.00')
+  })
+
+  it('hides the total-mismatch warning once budgets-per-category is turned off', () => {
+    const rendered = renderBudget()
+    root = rendered.root
+    const { container } = rendered
+
+    changeInput(container.querySelector<HTMLInputElement>('#budget-monthly-income')!, '1800')
+    expect(container.querySelector('.settings-total-warning')).not.toBeNull()
+
+    const toggle = container.querySelector<HTMLButtonElement>('[role="switch"]')!
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    act(() => {
+      toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
+    expect(container.querySelector('.settings-total-warning')).toBeNull()
+  })
+
+  it('persists the budgets-off choice without discarding the saved limits', () => {
+    const rendered = renderBudget()
+    root = rendered.root
+    const { container } = rendered
+
+    const toggle = container.querySelector<HTMLButtonElement>('[role="switch"]')!
+    act(() => {
+      toggle.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+    clickSave(container)
+
+    const saved = JSON.parse(localStorage.getItem('budget_config') ?? '{}')
+    expect(saved.trackByCategory).toBe(false)
+    // Non-destructive: the limits are still there for when it is switched back on.
+    expect(saved.lunch).toBe(DEFAULT_BUDGET.lunch)
   })
 
   it('adds a custom category with a budget and persists on save', () => {

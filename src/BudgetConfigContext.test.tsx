@@ -20,6 +20,7 @@ const storedConfig: BudgetConfig = {
   investments: 500,
   buffer: 680,
   others: 680,
+  trackByCategory: true,
 }
 
 const storedCategories: CustomCategory[] = [

@@ -22,6 +22,8 @@ import {
   categoryBudgets,
   customBudgetTotal,
   safeToSpendPerDay,
+  tracksByCategory,
+  categorySpendBreakdown,
 } from '../compute'
 import { addDays, fromLocalDateString, toLocalDateString } from '../dates'
 import { sgtToday } from '../shared/sgtDate'
@@ -131,6 +133,10 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
   const deficits = categoryDeficits(spend, config, customCategories)
   const buffer = bufferRemaining(deficits, config)
   const thisWeek = weeklyTotal(entries, now)
+  // When budgets-per-category is off, the dashboard drops limits/bars and just tracks spend
+  // against monthlyIncome; the category cards collapse into a "where it went" breakdown.
+  const budgetsOn = tracksByCategory(config)
+  const spendBreakdown = budgetsOn ? [] : categorySpendBreakdown(spend)
   const monthlyIncome = config.monthlyIncome
   const budgetUsedPct = monthlyIncome > 0
     ? Math.max(0, Math.min(100, (monthTotal / monthlyIncome) * 100))
@@ -145,6 +151,14 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
     spendableBudget,
     now,
     { excludedCategories: COMMITTED_CATEGORIES },
+  ).amountPerDay
+  // Budgets-off has no envelopes to exclude: pace the whole income across the month.
+  const incomeSafePerDay = safeToSpendPerDay(
+    entries,
+    now.getFullYear(),
+    now.getMonth(),
+    monthlyIncome,
+    now,
   ).amountPerDay
 
   const monthLabel = now.toLocaleString('default', { month: 'long', year: 'numeric' })
@@ -307,6 +321,38 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
     )
   }
 
+  // The expanded expense list under a category — shared by the budgeted cards and the
+  // budgets-off "where it went" rows so tapping either reveals the same recent entries.
+  function renderCategoryExpenses(cat: string, label: string) {
+    const categoryEntries = currentMonthEntries
+      .filter(
+        entry =>
+          entry.category === cat &&
+          entry.date >= recentExpenseStartDate &&
+          entry.date <= todayDate,
+      )
+      .sort(entrySort)
+    return (
+      <div
+        id={`category-expenses-${cat}`}
+        className="category-expense-list"
+        aria-label={`${label} expenses`}
+      >
+        <div className="category-expense-header">
+          <span>{label} Expenses</span>
+          <span>{categoryEntries.length} entr{categoryEntries.length === 1 ? 'y' : 'ies'}</span>
+        </div>
+        {categoryEntries.length === 0 ? (
+          <p className="category-expense-empty">
+            No {label.toLowerCase()} entries in the past 2 weeks.
+          </p>
+        ) : (
+          categoryEntries.map(renderExpenseRow)
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="screen dashboard theme-screen theme-screen--home">
       <header className="dashboard-header">
@@ -402,14 +448,31 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
       <section className="home-budget-overview" aria-label="Monthly budget overview">
         <BudgetUsageRing allocated={monthTotal} total={monthlyIncome} currency={activeCurrency} />
         <div className="home-budget-overview__copy">
-          <span className="summary-label">Safe to spend today</span>
-          <strong className="home-safe-amount">
-            {formatMoney(Math.max(0, safePerDay), activeCurrency)}
-          </strong>
-          <span className="muted">{formatRemaining(buffer, activeCurrency)} in your Others budget</span>
+          {budgetsOn ? (
+            <>
+              <span className="summary-label">Safe to spend today</span>
+              <strong className="home-safe-amount">
+                {formatMoney(Math.max(0, safePerDay), activeCurrency)}
+              </strong>
+              <span className="muted">{formatRemaining(buffer, activeCurrency)} in your Others budget</span>
+            </>
+          ) : (
+            <>
+              <span className="summary-label">Spent this month</span>
+              <strong className="home-safe-amount">
+                {formatMoney(monthTotal, activeCurrency)}
+              </strong>
+              <span className="muted">
+                {formatMoney(Math.max(0, incomeSafePerDay), activeCurrency)}/day keeps you under{' '}
+                {formatMoneyWhole(monthlyIncome, activeCurrency)}
+              </span>
+            </>
+          )}
         </div>
       </section>
 
+      {budgetsOn ? (
+      <>
       <h3 className="section-title">Categories</h3>
       {categoryIds.map(cat => {
         const spent = spend[cat]
@@ -421,14 +484,6 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
         const flexibleBudgetExhausted = isFlexible && buffer <= 0
         const committed = COMMITTED_CATEGORY_SET.has(cat as Category)
         const expanded = expandedCategory === cat
-        const categoryEntries = currentMonthEntries
-          .filter(
-            entry =>
-              entry.category === cat &&
-              entry.date >= recentExpenseStartDate &&
-              entry.date <= todayDate,
-          )
-          .sort(entrySort)
         const categoryLabel = labelFor(cat)
         const pct = isFlexible
           ? config.buffer > 0
@@ -513,28 +568,54 @@ export default function Dashboard({ onAddEntry, onOpenAutomaticTracking }: Props
               </span>
             </button>
 
-            {expanded && (
-              <div
-                id={`category-expenses-${cat}`}
-                className="category-expense-list"
-                aria-label={`${categoryLabel} expenses`}
-              >
-                <div className="category-expense-header">
-                  <span>{categoryLabel} Expenses</span>
-                  <span>{categoryEntries.length} entr{categoryEntries.length === 1 ? 'y' : 'ies'}</span>
-                </div>
-                {categoryEntries.length === 0 ? (
-                  <p className="category-expense-empty">
-                    No {categoryLabel.toLowerCase()} entries in the past 2 weeks.
-                  </p>
-                ) : (
-                  categoryEntries.map(renderExpenseRow)
-                )}
-              </div>
-            )}
+            {expanded && renderCategoryExpenses(cat, categoryLabel)}
           </article>
         )
       })}
+      </>
+      ) : (
+      <>
+      <h3 className="section-title">Where it went</h3>
+      {spendBreakdown.length === 0 ? (
+        <p className="muted where-it-went-empty">Nothing spent yet this month.</p>
+      ) : (
+        spendBreakdown.map(({ id: cat, amount, share }) => {
+          const expanded = expandedCategory === cat
+          const breakdownLabel = labelFor(cat)
+          return (
+            <article key={cat} className="card category-row-card where-row-card">
+              <button
+                type="button"
+                className="category-row-toggle where-row-toggle"
+                onClick={() => toggleCategory(cat)}
+                aria-expanded={expanded}
+                aria-controls={`category-expenses-${cat}`}
+              >
+                <span className="cat-row-top">
+                  <span className="cat-name icon-label">
+                    <BudgetIcon name={iconFor(cat)} />
+                    {breakdownLabel}
+                  </span>
+                  <span className="cat-row-right">
+                    <span className="cat-spent-group">
+                      <span className="cat-spent">{formatMoney(amount, activeCurrency)}</span>
+                      <span className="where-share">{Math.round(share * 100)}%</span>
+                      {expanded ? (
+                        <ChevronUp className="cat-chevron" aria-hidden="true" strokeWidth={2.4} />
+                      ) : (
+                        <ChevronDown className="cat-chevron" aria-hidden="true" strokeWidth={2.4} />
+                      )}
+                    </span>
+                  </span>
+                </span>
+              </button>
+              {expanded && renderCategoryExpenses(cat, breakdownLabel)}
+            </article>
+          )
+        })
+      )}
+      </>
+      )}
 
       {uncategorizedEntries.length > 0 && (
         <article className="card category-row-card">

@@ -141,14 +141,25 @@ function readCachedEntries(): Seed[] {
   return JSON.parse(localStorage.getItem('budget_entries') ?? '[]')
 }
 
-async function waitFor(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
-  const start = Date.now()
-  while (!predicate()) {
-    if (Date.now() - start > timeoutMs) throw new Error('Timed out waiting for condition')
+// Budgeted in polling attempts rather than wall-clock milliseconds. Under full-suite parallel
+// load the event loop is starved while the clock keeps running, so a time-based budget expires
+// on a machine that is merely busy rather than on an app that is actually stuck. Counting
+// attempts gives the component the same number of chances to settle however contended the CPU is.
+//
+// The default stays small enough that the helper throws its own descriptive error before vitest's
+// 5000ms per-test default aborts the test — an abort abandons this loop mid-await and it goes on
+// interleaving with later tests. Callers that raise their vitest timeout raise this to match.
+const SETTLE_ATTEMPTS = 100
+const SLOW_SETTLE_ATTEMPTS = 400
+
+async function waitFor(predicate: () => boolean, attempts = SETTLE_ATTEMPTS): Promise<void> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    if (predicate()) return
     await act(async () => {
       await new Promise(resolve => setTimeout(resolve, 20))
     })
   }
+  if (!predicate()) throw new Error('Timed out waiting for condition')
 }
 
 describe('Settings hub', () => {
@@ -299,6 +310,10 @@ describe('Settings hub', () => {
     expect(findButton(rendered.container, 'Undo')).toBeEnabled()
   })
 
+  // Explicit timeout, well clear of the 5000ms default. This is the slowest test in the file --
+  // two confirm-dialog round trips plus a delete and an undo -- and when the default fired it did
+  // not just fail itself: vitest abandons the test mid-await, so its polling loop kept running and
+  // interleaved with the next two tests, which then failed on a button that had not rendered yet.
   it('undoes a month reset with every original id and dedupe key intact', async () => {
     const now = new Date()
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -325,22 +340,19 @@ describe('Settings hub', () => {
       findButton(rendered.container, 'Reset This Month').click()
     })
     fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
-    // Wider budget than the default 2000ms: the confirm dialog round trip adds a couple of
-    // render/microtask hops before removeEntry fires, and that's occasionally tight under
-    // full-suite parallel load (this test alone is never slow).
-    await waitFor(() => readCachedEntries().length === 0, 5000)
+    await waitFor(() => readCachedEntries().length === 0, SLOW_SETTLE_ATTEMPTS)
 
     await act(async () => {
       findButton(rendered.container, 'Undo').click()
     })
-    await waitFor(() => readCachedEntries().length === 2)
+    await waitFor(() => readCachedEntries().length === 2, SLOW_SETTLE_ATTEMPTS)
 
     expect(readCachedEntries()).toEqual([first, second])
     expect(rendered.container).toHaveTextContent('Restored 2 entries')
     expect([...rendered.container.querySelectorAll('button')].some(button =>
       button.textContent?.includes('Undo'),
     )).toBe(false)
-  })
+  }, 20_000)
 
   it('keeps the current month when the reset confirmation is declined', async () => {
     const now = new Date()

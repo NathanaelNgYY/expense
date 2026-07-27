@@ -71,8 +71,14 @@ function parseCsv(text: string): string[][] {
   return rows.filter(csvRow => csvRow.some(value => value.trim() !== ''))
 }
 
-function isCategory(value: string): value is Category {
-  return CATEGORY_SET.has(value as Category)
+// A category cell holds an *id*, not a label: either a built-in id or a custom one minted by
+// makeCustomCategoryId ("cat_<slug>_<suffix>"). Ids are slugified, so anything with spaces or
+// punctuation means the column is misaligned rather than a category we simply don't know yet —
+// unknown-but-well-formed ids import fine and render as their raw id (see categoryDisplay.ts).
+const CATEGORY_ID_RE = /^[a-z0-9_-]+$/i
+
+function isCategoryId(value: string): boolean {
+  return CATEGORY_SET.has(value as Category) || CATEGORY_ID_RE.test(value)
 }
 
 function isValidDateString(value: string): boolean {
@@ -114,11 +120,11 @@ function parseEntry(row: string[], rowNumber: number, hasKind: boolean, hasCurre
     throw new Error(`Row ${rowNumber} has an invalid amount`)
   }
 
-  let category: Category | null = null
+  let category: string | null = null
 
   if (categoryText) {
-    if (!isCategory(categoryText)) {
-      throw new Error(`Row ${rowNumber} has an invalid category`)
+    if (!isCategoryId(categoryText)) {
+      throw new Error(`Row ${rowNumber} has an invalid category (${categoryText})`)
     }
 
     category = categoryText

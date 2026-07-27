@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import IngestStatusCard from './IngestStatusCard'
 import { ConfirmProvider } from '../../components/ConfirmDialog'
 import { INGEST_BINDING_STORAGE_KEY } from '../../ingestVisibility'
+import { takeRememberedRoute } from '../../postAuthRoute'
 
 const api = vi.hoisted(() => ({ fetchIngestStatus: vi.fn(), rotateIngestToken: vi.fn() }))
 const sharedApi = vi.hoisted(() => ({ signInWithGoogle: vi.fn() }))
@@ -304,9 +305,12 @@ describe('IngestStatusCard', () => {
       b => /Set up Apple Pay|Generate token|Rotate token/.test(b.textContent ?? ''),
     )).toBe(false)
 
+    window.history.replaceState({}, '', '/#/settings/automatic')
     await act(async () => findButton(rendered.container, 'Continue with Google').click())
     expect(sharedApi.signInWithGoogle).toHaveBeenCalledTimes(1)
     expect(api.rotateIngestToken).not.toHaveBeenCalled()
+    // Without this the OAuth redirect drops the user on Home, mid-setup.
+    expect(takeRememberedRoute()).toEqual({ tab: 'settings', sub: 'automatic' })
   })
 
   it('tells the user to sign in again when rotation is rejected as unauthorized', async () => {

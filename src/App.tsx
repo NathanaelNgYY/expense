@@ -23,6 +23,7 @@ import { entriesForCurrency } from './shared/currency'
 import { parseAddDeepLink, resolveCategoryId } from './deepLink'
 import { formatHash, type Route, type SettingsSub } from './router'
 import { currentRoute, goBack, navigate, replaceRoute, useRoute } from './useRoute'
+import { useRestoreRouteAfterAuth } from './useRestoreRouteAfterAuth'
 
 // lazyWithRetry (not bare React.lazy): a stale chunk after a deploy — or a
 // transient mobile-network blip — would otherwise crash the lazy route to the
@@ -69,6 +70,8 @@ function normaliseInitialRoute(): void {
 function AppShell() {
   const { entries, editEntry, removeEntry } = useEntries()
   const { customCategories, overrides, activeCurrency } = useBudgetConfig()
+  // Google sign-in leaves the app; this puts the user back on the screen they left from.
+  useRestoreRouteAfterAuth()
   const route = useRoute()
   const tab = route.tab
   const [prefill, setPrefill] = useState<{ amount?: number; category: string | null }>(() => {

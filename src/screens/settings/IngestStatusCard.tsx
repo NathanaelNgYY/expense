@@ -10,6 +10,8 @@ import {
 } from '../../ingestVisibility'
 import { useSharedBudgets } from '../../sharedBudgets/SharedBudgetsContext'
 import * as sharedApi from '../../sharedBudgets/sharedApi'
+import { rememberRouteForAuth } from '../../postAuthRoute'
+import { currentRoute } from '../../useRoute'
 
 function accountLabel(userId: string, email: string | undefined, displayName: string | undefined): string {
   return email || displayName || `Account …${userId.slice(-8)}`
@@ -137,6 +139,9 @@ export default function IngestStatusCard({
     setSigningIn(true)
     setSignInError(null)
     try {
+      // Google redirects back to the origin and the implicit-flow token fragment claims the hash,
+      // so the way back to this screen has to be stashed before we leave.
+      rememberRouteForAuth(currentRoute())
       await sharedApi.signInWithGoogle()
     } catch (error) {
       setSignInError(error instanceof Error ? error.message : 'Sign-in failed. Please try again.')

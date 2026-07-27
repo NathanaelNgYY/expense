@@ -117,6 +117,36 @@ describe('CSV entry import and export', () => {
     expect(parseEntriesCsv(csv)[0]).toMatchObject({ id: 'legacy-1', kind: 'expense' })
   })
 
+  it('imports custom category ids that this device does not know yet', () => {
+    const csv = [
+      '"id","amount","category","note","date"',
+      '"custom-1","59.95","cat_meals_7r5hl","","2026-07-26"',
+      '"custom-2","5.41","cat_groceries_b2enu","","2026-07-25"',
+    ].join('\n')
+
+    expect(parseEntriesCsv(csv).map(entry => entry.category)).toEqual([
+      'cat_meals_7r5hl',
+      'cat_groceries_b2enu',
+    ])
+  })
+
+  it('round-trips an entry filed under a custom category', () => {
+    const entries: Entry[] = [
+      { id: 'entry-1', amount: 12, kind: 'expense', category: 'cat_meals_7r5hl', note: '', date: '2026-07-26' },
+    ]
+
+    expect(parseEntriesCsv(entriesToCsv(entries))).toEqual(entries)
+  })
+
+  it('rejects a category cell that cannot be a category id', () => {
+    const csv = [
+      '"id","amount","category","note","date"',
+      '"bad-1","12","Bubble tea, iced","Lunch","2026-05-11"',
+    ].join('\n')
+
+    expect(() => parseEntriesCsv(csv)).toThrow('Row 2 has an invalid category')
+  })
+
   it('rejects an unknown entry kind', () => {
     const csv = [
       '"id","amount","category","note","date","kind"',

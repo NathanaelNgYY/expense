@@ -6,19 +6,32 @@ import { ConfirmProvider } from '../../components/ConfirmDialog'
 import { INGEST_BINDING_STORAGE_KEY } from '../../ingestVisibility'
 
 const api = vi.hoisted(() => ({ fetchIngestStatus: vi.fn(), rotateIngestToken: vi.fn() }))
+const sharedApi = vi.hoisted(() => ({ signInWithGoogle: vi.fn() }))
 const shared = vi.hoisted(() => ({
   value: {
     authReady: true,
-    session: { user: { id: 'user-current', email: 'nat@example.com' } },
+    session: { user: { id: 'user-current', email: 'nat@example.com', is_anonymous: false } },
     profile: { id: 'user-current', displayName: 'Nat' },
   },
 }))
 
+class ApiError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 vi.mock('../../api', () => ({
   fetchIngestStatus: api.fetchIngestStatus,
   rotateIngestToken: api.rotateIngestToken,
+  isAuthFailure: (error: unknown) =>
+    error instanceof ApiError && (error.status === 401 || error.status === 403),
 }))
 vi.mock('../../sharedBudgets/SharedBudgetsContext', () => ({ useSharedBudgets: () => shared.value }))
+vi.mock('../../sharedBudgets/sharedApi', () => ({ signInWithGoogle: sharedApi.signInWithGoogle }))
 
 async function renderCard(
   props: { refreshable?: boolean; shortcutInstallUrl?: string | null } = {},
@@ -50,7 +63,7 @@ describe('IngestStatusCard', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
-    shared.value.session = { user: { id: 'user-current', email: 'nat@example.com' } }
+    shared.value.session = { user: { id: 'user-current', email: 'nat@example.com', is_anonymous: false } }
     shared.value.profile = { id: 'user-current', displayName: 'Nat' }
   })
 
@@ -274,6 +287,40 @@ describe('IngestStatusCard', () => {
 
     expect(rendered.container).toHaveTextContent('Could not generate a new token')
     expect(rendered.container.querySelector('input[aria-label="Shortcut setup value"]')).toBeNull()
+  })
+
+  it('asks an anonymous user to sign in instead of offering a token the server will refuse', async () => {
+    shared.value.session = {
+      user: { id: 'anon-user', email: undefined as unknown as string, is_anonymous: true },
+    }
+    shared.value.profile = null as unknown as typeof shared.value.profile
+    api.fetchIngestStatus.mockResolvedValue(null)
+
+    const rendered = await renderCard({ shortcutInstallUrl: 'https://www.icloud.com/shortcuts/abc123' })
+    root = rendered.root
+
+    expect(rendered.container).toHaveTextContent('Sign in to connect Apple Pay')
+    expect([...rendered.container.querySelectorAll('button')].some(
+      b => /Set up Apple Pay|Generate token|Rotate token/.test(b.textContent ?? ''),
+    )).toBe(false)
+
+    await act(async () => findButton(rendered.container, 'Continue with Google').click())
+    expect(sharedApi.signInWithGoogle).toHaveBeenCalledTimes(1)
+    expect(api.rotateIngestToken).not.toHaveBeenCalled()
+  })
+
+  it('tells the user to sign in again when rotation is rejected as unauthorized', async () => {
+    api.fetchIngestStatus.mockResolvedValue(null)
+    api.rotateIngestToken.mockRejectedValue(new ApiError(401, 'unauthorized'))
+
+    const rendered = await renderCard()
+    root = rendered.root
+
+    await act(async () => findButton(rendered.container, 'Generate token').click())
+    await clickConfirm('Generate')
+
+    expect(rendered.container).toHaveTextContent('Your session is no longer valid')
+    expect(rendered.container).not.toHaveTextContent('Please try again')
   })
 
   it('hides the rotate control when there is no signed-in account', async () => {

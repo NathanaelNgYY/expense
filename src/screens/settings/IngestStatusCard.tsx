@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, ExternalLink, Radio } from 'lucide-react'
-import { fetchIngestStatus, rotateIngestToken } from '../../api'
+import { fetchIngestStatus, isAuthFailure, rotateIngestToken } from '../../api'
 import { useConfirm } from '../../components/ConfirmDialog'
 import {
   readIngestBinding,
@@ -9,6 +9,7 @@ import {
   type IngestVisibility,
 } from '../../ingestVisibility'
 import { useSharedBudgets } from '../../sharedBudgets/SharedBudgetsContext'
+import * as sharedApi from '../../sharedBudgets/sharedApi'
 
 function accountLabel(userId: string, email: string | undefined, displayName: string | undefined): string {
   return email || displayName || `Account …${userId.slice(-8)}`
@@ -28,6 +29,10 @@ function sourceLabel(source: IngestVisibility['lastSource']): string | null {
   return null
 }
 
+// 'auth' is a dead end the user can act on (sign in), 'failed' is worth retrying — the old single
+// "please try again" message told someone with no real account to repeat a call that can't succeed.
+type RotateError = 'auth' | 'failed' | null
+
 interface Props {
   refreshable?: boolean
   shortcutInstallUrl?: string | null
@@ -44,12 +49,17 @@ export default function IngestStatusCard({
   const [refreshing, setRefreshing] = useState(false)
   const [refreshVersion, setRefreshVersion] = useState(0)
   const [rotating, setRotating] = useState(false)
-  const [rotateError, setRotateError] = useState(false)
+  const [rotateError, setRotateError] = useState<RotateError>(null)
   const [newToken, setNewToken] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [copyError, setCopyError] = useState(false)
+  const [signingIn, setSigningIn] = useState(false)
+  const [signInError, setSignInError] = useState<string | null>(null)
 
   const currentUserId = session?.user.id ?? null
+  // Everyone gets a Supabase session silently, anonymous ones included. An ingest token binds to a
+  // durable identity, so rotate-ingest-token rejects anonymous callers — don't offer the action.
+  const isAnonymous = session?.user.is_anonymous === true
   const currentAccountLabel = currentUserId
     ? accountLabel(currentUserId, session?.user.email, profile?.displayName)
     : 'No account session'
@@ -107,17 +117,31 @@ export default function IngestStatusCard({
     })
     if (!confirmed) return
     setRotating(true)
-    setRotateError(false)
+    setRotateError(null)
     try {
       const { token } = await rotateIngestToken()
       setNewToken(token)
       setCopied(false)
       setCopyError(false)
       refreshStatus()
-    } catch {
-      setRotateError(true)
+    } catch (error) {
+      setRotateError(isAuthFailure(error) ? 'auth' : 'failed')
     } finally {
       setRotating(false)
+    }
+  }
+
+  // signInWithGoogle links the identity onto an existing anonymous session rather than replacing
+  // it, so entries already captured on this device survive the upgrade to a real account.
+  async function handleSignIn() {
+    setSigningIn(true)
+    setSignInError(null)
+    try {
+      await sharedApi.signInWithGoogle()
+    } catch (error) {
+      setSignInError(error instanceof Error ? error.message : 'Sign-in failed. Please try again.')
+    } finally {
+      setSigningIn(false)
     }
   }
 
@@ -175,7 +199,7 @@ export default function IngestStatusCard({
           <strong>Account mismatch.</strong> Your Shortcuts were last linked to {visibility.recipientAccountLabel}, but the app is signed in as {currentAccountLabel}. New purchases may not appear here.
         </p>
       )}
-      {visibility?.state === 'unlinked' && (
+      {visibility?.state === 'unlinked' && !isAnonymous && (
         <p className="ingest-status-card__notice" role="status">
           {shortcutInstallUrl
             ? 'Apple Pay is not connected to this account yet.'
@@ -185,7 +209,27 @@ export default function IngestStatusCard({
       {visibility?.state === 'linked' && (
         <p className="ingest-status-card__linked">Linked via {visibility.tokenLabel || 'iOS Shortcut'}</p>
       )}
-      {visibility && currentUserId && (
+      {visibility && currentUserId && isAnonymous && (
+        <div className="ingest-status-card__rotate">
+          <p className="ingest-status-card__notice" role="status">
+            <strong>Sign in to connect Apple Pay.</strong> Captured purchases need a permanent
+            account to arrive in. Signing in keeps everything already on this device.
+          </p>
+          <button
+            type="button"
+            className="ingest-status-card__rotate-btn"
+            onClick={() => void handleSignIn()}
+            disabled={signingIn}
+          >
+            {signingIn ? 'Opening Google…' : 'Continue with Google'}
+          </button>
+          {signInError && (
+            <p className="ingest-status-card__notice" role="alert">{signInError}</p>
+          )}
+        </div>
+      )}
+
+      {visibility && currentUserId && !isAnonymous && (
         <div className="ingest-status-card__rotate">
           {newToken ? (
             <div className="ingest-token-reveal" role="status">
@@ -247,9 +291,14 @@ export default function IngestStatusCard({
                     ? isGenerate ? 'Set up Apple Pay' : 'Reconnect Apple Pay'
                     : isGenerate ? 'Generate token' : 'Rotate token'}
               </button>
-              {rotateError && (
+              {rotateError === 'failed' && (
                 <p className="ingest-status-card__notice" role="alert">
                   Could not generate a new token. Please try again.
+                </p>
+              )}
+              {rotateError === 'auth' && (
+                <p className="ingest-status-card__notice" role="alert">
+                  Your session is no longer valid. Sign in again, then generate the token.
                 </p>
               )}
             </>

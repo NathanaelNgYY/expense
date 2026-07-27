@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useSharedBudgets } from './SharedBudgetsContext'
 import * as sharedApi from './sharedApi'
+import { rememberRouteForAuth } from '../postAuthRoute'
+import { currentRoute } from '../useRoute'
 
 async function submitWithState(
   action: () => Promise<void>,
@@ -32,7 +34,12 @@ export default function AuthGate() {
         disabled={busy}
         onClick={() =>
           void submitWithState(
-            () => sharedApi.signInWithGoogle(),
+            () => {
+              // Google redirects back to the origin and the implicit-flow token fragment claims
+              // the hash, so the way back here has to be stashed before we leave.
+              rememberRouteForAuth(currentRoute())
+              return sharedApi.signInWithGoogle()
+            },
             setBusy,
             setError,
           )

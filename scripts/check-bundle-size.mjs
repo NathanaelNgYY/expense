@@ -22,9 +22,15 @@ const BUDGETS = [
   // rankCategoriesForMerchant helper, the UncategorizedTriageChips component, and the Dashboard
   // wiring — all on the eager Home path) then added ~2 KiB, to 145.3 KiB actual. The merchant pack
   // was already eager via src/api.ts, so this is the feature's own code, not an accidental import;
-  // there is no single hot spot to move to a lazy chunk. 146 KiB is set just above that, preserving
-  // the same small-margin regression-catching intent as before.
-  { label: 'initial JS', kind: 'js', budgetKb: 146 },
+  // there is no single hot spot to move to a lazy chunk.
+  //
+  // The post-sign-in route restore (postAuthRoute + useRestoreRouteAfterAuth) then took it to
+  // 145.98 KiB actual — inside the old 146 budget by 17 bytes, which is not a margin. Both modules
+  // are small and necessarily eager: the restore hook is wired into AppShell because the auth
+  // event it waits for fires during startup, so deferring it would miss the event it exists for.
+  // 147 KiB restores roughly the ~0.7 KiB margin the earlier raises kept — a small deliberate
+  // margin that still catches a real regression, not open-ended headroom.
+  { label: 'initial JS', kind: 'js', budgetKb: 147 },
   // The always-available ConfirmDialog + LazyFallback styles (M1/M2) are deliberately in the
   // main chunk (see docs/superpowers/specs/2026-07-16-m1-m2-m4-ux-a11y-design.md). The currency
   // wallet menu styles pushed CSS to 13.5 KiB actual. 14 KiB is set just above that, preserving

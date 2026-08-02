@@ -24,7 +24,7 @@ import { parseAddDeepLink, resolveCategoryId } from './deepLink'
 import { formatHash, type Route, type SettingsSub } from './router'
 import { currentRoute, goBack, navigate, replaceRoute, useRoute } from './useRoute'
 import { useRestoreRouteAfterAuth } from './useRestoreRouteAfterAuth'
-import { captureAuthRedirectError } from './authRedirectError'
+import { captureAuthRedirectError, isAuthCallbackHash } from './authRedirectError'
 import AuthErrorBanner from './components/AuthErrorBanner'
 
 // lazyWithRetry (not bare React.lazy): a stale chunk after a deploy — or a
@@ -63,6 +63,12 @@ function initialTab(): Tab {
  */
 function normaliseInitialRoute(): void {
   const raw = window.location.hash
+  // A Supabase auth callback rides in this same slot, and the fragment is the only copy of the
+  // session. The client is created lazily — after this render — so rewriting the hash here
+  // destroys the token before supabase-js can read it, leaving the user anonymous despite a
+  // successful sign-in. Leave it; supabase-js clears it itself, and `useRestoreRouteAfterAuth`
+  // puts the user back on the right screen once the auth event lands.
+  if (isAuthCallbackHash(raw)) return
   const parsed = currentRoute()
   const target: Route = raw ? parsed : { tab: initialTab(), sub: null }
   // `raw &&` — an empty hash is not "unknown", it is simply absent.

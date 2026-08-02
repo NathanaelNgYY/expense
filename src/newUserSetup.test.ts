@@ -331,6 +331,31 @@ describe('new user: the failure is actually surfaced', () => {
     )
   })
 
+  // The fault behind the whole saga: the server logged successful sign-ins while the browser
+  // never kept one. `normaliseInitialRoute` rewrote the hash during render, and the Supabase
+  // client -- created lazily, in an effect -- then found no token and minted a new anonymous
+  // user ~200ms after each real sign-in.
+  it('leaves a Supabase auth callback hash alone so the session can be read', async () => {
+    const { isAuthCallbackHash } = await import('./authRedirectError')
+
+    expect(isAuthCallbackHash('#access_token=abc&refresh_token=def&token_type=bearer')).toBe(true)
+    expect(isAuthCallbackHash('#error=server_error&error_code=identity_already_exists')).toBe(true)
+    // Ordinary routes must still be normalised, or the address bar never settles.
+    expect(isAuthCallbackHash('#/settings/automatic')).toBe(false)
+    expect(isAuthCallbackHash('#/home')).toBe(false)
+    expect(isAuthCallbackHash('')).toBe(false)
+  })
+
+  it('guards the auth callback before rewriting the hash', () => {
+    const app = readFileSync(join(srcRoot, 'App.tsx'), 'utf8')
+    const fn = app.slice(app.indexOf('function normaliseInitialRoute'))
+    const body = fn.slice(0, fn.indexOf('\n}'))
+
+    expect(body).toContain('isAuthCallbackHash(raw)')
+    // The bail-out has to come first; a replaceRoute above it has already destroyed the token.
+    expect(body.indexOf('isAuthCallbackHash(raw)')).toBeLessThan(body.indexOf('replaceRoute'))
+  })
+
   it('renders the captured error somewhere the user will see it', () => {
     expect(importersOf('peekAuthRedirectError')).not.toEqual([])
 

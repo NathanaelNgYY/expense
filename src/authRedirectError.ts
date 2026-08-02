@@ -42,6 +42,23 @@ export function friendlyAuthError(error: AuthRedirectError): string {
   return FRIENDLY[error.code] ?? error.message
 }
 
+// Supabase hands both outcomes back in the fragment, and it is the *only* copy — supabase-js
+// reads `window.location.hash` when the client initialises, which happens lazily, well after
+// the first render. Anything that rewrites the hash before then destroys the session before it
+// is ever established, and the app silently falls back to a new anonymous user.
+const AUTH_FRAGMENT_KEYS = ['access_token', 'refresh_token', 'error_code', 'error_description']
+
+/**
+ * True when the hash is a Supabase auth callback rather than a route. Callers that rewrite the
+ * hash on load must leave these alone and let supabase-js consume them first.
+ */
+export function isAuthCallbackHash(hash: string): boolean {
+  const raw = hash.startsWith('#') ? hash.slice(1) : hash
+  if (!raw || raw.startsWith('/')) return false
+  const params = new URLSearchParams(raw)
+  return AUTH_FRAGMENT_KEYS.some(key => params.has(key)) || params.has('error')
+}
+
 // The fragment is short-lived: `normaliseInitialRoute` replaces any hash that is not a route,
 // and supabase-js clears the URL once it has looked at it. Whichever gets there first, the
 // error is gone before a component could mount and read it — so capture it once, eagerly, and

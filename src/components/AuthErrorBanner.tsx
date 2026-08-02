@@ -21,13 +21,13 @@ export default function AuthErrorBanner() {
   }
 
   // `identity_already_exists` means this device holds a throwaway anonymous account while the
-  // Google account belongs to a real one. Dropping the anonymous session turns the next attempt
-  // into a plain sign-in, which is the one that succeeds.
+  // Google account belongs to a real one. This goes straight to a plain sign-in rather than
+  // signing out and re-deciding — see signInWithGoogleAsExistingAccount for why re-deciding
+  // loops back onto the same error.
   async function signInAgain() {
     setRetrying(true)
     try {
-      await sharedApi.signOut()
-      await sharedApi.signInWithGoogle()
+      await sharedApi.signInWithGoogleAsExistingAccount()
     } catch {
       setRetrying(false)
     }

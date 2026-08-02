@@ -152,6 +152,26 @@ export async function signInWithGoogle(): Promise<void> {
   if (error) throw friendly(error.message)
 }
 
+/**
+ * Recovery for `identity_already_exists`: the Google account belongs to a real user while this
+ * device is holding a throwaway anonymous one.
+ *
+ * Deliberately never reads the current session. `EntriesContext.refresh()` calls `ensureUserId()`
+ * on focus, pageshow, visibilitychange and online, each of which mints a fresh anonymous user
+ * when none exists — so signing out and then *checking* what we have races that straight back
+ * into the `linkIdentity` branch that just failed, and the user sees the same error forever.
+ * Going directly to `signInWithOAuth` replaces whatever session exists on the way back.
+ */
+export async function signInWithGoogleAsExistingAccount(): Promise<void> {
+  const supabase = getSupabase()
+  await supabase.auth.signOut()
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin },
+  })
+  if (error) throw friendly(error.message)
+}
+
 export async function verifyOtpCode(email: string, code: string): Promise<void> {
   const { error } = await getSupabase().auth.verifyOtp({ email, token: code.trim(), type: 'email' })
   if (error) throw friendly(error.message)

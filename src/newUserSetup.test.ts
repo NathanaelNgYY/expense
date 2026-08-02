@@ -69,6 +69,21 @@ class FakeAuth {
     return { data: null, error: null }
   }
 
+  async signOut() {
+    this.calls.push('signOut')
+    this.session = null
+    // EntriesContext.refresh() is bound to focus/pageshow/visibilitychange/online and calls
+    // ensureUserId(), which mints a new anonymous user the moment one is missing. Modelling
+    // that here is the point: signing out does not reliably leave the app signed out.
+    if (this.anonymousSessionReturnsAfterSignOut) {
+      this.session = { user: { id: 'anon-respawned', is_anonymous: true } }
+    }
+    return { error: null }
+  }
+
+  /** Set to reproduce the race that made the recovery button loop forever. */
+  anonymousSessionReturnsAfterSignOut = false
+
   onAuthStateChange() {
     return { data: { subscription: { unsubscribe: () => {} } } }
   }
@@ -82,7 +97,7 @@ vi.mock('./lib/supabaseClient', () => ({
 }))
 
 import { ensureUserId } from './api'
-import { signInWithGoogle } from './sharedBudgets/sharedApi'
+import { signInWithGoogle, signInWithGoogleAsExistingAccount } from './sharedBudgets/sharedApi'
 
 const APP_ORIGIN = 'https://budget-tracker-sooty-ten.vercel.app'
 
@@ -188,6 +203,39 @@ describe('new user: returning from Google', () => {
       code: 'identity_already_exists',
       message: 'Identity is already linked to another user',
     })
+  })
+
+  // ---------------------------------------------------------------------------------------
+  // Recovering from that dead end. The obvious implementation -- sign out, then run the normal
+  // sign-in which re-checks the session -- loops: an anonymous session reappears between the
+  // two steps, so the re-check picks linkIdentity again and hits the identical error. The
+  // recovery has to commit to a plain sign-in without consulting the session at all.
+  // ---------------------------------------------------------------------------------------
+  it('recovers with a plain sign-in even when an anonymous session respawns mid-recovery', async () => {
+    auth.takenIdentities.add('google')
+    auth.anonymousSessionReturnsAfterSignOut = true
+    await ensureUserId()
+    await signInWithGoogle()
+    expect(auth.redirectFragment).toContain('identity_already_exists')
+
+    auth.calls = []
+    await signInWithGoogleAsExistingAccount()
+
+    expect(auth.calls).toEqual(['signOut', 'signInWithOAuth'])
+    // The regression: a second linkIdentity here is what produced the same error forever.
+    expect(auth.calls).not.toContain('linkIdentity')
+    expect(auth.redirectFragment).toContain('access_token')
+    expect(auth.session?.user.is_anonymous).toBe(false)
+  })
+
+  it('recovery still works when signing out does leave the app signed out', async () => {
+    auth.anonymousSessionReturnsAfterSignOut = false
+    await ensureUserId()
+
+    await signInWithGoogleAsExistingAccount()
+
+    expect(auth.calls).toEqual(['signInAnonymously', 'signOut', 'signInWithOAuth'])
+    expect(auth.session?.user.is_anonymous).toBe(false)
   })
 
   it('ignores an ordinary hash-router path', async () => {

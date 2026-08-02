@@ -3190,9 +3190,25 @@ input:focus-visible {
   text-align: left;
 }
 
-.shared-budget-name {
+.shared-budget-text {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shared-budget-name {
   font-weight: 600;
+}
+
+.shared-budget-meta {
+  font-size: 13px;
+}
+
+.shared-budget-chevron {
+  flex: 0 0 auto;
+  color: var(--text-tertiary);
 }
 
 .shared-actions {
@@ -3203,6 +3219,284 @@ input:focus-visible {
 
 .shared-actions .save-btn {
   flex: 1;
+}
+
+/* ---------- shared budgets: create / join / invite subscreens ---------- */
+
+/* The list and each subscreen are all `.screen`, so the pinned action sits at
+   the bottom of whichever one is mounted. `.save-btn` carries a global
+   `margin-top: auto`; the stack owns the pinning instead so a two-button group
+   stays together rather than the first button flying to the bottom alone. */
+.shared-pinned-action {
+  margin-top: auto;
+}
+
+.shared-action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shared-action-stack .save-btn,
+.shared-action-stack .export-btn {
+  margin-top: 0;
+}
+
+.shared-subscreen {
+  gap: 14px;
+}
+
+.shared-header-done {
+  justify-content: flex-end;
+  min-width: 64px;
+}
+
+.shared-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Labels sit above the field rather than inside it, so the question a field is
+   asking survives the user answering it. */
+.shared-field-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.shared-field-optional {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.shared-field-hint,
+.shared-field-error {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.shared-field-hint {
+  color: var(--text-tertiary);
+}
+
+.shared-field-error {
+  color: var(--red);
+}
+
+/* Currency prefix rendered beside the input rather than inside its value, so
+   the field stays a real number input for the numeric keyboard. */
+.amount-field {
+  display: flex;
+  align-items: stretch;
+  border-radius: 12px;
+  background: var(--bg-elev-2);
+  overflow: hidden;
+}
+
+.amount-field-prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  color: var(--text-secondary);
+  font-size: 16px;
+  border-right: 1px solid var(--separator);
+}
+
+.amount-field-input.note-input {
+  background: transparent;
+  border-radius: 0;
+}
+
+/* The wrapper clips its children, so the input's own 4px focus ring would be
+   cut in half. Move the ring to the wrapper, the same way .date-input-shell
+   already handles its inner control. */
+.amount-field:focus-within {
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.amount-field-input.note-input:focus-visible {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.shared-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px;
+  border: 1px solid var(--separator);
+  border-radius: 16px;
+  background: var(--bg-elev);
+}
+
+.shared-preview-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+.shared-preview-amount {
+  font-family: var(--font-display);
+  font-size: 26px;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.shared-preview-sub {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* ---------- invite code ---------- */
+
+/* One real input stretched invisibly over the boxes: the boxes are decoration,
+   the input is the control, so paste, autofill, caret, and the iOS keyboard all
+   behave natively. */
+.code-input {
+  position: relative;
+}
+
+.code-input__field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  border: none;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  text-align: center;
+  letter-spacing: 1em;
+  font-size: 16px; /* iOS zooms the page on focus below 16px. */
+  outline: none;
+}
+
+.code-input__boxes {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Six fixed 44px boxes plus their gaps come to 304px, which overflows a 320px
+   screen once the .screen gutters are taken out. They flex instead, capped so
+   they stay tidy on a 430px column. The whole row is one input, so shrinking an
+   individual box never shrinks the touch target. */
+.code-box {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 48px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--separator);
+  border-radius: 12px;
+  background: var(--bg-elev-2);
+  color: var(--primary);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 22px;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.code-box--empty {
+  border-style: dashed;
+  color: var(--text-tertiary);
+}
+
+.code-input__field:focus-visible + .code-input__boxes .code-box--cursor,
+.code-input__field:focus + .code-input__boxes .code-box--cursor {
+  border-style: solid;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.code-input--invalid .code-box {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.shared-code-hint {
+  text-align: center;
+}
+
+.shared-code-copy {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.shared-code-copy:active {
+  opacity: 0.7;
+}
+
+/* ---------- success + empty states ---------- */
+
+/* The post-create confirmation and the empty state are the same composition
+   (centred mark, display-face heading, one line of explanation), so they share
+   one set of rules and differ only where they mean to. */
+.shared-success,
+.shared-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.shared-success {
+  padding: 18px 0 6px;
+}
+
+.shared-empty {
+  padding: 32px 8px 12px;
+}
+
+.shared-success-tick,
+.shared-empty-mark {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.shared-success-tick {
+  background: var(--green);
+  color: var(--bg);
+}
+
+.shared-empty-mark {
+  border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+  background: var(--fill);
+  color: var(--primary);
+}
+
+.shared-success-title,
+.shared-empty-title {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 400;
+}
+
+.shared-success-sub,
+.shared-empty-body {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 34ch;
 }
 
 .shared-detail-header {

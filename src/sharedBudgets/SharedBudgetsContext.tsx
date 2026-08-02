@@ -11,6 +11,7 @@ import {
 } from 'react'
 import { isSupabaseConfigured } from '../lib/supabaseClient'
 import { applyEntriesChange, type EntryChange } from './applyEntriesChange'
+import { friendlyError } from './friendlyError'
 import * as sharedApi from './sharedApi'
 import type { ActiveBudgetData, NewSharedEntry, Profile, SharedBudget, SharedCategory } from './types'
 
@@ -23,8 +24,8 @@ export interface SharedBudgetsContextValue {
   active: ActiveBudgetData | null
   error: string | null
   refreshProfile: () => Promise<void>
-  createBudget: (name: string, monthlyLimit: number | null) => Promise<void>
-  joinBudget: (code: string) => Promise<void>
+  createBudget: (name: string, monthlyLimit: number | null) => Promise<SharedBudget>
+  joinBudget: (code: string) => Promise<SharedBudget>
   openBudget: (id: string) => Promise<void>
   closeBudget: () => void
   addEntry: (input: NewSharedEntry) => Promise<void>
@@ -62,7 +63,7 @@ export function SharedBudgetsProvider({ children }: { children: ReactNode }) {
       setError(null)
       return result
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong')
+      setError(friendlyError(e))
       throw e
     }
   }, [])
@@ -111,7 +112,7 @@ export function SharedBudgetsProvider({ children }: { children: ReactNode }) {
         setProfile(nextProfile)
         setBudgets(nextBudgets)
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load shared budgets')
+        if (!cancelled) setError(friendlyError(e))
       }
     })()
     return () => {
@@ -155,8 +156,11 @@ export function SharedBudgetsProvider({ children }: { children: ReactNode }) {
   const createBudget = useCallback(
     async (name: string, monthlyLimit: number | null) =>
       run(async () => {
-        const budget = await sharedApi.createBudget(name, monthlyLimit)
+        // The new budget is returned to the caller so the invite step can show
+        // its code without a second fetch. A brand-new budget is a party of one.
+        const budget = { ...(await sharedApi.createBudget(name, monthlyLimit)), memberCount: 1 }
         setBudgets(prev => [...prev, budget])
+        return budget
       }),
     [run],
   )
@@ -166,6 +170,7 @@ export function SharedBudgetsProvider({ children }: { children: ReactNode }) {
       run(async () => {
         const budget = await sharedApi.joinBudget(code)
         setBudgets(prev => (prev.some(b => b.id === budget.id) ? prev : [...prev, budget]))
+        return budget
       }),
     [run],
   )

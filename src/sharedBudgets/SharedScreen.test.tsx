@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import type { Session } from '@supabase/supabase-js'
 import { describe, expect, it, vi } from 'vitest'
 import SharedScreen from './SharedScreen'
+import { ConfirmProvider } from '../components/ConfirmDialog'
 import { SharedBudgetsContext, type SharedBudgetsContextValue } from './SharedBudgetsContext'
 
 function renderWith(partial: Partial<SharedBudgetsContextValue>) {
@@ -15,9 +16,12 @@ function renderWith(partial: Partial<SharedBudgetsContextValue>) {
     error: null,
   } as unknown as SharedBudgetsContextValue
   return render(
-    <SharedBudgetsContext.Provider value={{ ...value, ...partial }}>
-      <SharedScreen />
-    </SharedBudgetsContext.Provider>,
+    // BudgetList confirms before signing out, so the provider is part of the shell.
+    <ConfirmProvider>
+      <SharedBudgetsContext.Provider value={{ ...value, ...partial }}>
+        <SharedScreen />
+      </SharedBudgetsContext.Provider>
+    </ConfirmProvider>,
   )
 }
 
@@ -51,7 +55,7 @@ describe('SharedScreen', () => {
       profile: { id: 'u1', displayName: 'Nat' },
     })
     expect(screen.getByText('SHARED BUDGETS')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'New budget' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create a shared budget' })).toBeInTheDocument()
   })
 
   it('shows an offline banner when the browser is offline', () => {

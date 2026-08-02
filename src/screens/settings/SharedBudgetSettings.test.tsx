@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import SharedBudgetSettings from './SharedBudgetSettings'
-import type { ActiveBudgetData, SharedBudget } from '../../sharedBudgets/types'
+import { ConfirmProvider } from '../../components/ConfirmDialog'
+import type { ActiveBudgetData, SharedBudget, SharedEntry } from '../../sharedBudgets/types'
 
 const sharedCtx = vi.hoisted(() => ({
   value: {
@@ -59,12 +60,32 @@ function makeActive(budget: SharedBudget): ActiveBudgetData {
   }
 }
 
+function makeEntry(budgetId: string, id: string, categoryId: string | null): SharedEntry {
+  return {
+    id,
+    budgetId,
+    userId: 'u1',
+    amount: 10,
+    categoryId,
+    note: '',
+    date: '2026-07-01',
+    createdAt: '2026-07-01T00:00:00Z',
+    updatedAt: '2026-07-01T00:00:00Z',
+  }
+}
+
 function renderShared(onSaved: () => void = () => undefined) {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
   act(() => {
-    root.render(<SharedBudgetSettings onSaved={onSaved} />)
+    // Category deletion routes through ConfirmDialog, so the provider is part
+    // of the tree this screen expects.
+    root.render(
+      <ConfirmProvider>
+        <SharedBudgetSettings onSaved={onSaved} />
+      </ConfirmProvider>,
+    )
   })
   return { container, root }
 }
@@ -163,7 +184,37 @@ describe('SharedBudgetSettings', () => {
     expect(sharedCtx.value.updateCategory).toHaveBeenCalledWith('c1', { budgetAmount: 75 })
   })
 
-  it('removes a shared category', () => {
+  // shared_entries.category_id is ON DELETE SET NULL, so a category delete
+  // silently rewrites history for every member. It must be confirmed, and the
+  // confirmation must say how much history it touches.
+  it('removes a shared category only after confirming, naming the affected entries', async () => {
+    const budget = makeBudget()
+    sharedCtx.value.budgets = [budget]
+    sharedCtx.value.active = {
+      ...makeActive(budget),
+      entries: [
+        makeEntry(budget.id, 'e1', 'c1'),
+        makeEntry(budget.id, 'e2', 'c1'),
+        makeEntry(budget.id, 'e3', null),
+      ],
+    }
+
+    const rendered = renderShared()
+    root = rendered.root
+
+    await clickButtonAsync(
+      rendered.container,
+      b => b.getAttribute('aria-label') === 'Remove Groceries',
+    )
+    expect(sharedCtx.value.removeCategory).not.toHaveBeenCalled()
+    // Two entries use c1; the third must not be counted.
+    expect(rendered.container.textContent).toContain('2 entries will lose their category')
+
+    await clickButtonAsync(rendered.container, b => b.textContent === 'Delete')
+    expect(sharedCtx.value.removeCategory).toHaveBeenCalledWith('c1')
+  })
+
+  it('abandons a category delete when the confirmation is dismissed', async () => {
     const budget = makeBudget()
     sharedCtx.value.budgets = [budget]
     sharedCtx.value.active = makeActive(budget)
@@ -171,9 +222,13 @@ describe('SharedBudgetSettings', () => {
     const rendered = renderShared()
     root = rendered.root
 
-    clickButton(rendered.container, b => b.getAttribute('aria-label') === 'Remove Groceries')
+    await clickButtonAsync(
+      rendered.container,
+      b => b.getAttribute('aria-label') === 'Remove Groceries',
+    )
+    await clickButtonAsync(rendered.container, b => b.textContent === 'Cancel')
 
-    expect(sharedCtx.value.removeCategory).toHaveBeenCalledWith('c1')
+    expect(sharedCtx.value.removeCategory).not.toHaveBeenCalled()
   })
 
   it('lets a non-owner view nothing but an explanation', () => {

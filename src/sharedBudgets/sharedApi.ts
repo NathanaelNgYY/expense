@@ -1,5 +1,6 @@
 import type { RealtimePostgresChangesPayload, Session } from '@supabase/supabase-js'
 import { getSupabase } from '../lib/supabaseClient'
+import { getCachedEntries } from '../storage'
 import type { EntryChange } from './applyEntriesChange'
 import type {
   ActiveBudgetData,
@@ -146,9 +147,46 @@ export async function signInWithGoogle(): Promise<void> {
     provider: 'google',
     options: { redirectTo: window.location.origin },
   } as const
+
+  // Linking is only worth doing when the anonymous account actually holds something.
+  //
+  // `ensureUserId()` mints an anonymous session on app open, long before the user taps anything,
+  // so without this check *every* sign-in becomes a link — and linking an identity that already
+  // belongs to an account (very often the user's own, from a previous sign-in on another device
+  // or storage jar) fails with `identity_already_exists`. Every retry re-mints an empty
+  // anonymous session and collides again, which is the loop users actually hit.
+  //
+  // An empty anonymous account is worth nothing, so drop it and sign in plainly instead.
+  if (session?.user.is_anonymous && getCachedEntries().length === 0) {
+    await supabase.auth.signOut()
+    const { error } = await supabase.auth.signInWithOAuth(credentials)
+    if (error) throw friendly(error.message)
+    return
+  }
+
   const { error } = session?.user.is_anonymous
     ? await supabase.auth.linkIdentity(credentials)
     : await supabase.auth.signInWithOAuth(credentials)
+  if (error) throw friendly(error.message)
+}
+
+/**
+ * Recovery for `identity_already_exists`: the Google account belongs to a real user while this
+ * device is holding a throwaway anonymous one.
+ *
+ * Deliberately never reads the current session. `EntriesContext.refresh()` calls `ensureUserId()`
+ * on focus, pageshow, visibilitychange and online, each of which mints a fresh anonymous user
+ * when none exists — so signing out and then *checking* what we have races that straight back
+ * into the `linkIdentity` branch that just failed, and the user sees the same error forever.
+ * Going directly to `signInWithOAuth` replaces whatever session exists on the way back.
+ */
+export async function signInWithGoogleAsExistingAccount(): Promise<void> {
+  const supabase = getSupabase()
+  await supabase.auth.signOut()
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin },
+  })
   if (error) throw friendly(error.message)
 }
 

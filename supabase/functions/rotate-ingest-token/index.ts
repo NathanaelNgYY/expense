@@ -45,16 +45,34 @@ class SupabaseRotateStore implements RotateStore {
   }
 }
 
+// Unlike `ingest` — which is called by iOS Shortcuts and never sees a preflight — this function is
+// invoked from the browser, so it has to speak CORS itself. Without these the token is minted
+// server-side and the response is then blocked before the app can read it: the rotation silently
+// succeeds while the UI reports "could not generate a new token".
+//
+// `*` is deliberate: the security boundary is the verified JWT (verify_jwt = true), not the
+// origin, and the app is served from several Vercel aliases plus localhost in development.
+const CORS_HEADERS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'content-type': 'application/json' },
+    headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
   })
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
+  // Answer the preflight before the method check — that check is what was returning a bare 405
+  // to OPTIONS and killing the request.
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: CORS_HEADERS })
+  }
   if (req.method !== 'POST') {
-    return new Response('Method Not Allowed', { status: 405 })
+    return new Response('Method Not Allowed', { status: 405, headers: CORS_HEADERS })
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''

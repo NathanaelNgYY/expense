@@ -356,6 +356,21 @@ describe('new user: the failure is actually surfaced', () => {
     expect(body.indexOf('isAuthCallbackHash(raw)')).toBeLessThan(body.indexOf('replaceRoute'))
   })
 
+  // rotate-ingest-token is invoked from the browser, so a missing preflight branch mints the
+  // token server-side and then blocks the response — the UI reports failure while the database
+  // gains a row per press. `ingest` is exempt: iOS Shortcuts never send a preflight.
+  it('lets the browser read the rotate-ingest-token response', () => {
+    const fn = readFileSync(
+      resolve(srcRoot, '..', 'supabase/functions/rotate-ingest-token/index.ts'),
+      'utf8',
+    )
+
+    expect(fn).toContain('Access-Control-Allow-Origin')
+    expect(fn).toContain("req.method === 'OPTIONS'")
+    // The preflight branch must come before the method check that returns 405.
+    expect(fn.indexOf("req.method === 'OPTIONS'")).toBeLessThan(fn.indexOf("req.method !== 'POST'"))
+  })
+
   it('renders the captured error somewhere the user will see it', () => {
     expect(importersOf('peekAuthRedirectError')).not.toEqual([])
 

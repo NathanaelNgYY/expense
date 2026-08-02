@@ -13,6 +13,8 @@ export interface SharedBudget {
   inviteCode: string
   ownerId: string
   createdAt: string
+  /** Only the list query asks for this; a single-budget fetch leaves it undefined. */
+  memberCount?: number
 }
 
 export interface BudgetMember {

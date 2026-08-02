@@ -30,12 +30,25 @@ const BUDGETS = [
   // event it waits for fires during startup, so deferring it would miss the event it exists for.
   // 147 KiB restores roughly the ~0.7 KiB margin the earlier raises kept — a small deliberate
   // margin that still catches a real regression, not open-ended headroom.
-  { label: 'initial JS', kind: 'js', budgetKb: 147 },
+  //
+  // The shared-budget create/join/invite flow then took it to 147.05 KiB actual, 51 bytes over.
+  // The flow's three screens are lazy (they land in the SharedScreen chunk); what is eager is
+  // friendlyError.ts, reached from SharedBudgetsContext, which App.tsx mounts at the root. It
+  // cannot be deferred: the provider maps the error from the budget-load effect that runs during
+  // startup, so the mapping has to exist before any screen is asked for. 147.5 keeps the same
+  // ~0.45 KiB margin the previous raises settled on rather than opening up headroom.
+  { label: 'initial JS', kind: 'js', budgetKb: 147.5 },
   // The always-available ConfirmDialog + LazyFallback styles (M1/M2) are deliberately in the
   // main chunk (see docs/superpowers/specs/2026-07-16-m1-m2-m4-ux-a11y-design.md). The currency
   // wallet menu styles pushed CSS to 13.5 KiB actual. 14 KiB is set just above that, preserving
   // the same regression-catching intent as the JS budget (a small deliberate margin, not open-ended).
-  { label: 'CSS', kind: 'css', budgetKb: 14 },
+  //
+  // The shared-budget create/join/invite screens then took CSS to 14.04 KiB actual, 43 bytes over.
+  // Vite emits one stylesheet for the app, so a lazy screen's styles still land in the initial CSS;
+  // there is no dynamic import that would move them. The block was already de-duplicated (the
+  // success and empty states share one set of rules) before raising this. 14.5 keeps the same small
+  // margin as the JS budget.
+  { label: 'CSS', kind: 'css', budgetKb: 14.5 },
 ]
 
 const html = readFileSync(join(DIST_DIR, 'index.html'), 'utf8')

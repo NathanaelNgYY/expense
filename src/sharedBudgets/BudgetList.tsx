@@ -1,127 +1,131 @@
-import { Users } from 'lucide-react'
+import { ChevronRight, Users } from 'lucide-react'
 import { useState } from 'react'
-import { useSharedBudgets } from './SharedBudgetsContext'
+import { useConfirm } from '../components/ConfirmDialog'
 import { formatSGD } from '../format'
+import CreateBudgetScreen from './CreateBudgetScreen'
+import InviteScreen from './InviteScreen'
+import JoinBudgetScreen from './JoinBudgetScreen'
+import { useSharedBudgets } from './SharedBudgetsContext'
+import type { SharedBudget } from './types'
+
+/** list -> create -> invite, and list -> join, mirroring the Settings hub's
+ *  pushed-subscreen model. The list never shares the screen with a form, so it
+ *  stays readable at any number of budgets. */
+type View =
+  | { name: 'list' }
+  | { name: 'create' }
+  | { name: 'join' }
+  | { name: 'invite'; budget: SharedBudget }
+
+function memberSummary(budget: SharedBudget): string | null {
+  const count = budget.memberCount
+  if (count === undefined) return null
+  return count === 1 ? 'Just you' : `${count} people`
+}
 
 export default function BudgetList() {
-  const { budgets, error, createBudget, joinBudget, openBudget, signOut } = useSharedBudgets()
-  const [form, setForm] = useState<'none' | 'create' | 'join'>('none')
-  const [name, setName] = useState('')
-  const [limit, setLimit] = useState('')
-  const [code, setCode] = useState('')
-  const [busy, setBusy] = useState(false)
+  const { budgets, error, openBudget, signOut } = useSharedBudgets()
+  const confirm = useConfirm()
+  const [view, setView] = useState<View>({ name: 'list' })
 
-  async function submit(action: () => Promise<void>) {
-    setBusy(true)
-    try {
-      await action()
-      setForm('none')
-      setName('')
-      setLimit('')
-      setCode('')
-    } catch {
-      // Context exposes the operation error; keep the form open for correction.
-    } finally {
-      setBusy(false)
-    }
+  async function handleSignOut() {
+    if (
+      !(await confirm({
+        title: 'Sign out of shared budgets?',
+        message: 'Your own entries stay on this device. You can sign back in any time.',
+        confirmLabel: 'Sign out',
+        destructive: true,
+      }))
+    )
+      return
+    void signOut()
+  }
+
+  if (view.name === 'create') {
+    return (
+      <CreateBudgetScreen
+        onCancel={() => setView({ name: 'list' })}
+        onCreated={budget => setView({ name: 'invite', budget })}
+      />
+    )
+  }
+
+  if (view.name === 'join') {
+    return (
+      <JoinBudgetScreen
+        onCancel={() => setView({ name: 'list' })}
+        onJoined={budget => void openBudget(budget.id)}
+      />
+    )
+  }
+
+  if (view.name === 'invite') {
+    return (
+      <InviteScreen
+        budget={view.budget}
+        onDone={() => setView({ name: 'list' })}
+        onOpen={() => void openBudget(view.budget.id)}
+      />
+    )
   }
 
   return (
     <div className="screen shared-list">
       <p className="screen-title">SHARED BUDGETS</p>
 
-      {budgets.length === 0 && form === 'none' && (
-        <p className="muted">No shared budgets yet. Create one or join with a code.</p>
-      )}
-
-      <div className="shared-budget-cards">
-        {budgets.map(b => (
-          <button
-            key={b.id}
-            type="button"
-            className="shared-budget-card"
-            onClick={() => void openBudget(b.id)}
-          >
-            <Users className="ui-icon" aria-hidden="true" />
-            <span className="shared-budget-name">{b.name}</span>
-            <span className="muted">
-              {b.monthlyLimit !== null ? `${formatSGD(b.monthlyLimit)}/mo` : 'No limit'}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {form === 'create' && (
-        <div className="shared-form">
-          <input
-            type="text"
-            className="note-input"
-            placeholder="Budget name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-          />
-          <input
-            type="number"
-            className="note-input"
-            placeholder="Monthly limit (optional)"
-            inputMode="decimal"
-            value={limit}
-            onChange={e => setLimit(e.target.value)}
-          />
-          <button
-            type="button"
-            className="save-btn"
-            disabled={busy || name.trim().length === 0}
-            onClick={() =>
-              void submit(() =>
-                createBudget(name.trim(), limit.trim() === '' ? null : parseFloat(limit)),
-              )
-            }
-          >
-            Create
-          </button>
+      {budgets.length === 0 ? (
+        <div className="shared-empty">
+          <span className="shared-empty-mark" aria-hidden="true">
+            <Users size={22} strokeWidth={1.8} />
+          </span>
+          <h2 className="shared-empty-title">Split a budget</h2>
+          <p className="shared-empty-body">
+            Track spending with someone else. Anyone you share the code with can add entries and
+            see the running total.
+          </p>
         </div>
-      )}
-
-      {form === 'join' && (
-        <div className="shared-form">
-          <input
-            type="text"
-            className="note-input"
-            placeholder="Invite code"
-            autoCapitalize="characters"
-            value={code}
-            onChange={e => setCode(e.target.value)}
-          />
-          <button
-            type="button"
-            className="save-btn"
-            disabled={busy || code.trim().length === 0}
-            onClick={() => void submit(() => joinBudget(code.trim()))}
-          >
-            Join
-          </button>
+      ) : (
+        <div className="shared-budget-cards">
+          {budgets.map(b => {
+            const members = memberSummary(b)
+            return (
+              <button
+                key={b.id}
+                type="button"
+                className="shared-budget-card"
+                onClick={() => void openBudget(b.id)}
+              >
+                <Users className="ui-icon" aria-hidden="true" />
+                <span className="shared-budget-text">
+                  <span className="shared-budget-name">{b.name}</span>
+                  <span className="shared-budget-meta muted">
+                    {b.monthlyLimit !== null ? `${formatSGD(b.monthlyLimit)}/mo` : 'No limit'}
+                    {members ? ` · ${members}` : ''}
+                  </span>
+                </span>
+                <ChevronRight className="shared-budget-chevron" aria-hidden="true" size={18} />
+              </button>
+            )
+          })}
         </div>
       )}
 
       {error && <p className="form-error">{error}</p>}
 
-      {form === 'none' ? (
-        <div className="shared-actions">
-          <button type="button" className="save-btn" onClick={() => setForm('create')}>
-            New budget
-          </button>
-          <button type="button" className="save-btn" onClick={() => setForm('join')}>
-            Join with code
-          </button>
-        </div>
-      ) : (
-        <button type="button" className="link-btn" onClick={() => setForm('none')}>
-          Cancel
+      <div className="shared-pinned-action shared-action-stack">
+        <button type="button" className="save-btn" onClick={() => setView({ name: 'create' })}>
+          Create a shared budget
         </button>
-      )}
+        <button type="button" className="export-btn" onClick={() => setView({ name: 'join' })}>
+          Join with a code
+        </button>
+      </div>
 
-      <button type="button" className="link-btn shared-signout" onClick={() => void signOut()}>
+      <button
+        type="button"
+        className="link-btn shared-signout"
+        onClick={() => void handleSignOut()}
+      >
         Sign out
       </button>
     </div>

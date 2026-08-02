@@ -68,17 +68,13 @@ describe('OwnerTools', () => {
     await waitFor(() => expect(ctx.removeMember).toHaveBeenCalledWith('u2'))
   })
 
-  it('adds a category', async () => {
+  // Categories used to have a second, thinner editor here writing to the same
+  // table as the one in Settings. This screen now points at that single editor
+  // instead of competing with it.
+  it('sends category editing to Settings rather than duplicating the editor', () => {
     renderTools()
-    fireEvent.change(screen.getByPlaceholderText('New category'), { target: { value: 'Food' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Add category' }))
-    await waitFor(() =>
-      expect(ctx.addCategory).toHaveBeenCalledWith({
-        label: 'Food',
-        budgetAmount: null,
-        icon: 'others',
-      }),
-    )
+    fireEvent.click(screen.getByRole('button', { name: /Add, rename, and set category budgets/ }))
+    expect(window.location.hash).toBe('#/settings/shared')
   })
 
   it('deletes the budget only after confirm', async () => {

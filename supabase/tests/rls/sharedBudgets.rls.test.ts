@@ -251,3 +251,103 @@ describe('shared budgets — the SECURITY DEFINER RPCs', () => {
     expect(data!.invite_code).toBe(inviteCode)
   })
 })
+
+// Depends on Bob having joined, which the RPC block above does. The file runs
+// top to bottom, the same ordering the "mere member" invite-code test relies on.
+describe('shared budgets — categories belong to the owner', () => {
+  it('lets a member read the categories', async () => {
+    const { data, error } = await bob.client
+      .from('shared_categories')
+      .select('label')
+      .eq('budget_id', budgetId)
+    expect(error).toBeNull()
+    expect(data).toEqual([{ label: 'groceries' }])
+  })
+
+  it('refuses to let a member add a category', async () => {
+    const { error } = await bob.client
+      .from('shared_categories')
+      .insert({ budget_id: budgetId, label: 'bobs category' })
+    expect(error).not.toBeNull()
+
+    const { count } = await oracle
+      .from('shared_categories')
+      .select('id', { count: 'exact', head: true })
+      .eq('budget_id', budgetId)
+    expect(count).toBe(1)
+  })
+
+  it("silently no-ops a member's rename and leaves the label intact", async () => {
+    const { error } = await bob.client
+      .from('shared_categories')
+      .update({ label: 'renamed by bob' })
+      .eq('budget_id', budgetId)
+    expect(error).toBeNull()
+
+    const { data } = await oracle
+      .from('shared_categories')
+      .select('label')
+      .eq('budget_id', budgetId)
+    expect(data).toEqual([{ label: 'groceries' }])
+  })
+
+  // The sharp edge this policy exists for: shared_entries.category_id is
+  // ON DELETE SET NULL, so a member deleting a category would silently strip it
+  // from every other member's history.
+  it("silently no-ops a member's delete and leaves the category present", async () => {
+    const { error } = await bob.client
+      .from('shared_categories')
+      .delete()
+      .eq('budget_id', budgetId)
+    expect(error).toBeNull()
+
+    const { count } = await oracle
+      .from('shared_categories')
+      .select('id', { count: 'exact', head: true })
+      .eq('budget_id', budgetId)
+    expect(count).toBe(1)
+  })
+
+  it('still lets the owner add, rename and delete her own categories', async () => {
+    const added = await alice.client
+      .from('shared_categories')
+      .insert({ budget_id: budgetId, label: 'transport' })
+      .select()
+      .single()
+    expect(added.error).toBeNull()
+
+    const renamed = await alice.client
+      .from('shared_categories')
+      .update({ label: 'travel' })
+      .eq('id', added.data!.id)
+      .select()
+    expect(renamed.error).toBeNull()
+    expect(renamed.data).toHaveLength(1)
+    expect(renamed.data![0].label).toBe('travel')
+
+    const removed = await alice.client
+      .from('shared_categories')
+      .delete()
+      .eq('id', added.data!.id)
+      .select()
+    expect(removed.error).toBeNull()
+    expect(removed.data).toHaveLength(1)
+
+    const { count } = await oracle
+      .from('shared_categories')
+      .select('id', { count: 'exact', head: true })
+      .eq('budget_id', budgetId)
+    expect(count).toBe(1)
+  })
+
+  it('still lets a member add entries, so only the shape is locked down', async () => {
+    const { error } = await bob.client.from('shared_entries').insert({
+      budget_id: budgetId,
+      user_id: bob.id,
+      amount: 12,
+      note: 'bob paid',
+      date: '2026-08-02',
+    })
+    expect(error).toBeNull()
+  })
+})

@@ -31,6 +31,12 @@ interface BudgetRow {
   created_at: string
 }
 
+/** A budget row plus the embedded member-count aggregate, which PostgREST
+ *  returns as a one-element array. */
+interface BudgetListRow extends BudgetRow {
+  budget_members?: { count: number }[]
+}
+
 interface EntryRow {
   id: string
   budget_id: string
@@ -223,8 +229,17 @@ export async function saveDisplayName(name: string): Promise<void> {
 }
 
 export async function listMyBudgets(): Promise<SharedBudget[]> {
-  const res = await getSupabase().from('budgets').select('*').order('created_at')
-  return ok<BudgetRow[]>(res).map(mapBudget)
+  // The embedded aggregate rides along on the same request, so the list still
+  // costs one round trip. members_select RLS already scopes it to budgets we
+  // belong to, and a budget always has at least its owner.
+  const res = await getSupabase()
+    .from('budgets')
+    .select('*, budget_members(count)')
+    .order('created_at')
+  return ok<BudgetListRow[]>(res).map(row => ({
+    ...mapBudget(row),
+    memberCount: row.budget_members?.[0]?.count ?? 1,
+  }))
 }
 
 export async function createBudget(

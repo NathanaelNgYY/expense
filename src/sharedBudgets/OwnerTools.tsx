@@ -1,26 +1,24 @@
+import { ChevronRight, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { useConfirm } from '../components/ConfirmDialog'
+import { formatHash } from '../router'
+import { parseOptionalBudget } from '../screens/settings/parseOptionalBudget'
+import { inviteMessage } from './inviteCode'
 import { useSharedBudgets } from './SharedBudgetsContext'
 
 export default function OwnerTools() {
-  const {
-    active,
-    regenerateCode,
-    removeMember,
-    updateActiveBudget,
-    deleteActiveBudget,
-    addCategory,
-  } = useSharedBudgets()
+  const { active, regenerateCode, removeMember, updateActiveBudget, deleteActiveBudget } =
+    useSharedBudgets()
   const confirm = useConfirm()
   const [name, setName] = useState(active?.budget.name ?? '')
   const [limit, setLimit] = useState(
     active && active.budget.monthlyLimit !== null ? String(active.budget.monthlyLimit) : '',
   )
-  const [newCategory, setNewCategory] = useState('')
   const [busy, setBusy] = useState(false)
 
   if (!active) return null
   const { budget, members } = active
+  const categoryCount = active.categories.length
 
   async function guard(action: () => Promise<void>) {
     setBusy(true)
@@ -47,7 +45,7 @@ export default function OwnerTools() {
   }
 
   function share() {
-    const message = `Join my "${budget.name}" budget on ${window.location.origin} with code ${budget.inviteCode}`
+    const message = inviteMessage(budget, window.location.origin)
     if (navigator.share) {
       void navigator.share({ text: message }).catch(() => {})
       return
@@ -92,29 +90,32 @@ export default function OwnerTools() {
         </div>
       ))}
 
+      {/* Categories are edited in Settings > Shared budgets, which reuses the
+          same CategoryEditorForm as the personal budget: icon picker, per
+          category budget, rename, and a delete that warns how many entries it
+          will uncategorise. This screen used to carry a second, thinner creator
+          (one text box, icon hardcoded to 'others', no budget, no edit or
+          delete) writing to the same table. Two editors for one thing is one
+          too many, so this links to the good one. */}
       <p className="category-label">Categories</p>
-      <div className="shared-form">
-        <input
-          type="text"
-          className="note-input"
-          placeholder="New category"
-          value={newCategory}
-          onChange={e => setNewCategory(e.target.value)}
-        />
-        <button
-          type="button"
-          className="save-btn"
-          disabled={busy || newCategory.trim().length === 0}
-          onClick={() =>
-            void guard(async () => {
-              await addCategory({ label: newCategory.trim(), budgetAmount: null, icon: 'others' })
-              setNewCategory('')
-            })
-          }
-        >
-          Add category
-        </button>
-      </div>
+      <button
+        type="button"
+        className="settings-nav-row"
+        onClick={() => {
+          window.location.hash = formatHash({ tab: 'settings', sub: 'shared' })
+        }}
+      >
+        <SlidersHorizontal className="ui-icon" aria-hidden="true" size={20} />
+        <span className="settings-row-text">
+          <span>
+            {categoryCount === 0
+              ? 'Set up categories'
+              : `${categoryCount} ${categoryCount === 1 ? 'category' : 'categories'}`}
+          </span>
+          <span className="settings-row-sub">Add, rename, and set category budgets</span>
+        </span>
+        <ChevronRight className="settings-nav-chevron" aria-hidden="true" size={18} />
+      </button>
 
       <p className="category-label">Settings</p>
       <div className="shared-form">
@@ -142,7 +143,9 @@ export default function OwnerTools() {
             void guard(() =>
               updateActiveBudget({
                 name: name.trim(),
-                monthlyLimit: limit.trim() === '' ? null : parseFloat(limit),
+                // Same clamping rule as the personal and shared budget editors:
+                // blank means "no limit", never zero, and negatives cannot slip through.
+                monthlyLimit: parseOptionalBudget(limit),
               }),
             )
           }

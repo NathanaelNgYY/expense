@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Plus, Save, Trash2, Wallet } from 'lucide-react'
 import BudgetIcon from '../../components/BudgetIcon'
 import CategoryEditorForm, { type CategoryEditorResult } from './CategoryEditorForm'
+import { useConfirm } from '../../components/ConfirmDialog'
 import { parseOptionalBudget } from './parseOptionalBudget'
 import { useSharedBudgets } from '../../sharedBudgets/SharedBudgetsContext'
 
@@ -17,6 +18,7 @@ export default function SharedBudgetSettings({ onSaved }: Props) {
   const [showSharedAdd, setShowSharedAdd] = useState(false)
   const [sharedBusy, setSharedBusy] = useState(false)
   const shared = useSharedBudgets()
+  const confirm = useConfirm()
   const { openBudget } = shared
 
   const selectedSharedBudgetId =
@@ -54,6 +56,35 @@ export default function SharedBudgetSettings({ onSaved }: Props) {
     try {
       await shared.addCategory({ label, budgetAmount: parseOptionalBudget(budget), icon })
       setShowSharedAdd(false)
+    } catch {
+      // Shared context exposes the operation error.
+    } finally {
+      setSharedBusy(false)
+    }
+  }
+
+  // shared_entries.category_id is ON DELETE SET NULL, so removing a category
+  // quietly strips it from every past entry that used it, for every member.
+  // Name the damage before doing it.
+  async function handleRemoveSharedCategory(categoryId: string, label: string) {
+    const affected =
+      shared.active?.entries.filter(entry => entry.categoryId === categoryId).length ?? 0
+    const message =
+      affected === 0
+        ? 'No entries use it yet.'
+        : `${affected} ${affected === 1 ? 'entry' : 'entries'} will lose their category. The entries and their amounts stay.`
+    if (
+      !(await confirm({
+        title: `Delete "${label}"?`,
+        message,
+        confirmLabel: 'Delete',
+        destructive: true,
+      }))
+    )
+      return
+    setSharedBusy(true)
+    try {
+      await shared.removeCategory(categoryId)
     } catch {
       // Shared context exposes the operation error.
     } finally {
@@ -159,7 +190,7 @@ export default function SharedBudgetSettings({ onSaved }: Props) {
                       className="category-remove-btn"
                       aria-label={`Remove ${category.label}`}
                       disabled={sharedBusy}
-                      onClick={() => void shared.removeCategory(category.id)}
+                      onClick={() => void handleRemoveSharedCategory(category.id, category.label)}
                     >
                       <Trash2 size={16} strokeWidth={2.3} aria-hidden="true" />
                     </button>

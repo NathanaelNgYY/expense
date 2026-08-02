@@ -663,3 +663,10 @@ input:focus-visible,
 /* .shared-budget-cards, .shared-actions are layout-only containers; children
    (.shared-budget-card, .save-btn) carry the Carbon Ledger surface/button
    tokens already defined above. */
+
+/* The create/join/invite subscreens (.shared-subscreen, .shared-field,
+   .amount-field, .code-box, .shared-preview-card, .shared-empty,
+   .shared-success) deliberately have NO override here. They are written in
+   index.css against the generic tokens this file remaps at :root, so they take
+   Carbon Ledger, Daylight, and Deep Sea for free. Adding per-class copies would
+   only create a second place for the palette to drift. */

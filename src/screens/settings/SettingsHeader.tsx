@@ -1,12 +1,15 @@
 import { ChevronLeft } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 interface Props {
   title: string
   backLabel?: string
   onBack?: () => void
+  /** Optional trailing action, e.g. a Done button on a terminal step. */
+  trailing?: ReactNode
 }
 
-export default function SettingsHeader({ title, backLabel, onBack }: Props) {
+export default function SettingsHeader({ title, backLabel, onBack, trailing }: Props) {
   return (
     <div className="settings-header">
       {onBack ? (
@@ -16,7 +19,7 @@ export default function SettingsHeader({ title, backLabel, onBack }: Props) {
         </button>
       ) : <div className="settings-header-spacer" />}
       <h1 className="settings-title">{title}</h1>
-      <div className="settings-header-spacer" />
+      {trailing ?? <div className="settings-header-spacer" />}
     </div>
   )
 }

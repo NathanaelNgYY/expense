@@ -132,9 +132,18 @@ describe('new user: first load', () => {
   })
 })
 
+/** Put entries in the active local namespace, so the anonymous account has something to lose. */
+function seedLocalEntries() {
+  localStorage.setItem(
+    'budget_entries',
+    JSON.stringify([{ id: 'a', amount: 5, category: 'lunch', note: '', date: '2026-08-01' }]),
+  )
+}
+
 describe('new user: continue with Google', () => {
-  it('links Google onto the anonymous account so entries keep their owner', async () => {
+  it('links Google onto the anonymous account when it holds entries worth keeping', async () => {
     const anonId = await ensureUserId()
+    seedLocalEntries()
 
     await signInWithGoogle()
 
@@ -142,6 +151,32 @@ describe('new user: continue with Google', () => {
     expect(auth.calls).not.toContain('signInWithOAuth')
     // The uid surviving the upgrade is the whole point: entries are keyed by user_id.
     expect(auth.session?.user.id).toBe(anonId)
+    expect(auth.session?.user.is_anonymous).toBe(false)
+  })
+
+  // The loop users actually hit: the app mints an anonymous session on open, so without this
+  // every sign-in is a link, and linking an identity that already belongs to an account fails.
+  it('discards an empty anonymous account and signs in plainly instead', async () => {
+    await ensureUserId()
+    expect(auth.session?.user.is_anonymous).toBe(true)
+
+    await signInWithGoogle()
+
+    expect(auth.calls).toEqual(['signInAnonymously', 'signOut', 'signInWithOAuth'])
+    expect(auth.calls).not.toContain('linkIdentity')
+    expect(auth.session?.user.is_anonymous).toBe(false)
+  })
+
+  it('signs in cleanly even when the Google account already exists', async () => {
+    // Previously this was the dead end: an empty anonymous session forced linkIdentity, which
+    // collided with the user's own account from an earlier sign-in elsewhere.
+    auth.takenIdentities.add('google')
+    await ensureUserId()
+
+    await signInWithGoogle()
+
+    expect(auth.redirectFragment).not.toContain('identity_already_exists')
+    expect(auth.redirectFragment).toContain('access_token')
     expect(auth.session?.user.is_anonymous).toBe(false)
   })
 
@@ -189,6 +224,9 @@ describe('new user: returning from Google', () => {
   it('surfaces the failure when the Google account is already registered', async () => {
     auth.takenIdentities.add('google')
     await ensureUserId()
+    // Entries on the device are what force the link branch — an empty anonymous account is
+    // discarded in favour of a plain sign-in and never reaches this failure.
+    seedLocalEntries()
 
     await signInWithGoogle()
 
@@ -215,6 +253,7 @@ describe('new user: returning from Google', () => {
     auth.takenIdentities.add('google')
     auth.anonymousSessionReturnsAfterSignOut = true
     await ensureUserId()
+    seedLocalEntries()
     await signInWithGoogle()
     expect(auth.redirectFragment).toContain('identity_already_exists')
 

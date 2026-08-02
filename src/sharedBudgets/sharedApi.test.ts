@@ -4,8 +4,9 @@ const rpc = vi.fn()
 const signInWithOAuth = vi.fn()
 const linkIdentity = vi.fn()
 const getSession = vi.fn()
+const signOut = vi.fn()
 vi.mock('../lib/supabaseClient', () => ({
-  getSupabase: () => ({ rpc, auth: { getSession, linkIdentity, signInWithOAuth } }),
+  getSupabase: () => ({ rpc, auth: { getSession, linkIdentity, signInWithOAuth, signOut } }),
   isSupabaseConfigured: () => true,
 }))
 
@@ -14,6 +15,7 @@ import { joinBudget, mapBudget, mapEntry, mapMember, signInWithGoogle } from './
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.clearAllMocks()
+  localStorage.clear()
 })
 
 const budgetRow = {
@@ -90,8 +92,12 @@ describe('joinBudget', () => {
 })
 
 describe('signInWithGoogle', () => {
-  it('links Google to the current anonymous user instead of creating a new user', async () => {
+  it('links Google to the current anonymous user when it holds entries worth keeping', async () => {
     vi.stubGlobal('window', { location: { origin: 'https://budget.example' } })
+    localStorage.setItem(
+      'budget_entries',
+      JSON.stringify([{ id: 'a', amount: 5, category: 'lunch', note: '', date: '2026-08-01' }]),
+    )
     getSession.mockResolvedValue({
       data: { session: { user: { id: 'anon-user', is_anonymous: true } } },
       error: null,
@@ -105,6 +111,27 @@ describe('signInWithGoogle', () => {
       options: { redirectTo: 'https://budget.example' },
     })
     expect(signInWithOAuth).not.toHaveBeenCalled()
+  })
+
+  // An anonymous account with nothing in it is not worth preserving, and linking it is what
+  // produced `identity_already_exists` for anyone who already had an account.
+  it('discards an empty anonymous account and signs in plainly', async () => {
+    vi.stubGlobal('window', { location: { origin: 'https://budget.example' } })
+    localStorage.clear()
+    getSession.mockResolvedValue({
+      data: { session: { user: { id: 'anon-user', is_anonymous: true } } },
+      error: null,
+    })
+    signInWithOAuth.mockResolvedValue({ data: {}, error: null })
+
+    await signInWithGoogle()
+
+    expect(signOut).toHaveBeenCalled()
+    expect(linkIdentity).not.toHaveBeenCalled()
+    expect(signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: 'https://budget.example' },
+    })
   })
 
   it('starts Google OAuth when there is no anonymous identity to preserve', async () => {

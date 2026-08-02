@@ -3292,6 +3292,46 @@ input:focus-visible {
   margin: 8px 16px 0;
 }
 
+.auth-error-banner {
+  display: grid;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--red) 38%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--red) 10%, var(--bg-elev));
+  padding: 12px 14px;
+  margin: 8px 16px 0;
+}
+
+.auth-error-banner__message {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.auth-error-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.auth-error-banner__actions button {
+  flex: 1 1 auto;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--separator);
+  background: var(--fill);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  transition: opacity 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-error-banner__actions button:disabled {
+  opacity: 0.55;
+}
+
 /* ─── Sync status ────────────────────────────────────────── */
 
 .capture-health-warning {

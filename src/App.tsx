@@ -24,6 +24,8 @@ import { parseAddDeepLink, resolveCategoryId } from './deepLink'
 import { formatHash, type Route, type SettingsSub } from './router'
 import { currentRoute, goBack, navigate, replaceRoute, useRoute } from './useRoute'
 import { useRestoreRouteAfterAuth } from './useRestoreRouteAfterAuth'
+import { captureAuthRedirectError } from './authRedirectError'
+import AuthErrorBanner from './components/AuthErrorBanner'
 
 // lazyWithRetry (not bare React.lazy): a stale chunk after a deploy — or a
 // transient mobile-network blip — would otherwise crash the lazy route to the
@@ -152,6 +154,7 @@ function AppShell() {
 
   return (
     <div className="app">
+      <AuthErrorBanner />
       <main>
         <Suspense fallback={<LazyFallback />}>
           {tab === 'home' && (
@@ -207,6 +210,9 @@ function AppShell() {
 }
 
 export default function App() {
+  // Before `normaliseInitialRoute` — it replaces any hash that is not a route, which includes
+  // the `#error=…` fragment a failed sign-in comes back on.
+  captureAuthRedirectError()
   normaliseInitialRoute()
   return (
     <AppErrorBoundary
